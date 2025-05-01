@@ -3,44 +3,177 @@
 import { jsPDF } from "jspdf"
 import autoTable from "jspdf-autotable"
 
-export function generatePDF(plan: any, type: "workout" | "meal") {
-  const doc = new jsPDF()
+// Define proper types for the workout and meal plans
+interface ExerciseDetail {
+  name: string
+  sets: number
+  reps: string
+  rest: string
+}
 
-  // Add title
+interface WorkoutDay {
+  focus: string
+  description: string
+  exercises: ExerciseDetail[]
+  notes: string[]
+}
+
+interface WorkoutPlan {
+  summary: {
+    goal: string
+    level: string
+    daysPerWeek: number
+    sessionLength: number
+  }
+  overview: string
+  workouts: Record<string, WorkoutDay>
+}
+
+interface FoodItem {
+  name: string
+  amount: string
+  protein: number
+  carbs: number
+  fat: number
+  calories: number
+}
+
+interface MealDetail {
+  name: string
+  foods: FoodItem[]
+  totals: {
+    protein: number
+    carbs: number
+    fat: number
+    calories: number
+  }
+  notes?: string
+  cookingTime?: string
+  isSnack?: boolean
+}
+
+interface MealPlanSummary {
+  goal: string
+  calories: number
+  dietType: string
+  mealsPerDay: number
+  restrictions: string
+  cuisine?: string
+  complexity?: string
+  includeDesserts?: boolean
+  allergies?: string
+  budget?: string
+  cookingTime?: string
+  seasonalPreference?: string
+  healthConditions?: string
+  proteinPreference?: string
+  mealPrepOption?: string
+  includeSnacks?: boolean
+  snackFrequency?: string
+  snackType?: string
+}
+
+interface MealPlan {
+  summary: MealPlanSummary
+  overview: string
+  macros: {
+    protein: number
+    carbs: number
+    fat: number
+  }
+  meals: Record<string, MealDetail[]>
+}
+
+type PlanType = WorkoutPlan | MealPlan
+type PlanCategory = "workout" | "meal"
+
+// Fix for the lastAutoTable issue - extend jsPDF type
+declare module "jspdf" {
+  interface jsPDF {
+    lastAutoTable?: {
+      finalY: number
+    }
+  }
+}
+
+// Helper function to determine if a plan is a workout plan
+function isWorkoutPlan(plan: PlanType, type: PlanCategory): plan is WorkoutPlan {
+  return type === "workout"
+}
+
+// Helper function to determine if a plan is a meal plan
+function isMealPlan(plan: PlanType, type: PlanCategory): plan is MealPlan {
+  return type === "meal"
+}
+
+// Function to add a stylish header to the document
+function addStylishHeader(doc: jsPDF, title: string): void {
+  // Add header background
+  doc.setFillColor(16, 185, 129) // emerald-500
+  doc.rect(0, 0, 210, 25, "F")
+
+  // Add white title text
   doc.setFontSize(20)
-  doc.setTextColor(16, 185, 129) // emerald-500
-  doc.text(`AI GymBRO - Your Personalized ${type === "workout" ? "Workout" : "Meal"} Plan`, 105, 15, {
+  doc.setTextColor(255, 255, 255)
+  doc.text(title, 105, 15, {
     align: "center",
   })
 
+  // Add decorative line
+  doc.setDrawColor(16, 185, 129)
+  doc.setLineWidth(0.5)
+  doc.line(14, 30, 196, 30)
+}
+
+// Function to generate the PDF
+export function generatePDF(plan: PlanType, type: PlanCategory): void {
+  const doc = new jsPDF()
+  const titleText = `AI GymBRO - Your Personalized ${type === "workout" ? "Workout" : "Meal"} Plan`
+
+  // Add stylish header
+  addStylishHeader(doc, titleText)
+
   // Add summary
   doc.setFontSize(12)
-  doc.setTextColor(0, 0, 0)
-  doc.text("Plan Summary:", 14, 25)
+  doc.setTextColor(70, 70, 70)
+  doc.setFont("helvetica", "bold")
+  doc.text("Plan Summary", 14, 40)
+  doc.setLineWidth(0.2)
+  doc.line(14, 41, 65, 41)
 
-  const summaryText =
-    type === "workout"
-      ? `Goal: ${plan.summary.goal} | Level: ${plan.summary.level} | ${plan.summary.daysPerWeek} days per week | ${plan.summary.sessionLength} min sessions`
-      : `Goal: ${plan.summary.goal} | ${plan.summary.calories} calories | Diet: ${plan.summary.dietType} | ${plan.summary.mealsPerDay} meals per day`
+  let summaryText = ""
+  if (isWorkoutPlan(plan, type)) {
+    summaryText = `Goal: ${plan.summary.goal} | Level: ${plan.summary.level} | ${plan.summary.daysPerWeek} days per week | ${plan.summary.sessionLength} min sessions`
+  } else if (isMealPlan(plan, type)) {
+    summaryText = `Goal: ${plan.summary.goal} | ${plan.summary.calories} calories | Diet: ${plan.summary.dietType} | ${plan.summary.mealsPerDay} meals per day`
+  }
 
   doc.setFontSize(10)
-  doc.text(summaryText, 14, 32)
+  doc.setFont("helvetica", "normal")
+  doc.text(summaryText, 14, 47)
 
   // Add overview
   doc.setFontSize(12)
-  doc.text("Overview:", 14, 42)
+  doc.setFont("helvetica", "bold")
+  doc.text("Overview", 14, 57)
+  doc.setLineWidth(0.2)
+  doc.line(14, 58, 55, 58)
 
   const splitOverview = doc.splitTextToSize(plan.overview, 180)
   doc.setFontSize(10)
-  doc.text(splitOverview, 14, 49)
+  doc.setFont("helvetica", "normal")
+  doc.text(splitOverview, 14, 65)
 
-  let yPosition = 49 + splitOverview.length * 5
+  let yPosition = 65 + splitOverview.length * 5
 
   // Add macros if meal plan
-  if (type === "meal") {
+  if (isMealPlan(plan, type)) {
     yPosition += 5
     doc.setFontSize(12)
-    doc.text("Macronutrient Breakdown:", 14, yPosition)
+    doc.setFont("helvetica", "bold")
+    doc.text("Macronutrient Breakdown", 14, yPosition)
+    doc.setLineWidth(0.2)
+    doc.line(14, yPosition + 1, 105, yPosition + 1)
     yPosition += 7
 
     autoTable(doc, {
@@ -68,31 +201,86 @@ export function generatePDF(plan: any, type: "workout" | "meal") {
         ["Total", "", `${plan.summary.calories} cal`, "100%"],
       ],
       theme: "grid",
-      styles: { fontSize: 10, cellPadding: 3 },
-      headStyles: { fillColor: [16, 185, 129] },
+      styles: { fontSize: 10, cellPadding: 4, lineWidth: 0.1 },
+      headStyles: {
+        fillColor: [16, 185, 129],
+        textColor: [255, 255, 255],
+        fontStyle: "bold",
+      },
+      alternateRowStyles: {
+        fillColor: [240, 250, 245],
+      },
     })
 
-    yPosition = (doc as any).lastAutoTable.finalY + 10
-  }
+    yPosition = doc.lastAutoTable?.finalY ? doc.lastAutoTable.finalY + 10 : yPosition + 40
 
-  // Add daily plans
-  if (type === "workout") {
-    // Workout plan
-    Object.entries(plan.workouts).forEach(([day, workout]: [string, any], index: number) => {
+    // Add snack information if included
+    if (plan.summary.includeSnacks) {
       // Check if we need a new page
       if (yPosition > 250) {
         doc.addPage()
+        doc.setFillColor(16, 185, 129)
+        doc.rect(0, 0, 210, 10, "F")
+        yPosition = 20
+      }
+
+      doc.setFontSize(12)
+      doc.setFont("helvetica", "bold")
+      doc.setTextColor(70, 70, 70)
+      doc.text("Snack Information", 14, yPosition)
+      doc.setLineWidth(0.2)
+      doc.line(14, yPosition + 1, 85, yPosition + 1)
+      yPosition += 7
+
+      doc.setFontSize(10)
+      doc.setFont("helvetica", "normal")
+
+      const snackInfo = [
+        [`Snack Frequency: ${plan.summary.snackFrequency || "As needed"}`],
+        [`Snack Type: ${plan.summary.snackType || "Balanced"}`],
+        [`Snack Goals: To provide energy between meals and support your ${plan.summary.goal.toLowerCase()} goals`],
+      ]
+
+      autoTable(doc, {
+        startY: yPosition,
+        body: snackInfo,
+        theme: "plain",
+        styles: { fontSize: 10, cellPadding: 3 },
+        tableWidth: 180,
+      })
+
+      yPosition = doc.lastAutoTable?.finalY ? doc.lastAutoTable.finalY + 10 : yPosition + 30
+    }
+  }
+
+  // Add daily plans
+  if (isWorkoutPlan(plan, type)) {
+    // Workout plan
+    Object.entries(plan.workouts).forEach(([_, workout], index) => {
+      // Check if we need a new page
+      if (yPosition > 250) {
+        doc.addPage()
+        doc.setFillColor(16, 185, 129)
+        doc.rect(0, 0, 210, 10, "F")
         yPosition = 20
       }
 
       const dayNumber = index + 1
       doc.setFontSize(14)
+      doc.setFont("helvetica", "bold")
       doc.setTextColor(16, 185, 129)
       doc.text(`Day ${dayNumber}: ${workout.focus}`, 14, yPosition)
-      yPosition += 7
+
+      // Add divider
+      doc.setDrawColor(16, 185, 129)
+      doc.setLineWidth(0.3)
+      doc.line(14, yPosition + 2, 196, yPosition + 2)
+
+      yPosition += 8
 
       doc.setFontSize(10)
-      doc.setTextColor(0, 0, 0)
+      doc.setFont("helvetica", "normal")
+      doc.setTextColor(70, 70, 70)
       const splitDesc = doc.splitTextToSize(workout.description, 180)
       doc.text(splitDesc, 14, yPosition)
       yPosition += splitDesc.length * 5 + 5
@@ -101,25 +289,34 @@ export function generatePDF(plan: any, type: "workout" | "meal") {
       autoTable(doc, {
         startY: yPosition,
         head: [["Exercise", "Sets", "Reps", "Rest"]],
-        body: workout.exercises.map((exercise: any) => [
+        body: workout.exercises.map((exercise) => [
           exercise.name,
           exercise.sets.toString(),
           exercise.reps,
           exercise.rest,
         ]),
         theme: "grid",
-        styles: { fontSize: 9, cellPadding: 2 },
-        headStyles: { fillColor: [16, 185, 129] },
+        styles: { fontSize: 9, cellPadding: 3, lineWidth: 0.1 },
+        headStyles: {
+          fillColor: [16, 185, 129],
+          textColor: [255, 255, 255],
+          fontStyle: "bold",
+        },
+        alternateRowStyles: {
+          fillColor: [240, 250, 245],
+        },
       })
 
-      yPosition = (doc as any).lastAutoTable.finalY + 5
+      yPosition = doc.lastAutoTable?.finalY ? doc.lastAutoTable.finalY + 5 : yPosition + 20
 
       // Notes
       doc.setFontSize(10)
+      doc.setFont("helvetica", "bold")
       doc.text("Notes:", 14, yPosition)
       yPosition += 5
 
-      workout.notes.forEach((note: string) => {
+      doc.setFont("helvetica", "normal")
+      workout.notes.forEach((note) => {
         const splitNote = doc.splitTextToSize(`• ${note}`, 180)
         doc.text(splitNote, 14, yPosition)
         yPosition += splitNote.length * 5
@@ -127,28 +324,45 @@ export function generatePDF(plan: any, type: "workout" | "meal") {
 
       yPosition += 10
     })
-  } else {
+  } else if (isMealPlan(plan, type)) {
     // Meal plan
-    Object.entries(plan.meals).forEach(([day, meals]: [string, any], dayIndex: number) => {
+    Object.entries(plan.meals).forEach(([dayKey, meals], dayIndex) => {
       // Add a new page for each day
       if (dayIndex > 0) {
         doc.addPage()
+        doc.setFillColor(16, 185, 129)
+        doc.rect(0, 0, 210, 10, "F")
         yPosition = 20
       }
 
       doc.setFontSize(14)
+      doc.setFont("helvetica", "bold")
       doc.setTextColor(16, 185, 129)
       doc.text(`Day ${dayIndex + 1}`, 14, yPosition)
+
+      // Add divider
+      doc.setDrawColor(16, 185, 129)
+      doc.setLineWidth(0.3)
+      doc.line(14, yPosition + 2, 196, yPosition + 2)
+
       yPosition += 10
 
-      meals.forEach((meal: any, mealIndex: number) => {
+      // Separate meals and snacks
+      const mainMeals = meals.filter((meal) => !meal.isSnack)
+      const snacks = meals.filter((meal) => meal.isSnack)
+
+      // First output main meals
+      mainMeals.forEach((meal) => {
         // Check if we need a new page
         if (yPosition > 250) {
           doc.addPage()
+          doc.setFillColor(16, 185, 129)
+          doc.rect(0, 0, 210, 10, "F")
           yPosition = 20
         }
 
         doc.setFontSize(12)
+        doc.setFont("helvetica", "bold")
         doc.setTextColor(16, 185, 129)
         doc.text(meal.name, 14, yPosition)
         yPosition += 7
@@ -157,27 +371,24 @@ export function generatePDF(plan: any, type: "workout" | "meal") {
         autoTable(doc, {
           startY: yPosition,
           head: [["Food", "Amount", "Protein", "Carbs", "Fat", "Calories"]],
-          body: [
-            ...meal.foods.map((food: any) => [
-              food.name,
-              food.amount,
-              `${food.protein}g`,
-              `${food.carbs}g`,
-              `${food.fat}g`,
-              food.calories.toString(),
-            ]),
-            [
-              "Total",
-              "",
-              `${meal.totals.protein}g`,
-              `${meal.totals.carbs}g`,
-              `${meal.totals.fat}g`,
-              meal.totals.calories.toString(),
-            ],
-          ],
+          body: meal.foods.map((food) => [
+            food.name,
+            food.amount,
+            `${food.protein}g`,
+            `${food.carbs}g`,
+            `${food.fat}g`,
+            food.calories.toString(),
+          ]),
           theme: "grid",
-          styles: { fontSize: 9, cellPadding: 2 },
-          headStyles: { fillColor: [16, 185, 129] },
+          styles: { fontSize: 9, cellPadding: 3, lineWidth: 0.1 },
+          headStyles: {
+            fillColor: [16, 185, 129],
+            textColor: [255, 255, 255],
+            fontStyle: "bold",
+          },
+          alternateRowStyles: {
+            fillColor: [240, 250, 245],
+          },
           foot: [
             [
               "Total",
@@ -188,29 +399,126 @@ export function generatePDF(plan: any, type: "workout" | "meal") {
               meal.totals.calories.toString(),
             ],
           ],
-          footStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: "bold" },
+          footStyles: {
+            fillColor: [230, 250, 240],
+            textColor: [0, 0, 0],
+            fontStyle: "bold",
+          },
         })
 
-        yPosition = (doc as any).lastAutoTable.finalY + 5
+        yPosition = doc.lastAutoTable?.finalY ? doc.lastAutoTable.finalY + 5 : yPosition + 20
 
         // Notes
         if (meal.notes) {
           doc.setFontSize(10)
-          doc.setTextColor(0, 0, 0)
-          const splitNote = doc.splitTextToSize(`Preparation: ${meal.notes}`, 180)
+          doc.setFont("helvetica", "bold")
+          doc.setTextColor(70, 70, 70)
+          doc.text("Preparation:", 14, yPosition)
+          yPosition += 5
+
+          doc.setFont("helvetica", "normal")
+          const splitNote = doc.splitTextToSize(meal.notes, 180)
           doc.text(splitNote, 14, yPosition)
           yPosition += splitNote.length * 5 + 10
         } else {
           yPosition += 10
         }
       })
+
+      // Then output snacks if any
+      if (snacks.length > 0) {
+        // Check if we need a new page
+        if (yPosition > 230) {
+          doc.addPage()
+          doc.setFillColor(16, 185, 129)
+          doc.rect(0, 0, 210, 10, "F")
+          yPosition = 20
+        }
+
+        doc.setFontSize(12)
+        doc.setFont("helvetica", "bold")
+        doc.setTextColor(214, 156, 60) // Amber color for snacks
+        doc.text("Daily Snacks", 14, yPosition)
+
+        // Add divider
+        doc.setDrawColor(214, 156, 60)
+        doc.setLineWidth(0.3)
+        doc.line(14, yPosition + 2, 196, yPosition + 2)
+
+        yPosition += 10
+
+        snacks.forEach((snack, snackIndex) => {
+          // Check if we need a new page
+          if (yPosition > 250) {
+            doc.addPage()
+            doc.setFillColor(16, 185, 129)
+            doc.rect(0, 0, 210, 10, "F")
+            yPosition = 20
+          }
+
+          doc.setFontSize(11)
+          doc.setFont("helvetica", "bold")
+          doc.setTextColor(214, 156, 60)
+          doc.text(`Snack ${snackIndex + 1}: ${snack.name}`, 14, yPosition)
+          yPosition += 6
+
+          // Snack table
+          autoTable(doc, {
+            startY: yPosition,
+            head: [["Food", "Amount", "Calories"]],
+            body: snack.foods.map((food) => [food.name, food.amount, food.calories.toString()]),
+            theme: "grid",
+            styles: { fontSize: 9, cellPadding: 3, lineWidth: 0.1 },
+            headStyles: {
+              fillColor: [214, 156, 60],
+              textColor: [255, 255, 255],
+              fontStyle: "bold",
+            },
+            alternateRowStyles: {
+              fillColor: [252, 245, 235],
+            },
+            foot: [["Total", "", snack.totals.calories.toString()]],
+            footStyles: {
+              fillColor: [250, 240, 220],
+              textColor: [0, 0, 0],
+              fontStyle: "bold",
+            },
+          })
+
+          yPosition = doc.lastAutoTable?.finalY ? doc.lastAutoTable.finalY + 5 : yPosition + 15
+
+          // Notes
+          if (snack.notes) {
+            doc.setFontSize(9)
+            doc.setFont("helvetica", "bold")
+            doc.setTextColor(70, 70, 70)
+            doc.text("Tip:", 14, yPosition)
+            yPosition += 4
+
+            doc.setFont("helvetica", "normal")
+            const splitNote = doc.splitTextToSize(snack.notes, 180)
+            doc.text(splitNote, 14, yPosition)
+            yPosition += splitNote.length * 4 + 8
+          } else {
+            yPosition += 8
+          }
+        })
+      }
     })
   }
 
   // Add footer
-  doc.setFontSize(8)
+  doc.setFillColor(240, 240, 240)
+  doc.rect(0, 280, 210, 17, "F")
+
+  doc.setFontSize(9)
+  doc.setFont("helvetica", "bold")
   doc.setTextColor(100, 100, 100)
-  doc.text("Generated by AI GymBRO - Your AI-powered fitness companion", 105, 285, { align: "center" })
+  doc.text("Generated by AI GymBRO", 105, 285, { align: "center" })
+
+  doc.setFontSize(8)
+  doc.setFont("helvetica", "normal")
+  doc.text("Your AI-powered fitness companion", 105, 290, { align: "center" })
 
   // Save the PDF
   doc.save(`ai-gymbro-${type}-plan.pdf`)

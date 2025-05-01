@@ -10,11 +10,24 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Loader2, AlertTriangle } from "lucide-react"
-import { useRouter } from "next/navigation"
 import { generateWorkoutPlan } from "@/lib/ai-service"
 import WorkoutPlanDisplay from "./workout-plan-display"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import ApiTestButton from "./api-test-button"
+
+// Define the type for the workout plan
+interface WorkoutPlan {
+  // Add appropriate fields based on your actual plan structure
+  days: Array<{
+    day: string;
+    exercises: Array<{
+      name: string;
+      sets: number;
+      reps: string;
+      rest: string;
+    }>;
+  }>;
+  notes?: string;
+}
 
 const formSchema = z.object({
   fitnessGoal: z.string().min(1, { message: "Please select a fitness goal" }),
@@ -24,6 +37,8 @@ const formSchema = z.object({
   focusAreas: z.array(z.string()).min(1, { message: "Please select at least one focus area" }),
   equipment: z.string().min(1, { message: "Please select available equipment" }),
 })
+
+type FormValues = z.infer<typeof formSchema>;
 
 const focusAreaOptions = [
   { id: "fullBody", label: "Full Body" },
@@ -39,15 +54,14 @@ const focusAreaOptions = [
 
 export default function WorkoutPlanForm() {
   const [isLoading, setIsLoading] = useState(false)
-  const [workoutPlan, setWorkoutPlan] = useState<any>(null)
+  const [workoutPlan, setWorkoutPlan] = useState<WorkoutPlan | null>(null)
   const [hasGroqKey, setHasGroqKey] = useState<boolean | null>(null)
   const [apiError, setApiError] = useState<string | null>(null)
-  const router = useRouter()
 
   useEffect(() => {
     // First check if we have the environment variable from next.config.js
     if (typeof window !== "undefined" && window.process?.env?.HAS_GROQ_KEY !== undefined) {
-      setHasGroqKey(!!window.process.env.HAS_GROQ_KEY)
+      setHasGroqKey(!!window.process.env.NEXT_PUBLIC_GROQ_API_KEY)
       console.log("Using environment variable from next.config.js:", !!window.process.env.HAS_GROQ_KEY)
     } else {
       // Fallback to API route
@@ -64,7 +78,7 @@ export default function WorkoutPlanForm() {
     }
   }, [])
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       fitnessGoal: "",
@@ -76,7 +90,7 @@ export default function WorkoutPlanForm() {
     },
   })
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: FormValues) {
     setIsLoading(true)
     setApiError(null)
     try {
@@ -99,17 +113,7 @@ export default function WorkoutPlanForm() {
   }
 
   return (
-    <Form {...form}>
-      {hasGroqKey === false && (
-        <Alert variant="destructive" className="mb-6">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>API Key Missing</AlertTitle>
-          <AlertDescription>
-            GROQ_API_KEY is not set. The app will use mock data instead of generating real plans.
-          </AlertDescription>
-        </Alert>
-      )}
-
+    <div className="max-w-3xl mx-auto p-4 rounded-lg bg-gray-900 shadow-lg">
       {apiError && (
         <Alert variant="destructive" className="mb-6">
           <AlertTriangle className="h-4 w-4" />
@@ -118,181 +122,196 @@ export default function WorkoutPlanForm() {
         </Alert>
       )}
 
-      {/* Add API test button */}
-      <ApiTestButton />
+      {hasGroqKey === false && (
+        <Alert className="mb-6 border-amber-500 bg-amber-500/10">
+          <AlertTriangle className="h-4 w-4 text-amber-500" />
+          <AlertTitle className="text-amber-500">API Key Missing</AlertTitle>
+          <AlertDescription>
+            The GROQ API key is missing. Some features may not work correctly.
+          </AlertDescription>
+        </Alert>
+      )}
 
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 mt-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <h2 className="text-2xl font-bold mb-6 text-center text-emerald-400">Create Your Custom Workout Plan</h2>
+
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+              control={form.control}
+              name="fitnessGoal"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-emerald-400">Fitness Goal</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="bg-gray-800 border-gray-700 focus:ring-emerald-500">
+                        <SelectValue placeholder="Select your goal" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent className="bg-gray-800 border-gray-700">
+                      <SelectItem value="muscleGain">Muscle Gain</SelectItem>
+                      <SelectItem value="fatLoss">Fat Loss</SelectItem>
+                      <SelectItem value="strength">Strength</SelectItem>
+                      <SelectItem value="endurance">Endurance</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage className="text-red-400" />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="experienceLevel"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-emerald-400">Experience Level</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="bg-gray-800 border-gray-700 focus:ring-emerald-500">
+                        <SelectValue placeholder="Select your level" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent className="bg-gray-800 border-gray-700">
+                      <SelectItem value="beginner">Beginner</SelectItem>
+                      <SelectItem value="intermediate">Intermediate</SelectItem>
+                      <SelectItem value="advanced">Advanced</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage className="text-red-400" />
+                </FormItem>
+              )}
+            />
+          </div>
+
           <FormField
             control={form.control}
-            name="fitnessGoal"
+            name="daysPerWeek"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Fitness Goal</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger className="bg-gray-800 border-gray-700">
-                      <SelectValue placeholder="Select your goal" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent className="bg-gray-800 border-gray-700">
-                    <SelectItem value="muscleGain">Muscle Gain</SelectItem>
-                    <SelectItem value="fatLoss">Fat Loss</SelectItem>
-                    <SelectItem value="strength">Strength</SelectItem>
-                    <SelectItem value="endurance">Endurance</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="experienceLevel"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Experience Level</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger className="bg-gray-800 border-gray-700">
-                      <SelectValue placeholder="Select your level" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent className="bg-gray-800 border-gray-700">
-                    <SelectItem value="beginner">Beginner</SelectItem>
-                    <SelectItem value="intermediate">Intermediate</SelectItem>
-                    <SelectItem value="advanced">Advanced</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <FormField
-          control={form.control}
-          name="daysPerWeek"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Days Per Week: {field.value}</FormLabel>
-              <FormControl>
-                <Slider
-                  min={1}
-                  max={7}
-                  step={1}
-                  defaultValue={[field.value]}
-                  onValueChange={(value) => field.onChange(value[0])}
-                  className="py-4"
-                />
-              </FormControl>
-              <FormDescription>How many days per week can you commit to working out?</FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="sessionLength"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Session Length: {field.value} minutes</FormLabel>
-              <FormControl>
-                <Slider
-                  min={15}
-                  max={120}
-                  step={5}
-                  defaultValue={[field.value]}
-                  onValueChange={(value) => field.onChange(value[0])}
-                  className="py-4"
-                />
-              </FormControl>
-              <FormDescription>How long can each workout session be?</FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="focusAreas"
-          render={() => (
-            <FormItem>
-              <div className="mb-4">
-                <FormLabel>Focus Areas</FormLabel>
-                <FormDescription>Select the areas you want to focus on in your workouts</FormDescription>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                {focusAreaOptions.map((option) => (
-                  <FormField
-                    key={option.id}
-                    control={form.control}
-                    name="focusAreas"
-                    render={({ field }) => {
-                      return (
-                        <FormItem
-                          key={option.id}
-                          className="flex flex-row items-start space-x-3 space-y-0 rounded-md border border-gray-700 p-3"
-                        >
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value?.includes(option.id)}
-                              onCheckedChange={(checked) => {
-                                return checked
-                                  ? field.onChange([...field.value, option.id])
-                                  : field.onChange(field.value?.filter((value) => value !== option.id))
-                              }}
-                            />
-                          </FormControl>
-                          <FormLabel className="font-normal cursor-pointer">{option.label}</FormLabel>
-                        </FormItem>
-                      )
-                    }}
-                  />
-                ))}
-              </div>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="equipment"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Available Equipment</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormLabel className="text-emerald-400">Days Per Week: <span className="text-white font-semibold">{field.value}</span></FormLabel>
                 <FormControl>
-                  <SelectTrigger className="bg-gray-800 border-gray-700">
-                    <SelectValue placeholder="Select available equipment" />
-                  </SelectTrigger>
+                  <Slider
+                    min={1}
+                    max={7}
+                    step={1}
+                    defaultValue={[field.value]}
+                    onValueChange={(value) => field.onChange(value[0])}
+                    className="py-4"
+                  />
                 </FormControl>
-                <SelectContent className="bg-gray-800 border-gray-700">
-                  <SelectItem value="fullGym">Full Gym</SelectItem>
-                  <SelectItem value="homeBasic">Home Basic (Dumbbells, Resistance Bands)</SelectItem>
-                  <SelectItem value="bodyweight">Bodyweight Only</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+                <FormDescription className="text-gray-400">How many days per week can you commit to working out?</FormDescription>
+                <FormMessage className="text-red-400" />
+              </FormItem>
+            )}
+          />
 
-        <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 mt-8" disabled={isLoading}>
-          {isLoading ? (
-            <>
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              Creating Your Personalized Workout Plan...
-            </>
-          ) : (
-            "Generate Workout Plan"
-          )}
-        </Button>
-      </form>
-    </Form>
+          <FormField
+            control={form.control}
+            name="sessionLength"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-emerald-400">Session Length: <span className="text-white font-semibold">{field.value} minutes</span></FormLabel>
+                <FormControl>
+                  <Slider
+                    min={15}
+                    max={120}
+                    step={5}
+                    defaultValue={[field.value]}
+                    onValueChange={(value) => field.onChange(value[0])}
+                    className="py-4"
+                  />
+                </FormControl>
+                <FormDescription className="text-gray-400">How long can each workout session be?</FormDescription>
+                <FormMessage className="text-red-400" />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="focusAreas"
+            render={() => (
+              <FormItem>
+                <div className="mb-4">
+                  <FormLabel className="text-emerald-400">Focus Areas</FormLabel>
+                  <FormDescription className="text-gray-400">Select the areas you want to focus on in your workouts</FormDescription>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                  {focusAreaOptions.map((option) => (
+                    <FormField
+                      key={option.id}
+                      control={form.control}
+                      name="focusAreas"
+                      render={({ field }) => {
+                        return (
+                          <FormItem
+                            key={option.id}
+                            className="flex flex-row items-start space-x-3 space-y-0 rounded-md border border-gray-700 p-3 hover:border-emerald-500 transition-colors"
+                          >
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value?.includes(option.id)}
+                                onCheckedChange={(checked) => {
+                                  return checked
+                                    ? field.onChange([...field.value, option.id])
+                                    : field.onChange(field.value?.filter((value) => value !== option.id))
+                                }}
+                                className="data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500"
+                              />
+                            </FormControl>
+                            <FormLabel className="font-normal cursor-pointer">{option.label}</FormLabel>
+                          </FormItem>
+                        )
+                      }}
+                    />
+                  ))}
+                </div>
+                <FormMessage className="text-red-400 mt-2" />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="equipment"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-emerald-400">Available Equipment</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger className="bg-gray-800 border-gray-700 focus:ring-emerald-500">
+                      <SelectValue placeholder="Select available equipment" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent className="bg-gray-800 border-gray-700">
+                    <SelectItem value="fullGym">Full Gym</SelectItem>
+                    <SelectItem value="homeBasic">Home Basic (Dumbbells, Resistance Bands)</SelectItem>
+                    <SelectItem value="bodyweight">Bodyweight Only</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage className="text-red-400" />
+              </FormItem>
+            )}
+          />
+
+          <Button 
+            type="submit" 
+            className="w-full bg-emerald-600 hover:bg-emerald-700 mt-8 py-6 text-lg font-medium transition-all duration-200 transform hover:scale-[1.02]" 
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Creating Your Personalized Workout Plan...
+              </>
+            ) : (
+              "Generate Workout Plan"
+            )}
+          </Button>
+        </form>
+      </Form>
+    </div>
   )
 }
-

@@ -88,7 +88,7 @@ export const mockWorkoutPlan = {
 export const mockMealPlan = {
   summary: {
     goal: "Muscle Gain",
-    calories: 2800,
+    calories: 3100,
     dietType: "High Protein",
     mealsPerDay: 4,
     restrictions: "None",
@@ -107,7 +107,7 @@ export const mockMealPlan = {
         foods: [
           { name: "Egg Whites", amount: "6 whites", protein: 20, carbs: 0, fat: 0, calories: 80 },
           { name: "Whole Eggs", amount: "2 eggs", protein: 12, carbs: 0, fat: 10, calories: 140 },
-          { name: "Oatmeal", amount: "1 cup cooked", protein: 6, carbs: 32, fat: 3, calories: 180 },
+          { name: "Oatmeal", amount: "1 cup cooked", protein: 6, carbs: 32, fat: 3, calories: 18000 },
           { name: "Blueberries", amount: "1/2 cup", protein: 0, carbs: 10, fat: 0, calories: 40 },
           { name: "Almond Butter", amount: "1 tbsp", protein: 3, carbs: 3, fat: 9, calories: 100 },
         ],
