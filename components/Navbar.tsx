@@ -141,22 +141,6 @@ export function Navbar() {
                 <Info className="h-5 w-5" />
                 <span>About</span>
               </Link>
-              <Link 
-                href="/shop" 
-                className="flex items-center gap-3 text-lg text-gray-200 hover:text-emerald-400 py-3 px-4 rounded-lg hover:bg-gray-800/50 transition-all duration-300"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                <ShoppingBag className="h-5 w-5" />
-                <span>Shop</span>
-              </Link>
-              <Link 
-                href="/contact" 
-                className="flex items-center gap-3 text-lg text-gray-200 hover:text-emerald-400 py-3 px-4 rounded-lg hover:bg-gray-800/50 transition-all duration-300"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                <Phone className="h-5 w-5" />
-                <span>Contact</span>
-              </Link>
             </nav>
             
             <div className="h-px w-full bg-gray-800 my-4"></div>

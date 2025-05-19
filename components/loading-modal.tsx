@@ -27,8 +27,9 @@ export default function LoadingModal({ isOpen, formData }: LoadingModalProps) {
   const [progress, setProgress] = useState(0)
   const [currentStep, setCurrentStep] = useState(0)
   const [isVisible, setIsVisible] = useState(false)
+  const [isComplete, setIsComplete] = useState(false)
   const modalRef = useRef<HTMLDivElement>(null)
-  const animationRef = useRef<number | null>(null)
+  const timerRef = useRef<NodeJS.Timeout | null>(null)
 
   // Handle modal visibility with animation
   useEffect(() => {
@@ -36,6 +37,7 @@ export default function LoadingModal({ isOpen, formData }: LoadingModalProps) {
       setIsVisible(true)
       setProgress(0)
       setCurrentStep(0)
+      setIsComplete(false)
     } else {
       // Add exit animation
       const timer = setTimeout(() => {
@@ -45,67 +47,44 @@ export default function LoadingModal({ isOpen, formData }: LoadingModalProps) {
     }
   }, [isOpen])
 
-  // Smoother, much slower progress animation with minimum step duration
+  // Simplified progress handling - moves every 5 seconds
   useEffect(() => {
     if (!isOpen || !isVisible) {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current)
+      if (timerRef.current) {
+        clearInterval(timerRef.current)
       }
       return
     }
 
-    let lastTimestamp = 0
-    let lastStepChange = Date.now()
-    const MINIMUM_STEP_DURATION = 4000 // Minimum 4 seconds per step
-
-    const animate = (timestamp: number) => {
-      if (!lastTimestamp) lastTimestamp = timestamp
-      const elapsed = timestamp - lastTimestamp
-
-      // Only update every ~800ms with slight variation for natural feel
-      if (elapsed > 800 + Math.random() * 200) {
-        lastTimestamp = timestamp
-
-        setProgress((prevProgress) => {
-          // Very small, consistent increments
-          const increment = 0.1 + Math.random() * 0.15
-
-          if (prevProgress >= 100) {
-            if (animationRef.current) {
-              cancelAnimationFrame(animationRef.current)
-            }
-            return 100
+    // Start the timer for progress updates every 5 seconds
+    timerRef.current = setInterval(() => {
+      setProgress(prevProgress => {
+        // If already at 100%, maintain at 100%
+        if (prevProgress >= 100) {
+          setIsComplete(true)
+          return 100
+        }
+        
+        // Calculate new progress value - approximately 20% each time
+        // This ensures we reach 100% after 5 steps (5 * 20 = 100)
+        const newProgress = Math.min(prevProgress + 20, 100)
+        
+        // Update step based on the new progress value
+        const stepThresholds = [15, 32, 49, 66, 83]
+        for (let i = stepThresholds.length - 1; i >= 0; i--) {
+          if (newProgress >= stepThresholds[i] && currentStep !== i + 1) {
+            setCurrentStep(i + 1)
+            break
           }
-
-          // Update step based on progress thresholds, but enforce minimum duration
-          const now = Date.now()
-          const stepThresholds = [15, 32, 49, 66, 83]
-          const timeSinceLastStep = now - lastStepChange
-
-          for (let i = stepThresholds.length - 1; i >= 0; i--) {
-            if (
-              prevProgress >= stepThresholds[i] &&
-              currentStep !== i + 1 &&
-              timeSinceLastStep >= MINIMUM_STEP_DURATION
-            ) {
-              setCurrentStep(i + 1)
-              lastStepChange = now
-              break
-            }
-          }
-
-          return Math.min(prevProgress + increment, 100)
-        })
-      }
-
-      animationRef.current = requestAnimationFrame(animate)
-    }
-
-    animationRef.current = requestAnimationFrame(animate)
+        }
+        
+        return newProgress
+      })
+    }, 3000)
 
     return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current)
+      if (timerRef.current) {
+        clearInterval(timerRef.current)
       }
     }
   }, [isOpen, isVisible, currentStep])
@@ -186,8 +165,8 @@ export default function LoadingModal({ isOpen, formData }: LoadingModalProps) {
     },
     {
       icon: <Heart className="h-10 w-10 text-red-400" />,
-      title: "Almost ready!",
-      description: "Putting the finishing touches on your personalized meal plan.",
+      title: isComplete ? "Please wait" : "Almost ready!",
+      description: isComplete ? "Your personalized meal plan is being prepared. Please wait..." : "Putting the finishing touches on your personalized meal plan.",
       gradient: "from-red-900/30 to-red-700/20",
       color: "red",
     },
@@ -255,7 +234,9 @@ export default function LoadingModal({ isOpen, formData }: LoadingModalProps) {
 
           <div className="space-y-2">
             <Progress value={progress} indicatorClassName={getProgressBarColor()} />
-            <p className="text-sm text-gray-300 text-center">{Math.round(progress)}% complete</p>
+            <p className="text-sm text-gray-300 text-center">
+              {isComplete ? "Loading... Please wait" : `${Math.round(progress)}% complete`}
+            </p>
           </div>
 
           <div className="flex justify-center space-x-3 sm:space-x-6 pt-2">
@@ -307,7 +288,11 @@ export default function LoadingModal({ isOpen, formData }: LoadingModalProps) {
           </div>
 
           <div className="text-center text-sm text-gray-300/80 italic">
-            <p>Creating your perfect meal plan takes a moment. Please don't close this window.</p>
+            <p>
+              {isComplete 
+                ? "Your meal plan is almost ready. Just a moment longer..."
+                : "Creating your perfect meal plan takes a moment. Please don't close this window."}
+            </p>
             <div className="flex justify-center mt-3 space-x-2">
               {[0, 1, 2].map((i) => (
                 <span
@@ -353,4 +338,3 @@ export default function LoadingModal({ isOpen, formData }: LoadingModalProps) {
     </div>
   )
 }
-
