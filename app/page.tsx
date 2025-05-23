@@ -38,24 +38,24 @@ const animationKeyframes = `
 }
 `
 
-// Background elements with subtle animations - update to create smoother transitions
+// Update the BackgroundElements component to provide a more consistent background
 const BackgroundElements = () => {
   return (
-    <div className="absolute inset-0 -z-10 overflow-hidden">
-      {/* Smoother base gradient */}
-      <div className="absolute inset-0 bg-gradient-to-b from-gray-950 via-gray-900/90 to-gray-950" />
+    <div className="fixed inset-0 -z-10 overflow-hidden">
+      {/* Unified base gradient for the entire page */}
+      <div className="absolute inset-0 bg-gradient-to-b from-gray-950 via-gray-900/95 to-gray-950" />
 
-      {/* Very subtle radial gradients */}
-      <div className="absolute inset-0 opacity-40 bg-[radial-gradient(ellipse_at_center,rgba(16,185,129,0.05),transparent_70%)]" />
-      <div className="absolute top-0 right-0 w-full h-full opacity-30 bg-[radial-gradient(circle_at_top_right,rgba(6,182,212,0.05),transparent_60%)]" />
-      <div className="absolute bottom-0 left-0 w-full h-full opacity-30 bg-[radial-gradient(circle_at_bottom_left,rgba(124,58,237,0.03),transparent_60%)]" />
+      {/* Subtle radial gradients with consistent opacity */}
+      <div className="absolute inset-0 opacity-30 bg-[radial-gradient(ellipse_at_center,rgba(16,185,129,0.05),transparent_70%)]" />
+      <div className="absolute top-0 right-0 w-full h-full opacity-25 bg-[radial-gradient(circle_at_top_right,rgba(6,182,212,0.05),transparent_60%)]" />
+      <div className="absolute bottom-0 left-0 w-full h-full opacity-25 bg-[radial-gradient(circle_at_bottom_left,rgba(124,58,237,0.03),transparent_60%)]" />
 
-      {/* Extremely subtle grid lines */}
-      <div className="absolute inset-0 opacity-20 bg-[linear-gradient(to_right,rgba(16,185,129,0.01)_1px,transparent_1px),linear-gradient(to_bottom,rgba(16,185,129,0.01)_1px,transparent_1px)] bg-[size:60px_60px]" />
+      {/* Consistent grid lines */}
+      <div className="absolute inset-0 opacity-15 bg-[linear-gradient(to_right,rgba(16,185,129,0.01)_1px,transparent_1px),linear-gradient(to_bottom,rgba(16,185,129,0.01)_1px,transparent_1px)] bg-[size:60px_60px]" />
 
-      {/* Very subtle particle effect */}
+      {/* Consistent particle effect */}
       <div
-        className="absolute inset-0 opacity-20"
+        className="absolute inset-0 opacity-15"
         style={{
           backgroundImage: "radial-gradient(rgba(16, 185, 129, 0.03) 1px, transparent 1px)",
           backgroundSize: "40px 40px",
@@ -64,7 +64,7 @@ const BackgroundElements = () => {
         }}
       />
 
-      {/* Softer glowing orbs */}
+      {/* Softer glowing orbs with consistent styling */}
       {Array.from({ length: 4 }).map((_, i) => (
         <div
           key={i}
@@ -74,7 +74,7 @@ const BackgroundElements = () => {
             height: `${400 + i * 50}px`,
             left: `${(i * 20) % 100}%`,
             top: `${(i * 25) % 100}%`,
-            opacity: 0.04,
+            opacity: 0.03,
             background: `radial-gradient(circle at center, ${
               ["rgba(16,185,129,0.3)", "rgba(6,182,212,0.3)", "rgba(59,130,246,0.3)", "rgba(124,58,237,0.2)"][i % 4]
             }, transparent)`,
@@ -201,9 +201,9 @@ function FeatureCard({
         <div
           className={`absolute -inset-0.5 bg-gradient-to-r ${accentColor} rounded-2xl opacity-0 group-hover:opacity-50 transition duration-500 blur-md`}
         />
-        <div className="relative bg-gray-900/90 backdrop-blur-sm p-8 rounded-2xl border border-gray-800 group-hover:border-emerald-500/30 transition-all duration-300 h-full flex flex-col">
+        <div className="relative bg-gray-900/70 backdrop-blur-sm p-8 rounded-2xl border border-gray-800 group-hover:border-emerald-500/30 transition-all duration-300 h-full flex flex-col">
           <div
-            className={`h-16 w-16 rounded-xl bg-gradient-to-br ${accentColor.replace("500", "500/30").replace("to-cyan-500", "to-cyan-500/30")} flex items-center justify-center mb-6 transition-all duration-500 group-hover:${accentColor.replace("500", "500/40").replace("to-cyan-500", "to-cyan-500/40")}`}
+            className={`h-16 w-16 rounded-xl bg-gradient-to-br ${accentColor.replace("500", "500/30").replace("to-blue-500", "to-cyan-500/30")} flex items-center justify-center mb-6 transition-all duration-500 group-hover:${accentColor.replace("500", "500/40").replace("to-blue-500", "to-cyan-500/40")}`}
             style={{
               boxShadow: isHovered ? "0 0 20px rgba(16, 185, 129, 0.2)" : "none",
               transform: isHovered ? "scale(1.05)" : "scale(1)",
@@ -280,107 +280,113 @@ function HeroSection() {
           </div>
 
           {/* Bento Grid UI instead of hero image */}
+          {/* Two layered images with metrics and CTAs */}
           <div className="w-full lg:w-1/2">
             <Animation delay={500} direction="left">
-              <div className="grid grid-cols-2 gap-4">
-                {/* Calories Counter */}
-                <div className="col-span-2 md:col-span-1 bg-gray-900/80 backdrop-blur-sm rounded-2xl border border-emerald-500/30 p-6 shadow-lg shadow-emerald-500/10 hover:shadow-emerald-500/20 hover:border-emerald-500/50 transition-all duration-300 group">
-                  <h3 className="text-xl font-bold text-emerald-400 mb-3">Know Your Calories</h3>
-                  <div className="flex items-center justify-center h-32">
-                    <div className="relative w-32 h-32">
-                      <svg className="w-full h-full" viewBox="0 0 100 100">
-                        <circle cx="50" cy="50" r="45" fill="none" stroke="#1f2937" strokeWidth="8" />
-                        <circle
-                          cx="50"
-                          cy="50"
-                          r="45"
-                          fill="none"
-                          stroke="#10b981"
-                          strokeWidth="8"
-                          strokeDasharray="283"
-                          strokeDashoffset="70"
-                          className="transition-all duration-1000 group-hover:stroke-dashoffset-[100]"
-                        />
-                        <text
-                          x="50"
-                          y="50"
-                          textAnchor="middle"
-                          dominantBaseline="middle"
-                          fill="white"
-                          fontSize="18"
-                          fontWeight="bold"
-                          className="text-lg font-bold"
-                        >
-                          2,100
-                        </text>
-                        <text x="50" y="65" textAnchor="middle" dominantBaseline="middle" fill="#d1d5db" fontSize="10">
-                          calories/day
-                        </text>
-                      </svg>
-                    </div>
-                  </div>
-                  <p className="text-gray-300 text-sm mt-2">Personalized calorie targets based on your goals</p>
-                </div>
-
-                {/* Workout Metrics */}
-                <div className="col-span-2 md:col-span-1 bg-gray-900/80 backdrop-blur-sm rounded-2xl border border-cyan-500/30 p-6 shadow-lg shadow-cyan-500/10 hover:shadow-cyan-500/20 hover:border-cyan-500/50 transition-all duration-300 group">
-                  <h3 className="text-xl font-bold text-cyan-400 mb-3">Workout Metrics</h3>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-300">Weekly Sessions</span>
-                      <div className="flex space-x-1">
-                        {[1, 2, 3, 4, 5].map((i) => (
-                          <div
-                            key={i}
-                            className={`w-4 h-4 rounded-sm ${i <= 4 ? "bg-cyan-500" : "bg-gray-700"} group-hover:scale-110 transition-transform duration-300 delay-${i * 100}`}
-                          />
-                        ))}
+              <div className="grid grid-cols-1 gap-6">
+                {/* Workout Plan Image with Metrics Layer */}
+                <div className="relative overflow-hidden rounded-2xl border border-cyan-500/30 shadow-lg shadow-cyan-500/10 hover:shadow-cyan-500/20 hover:border-cyan-500/50 transition-all duration-300 group h-[280px] md:h-[320px] lg:h-[240px] xl:h-[280px]">
+                  <img
+                    src="/images/workout.webp"
+                    alt="Workout Plan"
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                  {/* Metrics Layer */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-gray-900/95 via-gray-900/70 to-gray-900/30">
+                    <div className="absolute bottom-0 left-0 w-full p-6">
+                      <h3 className="text-2xl font-bold text-cyan-400 mb-3">Custom Workout Plans</h3>
+                      <div className="space-y-3 mb-4">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-300">Weekly Sessions</span>
+                          <div className="flex space-x-1">
+                            {[1, 2, 3, 4, 5].map((i) => (
+                              <div
+                                key={i}
+                                className={`w-5 h-5 rounded-md ${i <= 4 ? "bg-gradient-to-br from-emerald-500 to-cyan-500" : "bg-gray-700"} group-hover:scale-110 transition-transform duration-300 delay-${i * 100} shadow-md`}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-300">Intensity</span>
+                          <div className="w-32 h-3 bg-gray-800 rounded-full overflow-hidden shadow-inner">
+                            <div className="h-full w-3/4 bg-gradient-to-r from-emerald-500 to-cyan-500 group-hover:w-full transition-all duration-700 rounded-full"></div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-300">Avg. Duration</span>
-                      <span className="text-white font-semibold">45 min</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-300">Intensity</span>
-                      <div className="w-24 h-2 bg-gray-700 rounded-full overflow-hidden">
-                        <div className="h-full w-3/4 bg-gradient-to-r from-cyan-500 to-blue-500 group-hover:w-full transition-all duration-700"></div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Food List */}
-                <div className="col-span-2 md:col-span-1 bg-gray-900/80 backdrop-blur-sm rounded-2xl border border-emerald-500/30 p-6 shadow-lg shadow-emerald-500/10 hover:shadow-emerald-500/20 hover:border-emerald-500/50 transition-all duration-300 group">
-                  <h3 className="text-xl font-bold text-emerald-400 mb-3">Recommended Foods</h3>
-                  <ul className="space-y-2 text-gray-300">
-                    {["Chicken Breast", "Salmon", "Quinoa", "Sweet Potato", "Broccoli"].map((food, index) => (
-                      <li
-                        key={index}
-                        className="flex items-center opacity-0 animate-[fadeIn_0.5s_ease-in-out_forwards]"
-                        style={{ animationDelay: `${index * 0.1 + 0.5}s` }}
+                      {/* CTA Button */}
+                      <a
+                        href="#workout-plan-explanation"
+                        className="inline-flex items-center justify-center w-full rounded-md bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 px-4 py-2.5 text-sm font-medium text-white transition-colors duration-300 shadow-lg shadow-emerald-500/20"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          document.getElementById("workout-plan-explanation")?.scrollIntoView({ behavior: "smooth" })
+                        }}
                       >
-                        <div className="w-2 h-2 rounded-full bg-emerald-500 mr-2"></div>
-                        {food}
-                      </li>
-                    ))}
-                  </ul>
+                        Learn More{" "}
+                        <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                      </a>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Workout Photo - Static Image */}
-                <div className="col-span-2 md:col-span-1 bg-gray-900/80 backdrop-blur-sm rounded-2xl border border-cyan-500/30 p-6 shadow-lg shadow-cyan-500/10 hover:shadow-cyan-500/20 hover:border-cyan-500/50 transition-all duration-300 group relative overflow-hidden">
-                  <h3 className="text-xl font-bold text-cyan-400 mb-3">Get Your Perfect Workout Plan</h3>
-                  <div className="relative h-[140px] rounded-lg overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-t from-gray-900/80 to-transparent z-10"></div>
-                    <div className="absolute bottom-2 left-2 z-20 text-sm text-white font-medium px-2 py-1 bg-cyan-500/30 backdrop-blur-sm rounded-md border border-cyan-500/50">
-                      Strength Training
-                    </div>
-                    <div className="w-full h-full">
-                      <img
-                        src="/images/workout.webp"
-                        alt="Workout"
-                        className="w-full h-full object-cover"
-                      />
+                {/* Meal Plan Image with Calorie Count Layer */}
+                <div className="relative overflow-hidden rounded-2xl border border-emerald-500/30 shadow-lg shadow-emerald-500/10 hover:shadow-emerald-500/20 hover:border-emerald-500/50 transition-all duration-300 group h-[280px] md:h-[320px] lg:h-[240px] xl:h-[280px]">
+                  <img
+                    src="/images/meal-plan.webp"
+                    alt="Meal Plan"
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                  {/* Calorie Count Layer */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-gray-900/95 via-gray-900/70 to-gray-900/30">
+                    <div className="absolute bottom-0 left-0 w-full p-6">
+                      <h3 className="text-2xl font-bold text-emerald-400 mb-3">Tailored Meal Plans</h3>
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex flex-col">
+                          <div className="flex items-center">
+                            <span className="text-white text-2xl font-bold mr-2">2,100</span>
+                            <span className="text-gray-300 text-sm">calories/day</span>
+                          </div>
+                          <div className="flex items-center mt-1">
+                            <div className="w-3 h-3 rounded-full bg-emerald-500 mr-2"></div>
+                            <span className="text-gray-300 text-xs">Personalized for your goals</span>
+                          </div>
+                        </div>
+                        <div className="relative w-20 h-20">
+                          <svg className="w-full h-full" viewBox="0 0 100 100">
+                            <defs>
+                              <linearGradient id="calorieGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stopColor="#10b981" />
+                                <stop offset="100%" stopColor="#059669" />
+                              </linearGradient>
+                            </defs>
+                            <circle cx="50" cy="50" r="45" fill="none" stroke="#1f2937" strokeWidth="8" />
+                            <circle
+                              cx="50"
+                              cy="50"
+                              r="45"
+                              fill="none"
+                              stroke="url(#calorieGradient)"
+                              strokeWidth="8"
+                              strokeDasharray="283"
+                              strokeDashoffset="70"
+                              className="transition-all duration-1000 group-hover:stroke-dashoffset-[100]"
+                            />
+                          </svg>
+                        </div>
+                      </div>
+                      {/* CTA Button */}
+                      <a
+                        href="#meal-plan-explanation"
+                        className="inline-flex items-center justify-center w-full rounded-md bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 px-4 py-2.5 text-sm font-medium text-white transition-colors duration-300 shadow-lg shadow-emerald-500/20"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          document.getElementById("meal-plan-explanation")?.scrollIntoView({ behavior: "smooth" })
+                        }}
+                      >
+                        Learn More{" "}
+                        <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                      </a>
                     </div>
                   </div>
                 </div>
@@ -453,14 +459,20 @@ function CtaSection() {
 
 // Update the WorkoutPlanSection CTA
 function WorkoutPlanSection() {
+  const dailyCalorieIntake = 1850
+  const maxCalorieIntake = 2200
+
   return (
     <section className="relative w-full py-24 overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/30 to-gray-950"></div>
+      {/* Remove the background gradient div that was here */}
 
       <div className="container px-4 mx-auto relative z-10">
         <div className="max-w-3xl mx-auto text-center mb-16">
           <Animation delay={100}>
-            <div className="inline-block px-4 py-2 rounded-full bg-gradient-to-r from-emerald-500/20 to-emerald-500/10 backdrop-blur-md border border-emerald-500/30 text-emerald-400 text-sm font-medium mb-6">
+            <div
+              id="workout-plan-explanation"
+              className="inline-block px-4 py-2 rounded-full bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 backdrop-blur-md border border-emerald-500/30 text-emerald-400 text-sm font-medium mb-6 shadow-lg shadow-emerald-500/5"
+            >
               <span className="flex items-center justify-center">
                 <Dumbbell className="w-4 h-4 mr-2" />
                 Personalized Training
@@ -469,8 +481,8 @@ function WorkoutPlanSection() {
           </Animation>
 
           <Animation delay={200}>
-            <h2 className="text-4xl md:text-5xl font-bold mb-6 drop-shadow-lg">
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-emerald-300">
+            <h2 id="workout-plan-section" className="text-4xl md:text-5xl font-bold mb-6 drop-shadow-lg">
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-cyan-400">
                 Custom Workout Plans
               </span>
             </h2>
@@ -487,14 +499,14 @@ function WorkoutPlanSection() {
         {/* Animated Workout Metrics Bento Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
           {/* Weekly Schedule */}
-          <div className="md:col-span-2 bg-gray-900/80 backdrop-blur-sm rounded-2xl border border-emerald-500/30 p-6 shadow-lg shadow-emerald-500/10 hover:shadow-emerald-500/20 hover:border-emerald-500/50 transition-all duration-300 group">
+          <div className="md:col-span-2 bg-gray-900/70 backdrop-blur-sm rounded-2xl border border-emerald-500/30 p-6 shadow-lg shadow-emerald-500/10 hover:shadow-emerald-500/20 hover:border-emerald-500/50 transition-all duration-300 group">
             <h3 className="text-xl font-bold text-emerald-400 mb-4">Weekly Schedule</h3>
             <div className="grid grid-cols-7 gap-2">
               {["M", "T", "W", "T", "F", "S", "S"].map((day, index) => (
                 <div key={index} className="text-center">
                   <div className="text-sm text-gray-400 mb-2">{day}</div>
                   <div
-                    className={`h-24 rounded-lg ${index < 5 ? "bg-gradient-to-b from-emerald-500/20 to-emerald-700/20 border border-emerald-500/30" : "bg-gray-800/50 border border-gray-700/30"} flex items-center justify-center group-hover:scale-105 transition-transform duration-300`}
+                    className={`h-24 rounded-lg ${index < 5 ? "bg-gradient-to-b from-emerald-500/20 to-cyan-500/20 border border-emerald-500/30" : "bg-gray-800/60 border border-gray-700/30"} flex items-center justify-center group-hover:scale-105 transition-transform duration-300`}
                     style={{ transitionDelay: `${index * 50}ms` }}
                   >
                     {index < 5 && (
@@ -510,7 +522,7 @@ function WorkoutPlanSection() {
           </div>
 
           {/* Exercise Stats */}
-          <div className="bg-gray-900/80 backdrop-blur-sm rounded-2xl border border-emerald-500/30 p-6 shadow-lg shadow-emerald-500/10 hover:shadow-emerald-500/20 hover:border-emerald-500/50 transition-all duration-300 group">
+          <div className="bg-gray-900/70 backdrop-blur-sm rounded-2xl border border-emerald-500/30 p-6 shadow-lg shadow-emerald-500/10 hover:shadow-emerald-500/20 hover:border-emerald-500/50 transition-all duration-300 group">
             <h3 className="text-xl font-bold text-emerald-400 mb-4">Exercise Stats</h3>
             <div className="space-y-6">
               <div>
@@ -519,7 +531,7 @@ function WorkoutPlanSection() {
                   <span className="text-emerald-400 text-sm font-medium">65%</span>
                 </div>
                 <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
-                  <div className="h-full w-[65%] bg-gradient-to-r from-emerald-500 to-emerald-400 group-hover:w-[70%] transition-all duration-700"></div>
+                  <div className="h-full w-[65%] bg-gradient-to-r from-emerald-500 to-cyan-500 group-hover:w-[70%] transition-all duration-700"></div>
                 </div>
               </div>
               <div>
@@ -528,7 +540,7 @@ function WorkoutPlanSection() {
                   <span className="text-emerald-400 text-sm font-medium">40%</span>
                 </div>
                 <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
-                  <div className="h-full w-[40%] bg-gradient-to-r from-emerald-500 to-emerald-400 group-hover:w-[45%] transition-all duration-700"></div>
+                  <div className="h-full w-[40%] bg-gradient-to-r from-emerald-500 to-cyan-500 group-hover:w-[45%] transition-all duration-700"></div>
                 </div>
               </div>
               <div>
@@ -537,14 +549,14 @@ function WorkoutPlanSection() {
                   <span className="text-emerald-400 text-sm font-medium">25%</span>
                 </div>
                 <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
-                  <div className="h-full w-[25%] bg-gradient-to-r from-emerald-500 to-emerald-400 group-hover:w-[30%] transition-all duration-700"></div>
+                  <div className="h-full w-[25%] bg-gradient-to-r from-emerald-500 to-cyan-500 group-hover:w-[30%] transition-all duration-700"></div>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Equipment Needed */}
-          <div className="bg-gray-900/80 backdrop-blur-sm rounded-2xl border border-emerald-500/30 p-6 shadow-lg shadow-emerald-500/10 hover:shadow-emerald-500/20 hover:border-emerald-500/50 transition-all duration-300 group">
+          <div className="bg-gray-900/70 backdrop-blur-sm rounded-2xl border border-emerald-500/30 p-6 shadow-lg shadow-emerald-500/10 hover:shadow-emerald-500/20 hover:border-emerald-500/50 transition-all duration-300 group">
             <h3 className="text-xl font-bold text-emerald-400 mb-4">Equipment</h3>
             <ul className="space-y-2">
               {["Dumbbells", "Resistance Bands", "Yoga Mat", "Pull-up Bar"].map((item, index) => (
@@ -564,83 +576,45 @@ function WorkoutPlanSection() {
           </div>
 
           {/* Workout Progress */}
-          <div className="md:col-span-2 bg-gray-900/80 backdrop-blur-sm rounded-2xl border border-emerald-500/30 p-6 shadow-lg shadow-emerald-500/10 hover:shadow-emerald-500/20 hover:border-emerald-500/50 transition-all duration-300 group">
-            <h3 className="text-xl font-bold text-emerald-400 mb-4">Progress Tracking</h3>
+          <div className="md:col-span-2 bg-gray-900/70 backdrop-blur-sm rounded-2xl border border-emerald-500/30 p-6 shadow-lg shadow-emerald-500/10 hover:shadow-emerald-500/20 hover:border-emerald-500/50 transition-all duration-300 group">
+            <h3 className="text-xl font-bold text-emerald-400 mb-4">Daily Calorie Tracker</h3>
             <div className="h-40 w-full relative">
-              <svg className="w-full h-full" viewBox="0 0 400 150" preserveAspectRatio="none">
-                <defs>
-                  <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#10b981" />
-                    <stop offset="100%" stopColor="#06b6d4" />
-                  </linearGradient>
-                </defs>
-                {/* Grid lines */}
-                <g className="grid-lines">
-                  {[0, 1, 2, 3, 4].map((i) => (
-                    <line
-                      key={i}
-                      x1="0"
-                      y1={30 * i}
-                      x2="400"
-                      y2={30 * i}
-                      stroke="#374151"
-                      strokeWidth="1"
-                      strokeDasharray="4 4"
-                    />
-                  ))}
-                  {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-                    <line
-                      key={i}
-                      x1={50 * i}
-                      y1="0"
-                      x2={50 * i}
-                      y2="150"
-                      stroke="#374151"
-                      strokeWidth="1"
-                      strokeDasharray="4 4"
-                    />
-                  ))}
-                </g>
-                {/* Progress line */}
-                <path
-                  d="M0,120 C50,100 100,90 150,70 C200,50 250,60 300,40 C350,20 400,30 400,30"
-                  fill="none"
-                  stroke="url(#progressGradient)"
-                  strokeWidth="3"
-                  className="group-hover:opacity-80 transition-opacity duration-300"
-                />
-                {/* Data points */}
-                {[
-                  { x: 0, y: 120 },
-                  { x: 50, y: 100 },
-                  { x: 100, y: 90 },
-                  { x: 150, y: 70 },
-                  { x: 200, y: 50 },
-                  { x: 250, y: 60 },
-                  { x: 300, y: 40 },
-                  { x: 350, y: 20 },
-                  { x: 400, y: 30 },
-                ].map((point, i) => (
-                  <circle
-                    key={i}
-                    cx={point.x}
-                    cy={point.y}
-                    r="4"
-                    fill="#10b981"
-                    className="group-hover:r-[6] transition-all duration-300"
-                    style={{ transitionDelay: `${i * 50}ms` }}
-                  />
-                ))}
-              </svg>
-              <div className="absolute bottom-0 left-0 w-full flex justify-between text-xs text-gray-500">
-                <span>Week 1</span>
-                <span>Week 2</span>
-                <span>Week 3</span>
-                <span>Week 4</span>
-                <span>Week 5</span>
-                <span>Week 6</span>
-                <span>Week 7</span>
-                <span>Week 8</span>
+              <div className="flex flex-col justify-center h-full">
+                <div className="mb-2 flex justify-between items-center">
+                  <span className="text-gray-300">Today's Calories</span>
+                  <span
+                    className={`font-medium ${dailyCalorieIntake > maxCalorieIntake ? "text-red-400" : "text-emerald-400"}`}
+                  >
+                    {dailyCalorieIntake} / {maxCalorieIntake} cal
+                  </span>
+                </div>
+
+                <div className="h-8 bg-gray-800 rounded-lg overflow-hidden relative">
+                  {/* Background bar - max calories */}
+                  <div className="absolute inset-0 border border-gray-700 rounded-lg"></div>
+
+                  {/* Calorie intake bar */}
+                  <div
+                    className={`h-full ${dailyCalorieIntake > maxCalorieIntake ? "bg-gradient-to-r from-yellow-500 to-red-500" : "bg-gradient-to-r from-emerald-500 to-cyan-500"} rounded-lg transition-all duration-1000`}
+                    style={{ width: `${Math.min(100, (dailyCalorieIntake / maxCalorieIntake) * 100)}%` }}
+                  ></div>
+
+                  {/* Max line indicator */}
+                  <div className="absolute top-0 bottom-0 w-0.5 bg-white/50 right-0 transform -translate-x-0"></div>
+                </div>
+
+                <div className="mt-6 grid grid-cols-2 gap-4">
+                  <div className="bg-gray-800/60 rounded-lg p-3 border border-gray-700/50">
+                    <div className="text-sm text-gray-400">Remaining</div>
+                    <div className="text-lg font-bold text-white">
+                      {Math.max(0, maxCalorieIntake - dailyCalorieIntake)} cal
+                    </div>
+                  </div>
+                  <div className="bg-gray-800/60 rounded-lg p-3 border border-gray-700/50">
+                    <div className="text-sm text-gray-400">Burned</div>
+                    <div className="text-lg font-bold text-emerald-400">320 cal</div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -648,7 +622,7 @@ function WorkoutPlanSection() {
 
         {/* AI Workout Plan Explanation and CTA */}
         <div className="max-w-5xl mx-auto mt-16">
-          <div className="bg-gradient-to-r from-gray-900/90 to-gray-800/90 backdrop-blur-md rounded-2xl border border-emerald-500/20 overflow-hidden shadow-xl">
+          <div className="bg-gradient-to-r from-gray-900/80 to-gray-800/80 backdrop-blur-md rounded-2xl border border-emerald-500/20 overflow-hidden shadow-xl">
             <div className="flex flex-col md:flex-row items-center">
               {/* Left side with content */}
               <div className="w-full md:w-2/3 p-8 md:p-10">
@@ -698,12 +672,15 @@ function WorkoutPlanSection() {
 function MealPlanSection() {
   return (
     <section className="relative w-full py-24 overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-cyan-900/20 to-gray-950"></div>
+      {/* Remove the background gradient div that was here */}
 
       <div className="container px-4 mx-auto relative z-10">
         <div className="max-w-3xl mx-auto text-center mb-16">
           <Animation delay={100}>
-            <div className="inline-block px-4 py-2 rounded-full bg-gradient-to-r from-cyan-500/20 to-cyan-500/10 backdrop-blur-md border border-cyan-500/30 text-cyan-400 text-sm font-medium mb-6">
+            <div
+              id="meal-plan-explanation"
+              className="inline-block px-4 py-2 rounded-full bg-gradient-to-r from-emerald-500/20 to-cyan-500/10 backdrop-blur-md border border-cyan-500/30 text-cyan-400 text-sm font-medium mb-6 shadow-lg shadow-emerald-500/5"
+            >
               <span className="flex items-center justify-center">
                 <Utensils className="w-4 h-4 mr-2" />
                 Nutrition Planning
@@ -712,8 +689,8 @@ function MealPlanSection() {
           </Animation>
 
           <Animation delay={200}>
-            <h2 className="text-4xl md:text-5xl font-bold mb-6 drop-shadow-lg">
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-cyan-300">
+            <h2 id="meal-plan-section" className="text-4xl md:text-5xl font-bold mb-6 drop-shadow-lg">
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-cyan-400">
                 Tailored Meal Plans
               </span>
             </h2>
@@ -730,7 +707,7 @@ function MealPlanSection() {
         {/* Animated Nutrition Metrics Bento Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
           {/* Improved Macronutrient Distribution */}
-          <div className="bg-gray-900/80 backdrop-blur-sm rounded-2xl border border-cyan-500/30 p-6 shadow-lg shadow-cyan-500/10 hover:shadow-cyan-500/20 hover:border-cyan-500/50 transition-all duration-300 group">
+          <div className="bg-gray-900/70 backdrop-blur-sm rounded-2xl border border-cyan-500/30 p-6 shadow-lg shadow-cyan-500/10 hover:shadow-cyan-500/20 hover:border-cyan-500/50 transition-all duration-300 group">
             <h3 className="text-xl font-bold text-cyan-400 mb-4">Macros</h3>
             <div className="relative h-52 w-full mx-auto flex items-center justify-center">
               {/* Simplified and cleaner pie chart */}
@@ -816,7 +793,7 @@ function MealPlanSection() {
           </div>
 
           {/* Meal Schedule */}
-          <div className="md:col-span-2 bg-gray-900/80 backdrop-blur-sm rounded-2xl border border-cyan-500/30 p-6 shadow-lg shadow-cyan-500/10 hover:shadow-cyan-500/20 hover:border-cyan-500/50 transition-all duration-300 group">
+          <div className="md:col-span-2 bg-gray-900/70 backdrop-blur-sm rounded-2xl border border-cyan-500/30 p-6 shadow-lg shadow-cyan-500/10 hover:shadow-cyan-500/20 hover:border-cyan-500/50 transition-all duration-300 group">
             <h3 className="text-xl font-bold text-cyan-400 mb-4">Daily Meal Schedule</h3>
             <div className="space-y-4">
               {[
@@ -828,7 +805,7 @@ function MealPlanSection() {
               ].map((item, index) => (
                 <div
                   key={index}
-                  className="flex items-center p-3 rounded-lg bg-gray-800/50 border border-gray-700/50 group-hover:border-cyan-500/20 transition-all duration-300 opacity-0 animate-[fadeIn_0.5s_ease-in-out_forwards]"
+                  className="flex items-center p-3 rounded-lg bg-gray-800/60 border border-gray-700/50 group-hover:border-cyan-500/20 transition-all duration-300 opacity-0 animate-[fadeIn_0.5s_ease-in-out_forwards]"
                   style={{ animationDelay: `${index * 0.1 + 0.5}s` }}
                 >
                   <div className="w-16 text-gray-400 text-sm">{item.time}</div>
@@ -843,7 +820,7 @@ function MealPlanSection() {
           </div>
 
           {/* Food Categories */}
-          <div className="bg-gray-900/80 backdrop-blur-sm rounded-2xl border border-cyan-500/30 p-6 shadow-lg shadow-cyan-500/10 hover:shadow-cyan-500/20 hover:border-cyan-500/50 transition-all duration-300 group">
+          <div className="bg-gray-900/70 backdrop-blur-sm rounded-2xl border border-cyan-500/30 p-6 shadow-lg shadow-cyan-500/10 hover:shadow-cyan-500/20 hover:border-cyan-500/50 transition-all duration-300 group">
             <h3 className="text-xl font-bold text-cyan-400 mb-4">Food Categories</h3>
             <div className="space-y-3">
               {[
@@ -875,7 +852,7 @@ function MealPlanSection() {
           </div>
 
           {/* Water & Supplements */}
-          <div className="md:col-span-2 bg-gray-900/80 backdrop-blur-sm rounded-2xl border border-cyan-500/30 p-6 shadow-lg shadow-cyan-500/10 hover:shadow-cyan-500/20 hover:border-cyan-500/50 transition-all duration-300 group">
+          <div className="md:col-span-2 bg-gray-900/70 backdrop-blur-sm rounded-2xl border border-cyan-500/30 p-6 shadow-lg shadow-cyan-500/10 hover:shadow-cyan-500/20 hover:border-cyan-500/50 transition-all duration-300 group">
             <h3 className="text-xl font-bold text-cyan-400 mb-4">Water & Supplements</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Water Intake */}
@@ -885,7 +862,7 @@ function MealPlanSection() {
                   {[65, 80, 90, 75, 85, 95, 70].map((level, i) => (
                     <div key={i} className="flex-1 bg-gray-800 rounded-t-md relative group">
                       <div
-                        className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-cyan-500 to-blue-500 rounded-t-md transition-all duration-700 group-hover:h-[calc(var(--h)+5%)]"
+                        className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-emerald-500 to-cyan-500 rounded-t-md transition-all duration-700 group-hover:h-[calc(var(--h)+5%)]"
                         style={{ height: `${level}%`, "--h": `${level}%` }}
                       ></div>
                     </div>
@@ -914,7 +891,7 @@ function MealPlanSection() {
                   ].map((supp, index) => (
                     <li
                       key={index}
-                      className="flex justify-between items-center p-2 rounded-lg bg-gray-800/50 border border-gray-700/50 group-hover:border-cyan-500/20 transition-all duration-300 opacity-0 animate-[fadeIn_0.5s_ease-in-out_forwards]"
+                      className="flex justify-between items-center p-2 rounded-lg bg-gray-800/60 border border-gray-700/50 group-hover:border-cyan-500/20 transition-all duration-300 opacity-0 animate-[fadeIn_0.5s_ease-in-out_forwards]"
                       style={{ animationDelay: `${index * 0.1 + 0.5}s` }}
                     >
                       <span className="text-gray-300">{supp.name}</span>
@@ -931,11 +908,11 @@ function MealPlanSection() {
 
         {/* AI Meal Plan Explanation and CTA */}
         <div className="max-w-5xl mx-auto mt-16">
-          <div className="bg-gradient-to-r from-gray-900/90 to-gray-800/90 backdrop-blur-md rounded-2xl border border-cyan-500/20 overflow-hidden shadow-xl">
+          <div className="bg-gradient-to-r from-gray-900/80 to-gray-800/80 backdrop-blur-md rounded-2xl border border-cyan-500/20 overflow-hidden shadow-xl">
             <div className="flex flex-col md:flex-row items-center">
               {/* Left side with content */}
               <div className="w-full md:w-2/3 p-8 md:p-10">
-                <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-400">
+                <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-cyan-400">
                   AI-Generated Meal Plans
                 </h2>
                 <p className="text-gray-300 mb-6 text-lg">
@@ -948,7 +925,7 @@ function MealPlanSection() {
                     primary
                     href="/meal-plan"
                     size="lg"
-                    className="transform hover:scale-105 transition-transform duration-300 from-cyan-500 to-blue-500"
+                    className="transform hover:scale-105 transition-transform duration-300 from-emerald-500 to-cyan-500"
                   >
                     Generate Meal Plan{" "}
                     <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
@@ -959,8 +936,8 @@ function MealPlanSection() {
               {/* Right side with decorative element */}
               <div className="w-full md:w-1/3 p-6 md:p-0 flex justify-center">
                 <div className="relative w-40 h-40">
-                  <div className="absolute inset-0 rounded-full bg-gradient-to-r from-cyan-500/20 to-blue-500/20 animate-pulse"></div>
-                  <div className="absolute inset-4 rounded-full bg-gradient-to-br from-cyan-500/30 to-blue-500/30 backdrop-blur-sm border border-cyan-500/40 flex items-center justify-center">
+                  <div className="absolute inset-0 rounded-full bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 animate-pulse"></div>
+                  <div className="absolute inset-4 rounded-full bg-gradient-to-br from-emerald-500/30 to-cyan-500/30 backdrop-blur-sm border border-cyan-500/40 flex items-center justify-center">
                     <Utensils className="h-16 w-16 text-white opacity-80" />
                   </div>
                   <div
@@ -1011,33 +988,33 @@ function PlatformBenefitsSection() {
             description="Custom exercise plans that adapt to your fitness level, equipment, and time constraints."
             icon={Dumbbell}
             delay={400}
-            accentColor="from-emerald-500 to-emerald-400"
+            accentColor="from-emerald-500 to-cyan-500"
           />
           <FeatureCard
             title="Tailored Nutrition"
             description="Meal plans that match your dietary preferences while supporting your health and fitness goals."
             icon={Utensils}
             delay={500}
-            accentColor="from-cyan-500 to-cyan-400"
+            accentColor="from-emerald-500 to-cyan-500"
           />
           <FeatureCard
             title="Consistent Progress"
             description="Structured approach that ensures steady improvement and helps maintain motivation."
             icon={Zap}
             delay={600}
-            accentColor="from-blue-500 to-blue-400"
+            accentColor="from-emerald-500 to-cyan-500"
           />
           <FeatureCard
             title="Achievable Goals"
             description="Realistic targets that build confidence and create sustainable long-term habits."
             icon={Trophy}
             delay={700}
-            accentColor="from-purple-500 to-purple-400"
+            accentColor="from-emerald-500 to-cyan-500"
           />
         </div>
 
         <Animation delay={800}>
-          <div className="mt-16 p-6 rounded-xl bg-gradient-to-br from-emerald-900/30 to-cyan-900/20 backdrop-blur-sm border border-emerald-500/20 shadow-lg shadow-emerald-900/10 hover:shadow-emerald-500/20 transition-all duration-300 transform hover:scale-[1.02] max-w-4xl mx-auto">
+          <div className="mt-16 p-6 rounded-xl bg-gradient-to-br from-gray-900/80 to-gray-800/80 backdrop-blur-sm border border-emerald-500/20 shadow-lg shadow-emerald-900/10 hover:shadow-emerald-500/20 transition-all duration-300 transform hover:scale-[1.02] max-w-4xl mx-auto">
             <div className="flex flex-col md:flex-row items-center">
               <div className="flex-shrink-0 mb-6 md:mb-0 md:mr-8">
                 <div className="relative w-20 h-20 flex items-center justify-center">
@@ -1140,7 +1117,7 @@ function Footer() {
   )
 }
 
-// Update the main component to include the new CTA section
+// Update the main component to ensure the background is properly applied
 export default function Home() {
   const [isMounted, setIsMounted] = useState(false)
 
