@@ -224,8 +224,6 @@ function FeatureCard({
   )
 }
 
-// Replace the workout photo upload placeholder with a static image
-// Update in the HeroSection component
 function HeroSection() {
   return (
     <section className="relative w-full pt-16 pb-24 overflow-hidden">
@@ -392,64 +390,6 @@ function HeroSection() {
                 </div>
               </div>
             </Animation>
-          </div>
-        </div>
-      </div>
-    </section>
-  )
-}
-
-// Add a new dedicated CTA section between the HeroSection and WorkoutPlanSection
-function CtaSection() {
-  return (
-    <section className="relative w-full py-16 overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-r from-emerald-900/10 via-cyan-900/10 to-emerald-900/10"></div>
-
-      <div className="container mx-auto px-4">
-        <div className="max-w-5xl mx-auto bg-gradient-to-r from-gray-900/90 to-gray-800/90 backdrop-blur-md rounded-2xl border border-emerald-500/20 overflow-hidden shadow-xl">
-          <div className="flex flex-col md:flex-row items-center">
-            {/* Left side with content */}
-            <div className="w-full md:w-2/3 p-8 md:p-10">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-cyan-400">
-                Ready to Transform Your Fitness Journey?
-              </h2>
-              <p className="text-gray-300 mb-6 text-lg">
-                Get personalized workout and meal plans designed specifically for your goals, preferences, and
-                lifestyle.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <EnhancedButton
-                  primary
-                  href="/workout-plan"
-                  size="lg"
-                  className="transform hover:scale-105 transition-transform duration-300"
-                >
-                  Start Workout Plan{" "}
-                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                </EnhancedButton>
-                <EnhancedButton
-                  href="/meal-plan"
-                  size="lg"
-                  className="transform hover:scale-105 transition-transform duration-300"
-                >
-                  Start Meal Plan <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                </EnhancedButton>
-              </div>
-            </div>
-
-            {/* Right side with decorative element */}
-            <div className="w-full md:w-1/3 p-6 md:p-0 flex justify-center">
-              <div className="relative w-40 h-40">
-                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 animate-pulse"></div>
-                <div className="absolute inset-4 rounded-full bg-gradient-to-br from-emerald-500/30 to-cyan-500/30 backdrop-blur-sm border border-emerald-500/40 flex items-center justify-center">
-                  <Dumbbell className="h-16 w-16 text-white opacity-80" />
-                </div>
-                <div
-                  className="absolute -inset-8 rounded-full border-2 border-dashed border-emerald-500/10"
-                  style={{ animation: "spin-slow 20s linear infinite" }}
-                ></div>
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -1147,6 +1087,7 @@ export default function Home() {
       <main className="flex-grow w-full">
         {/* Main Hero Section */}
         <HeroSection />
+    
 
         {/* Workout Plan Hero Section */}
         {isMounted && <WorkoutPlanSection />}
