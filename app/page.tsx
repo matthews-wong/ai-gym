@@ -1,6 +1,6 @@
 "use client"
 
-import type React from "react"
+import React from "react"
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
@@ -22,12 +22,20 @@ import { Button } from "@/components/ui/button"
 // Lightweight animation hook
 const useInView = (threshold = 0.1) => {
   const [isInView, setIsInView] = useState(false)
-  const [element, setElement] = useState<HTMLElement | null>(null)
+  const [element, setElement] = useState(null)
 
   useEffect(() => {
     if (!element) return
 
-    const observer = new IntersectionObserver(([entry]) => setIsInView(entry.isIntersecting), { threshold })
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        // Only update state if we're in the browser
+        if (typeof window !== "undefined") {
+          setIsInView(entry.isIntersecting)
+        }
+      },
+      { threshold },
+    )
 
     observer.observe(element)
     return () => observer.disconnect()
@@ -47,14 +55,21 @@ const FadeIn = ({
   className?: string
 }) => {
   const [ref, isInView] = useInView()
+  const [hasAnimated, setHasAnimated] = useState(false)
+
+  useEffect(() => {
+    if (isInView && !hasAnimated) {
+      setHasAnimated(true)
+    }
+  }, [isInView, hasAnimated])
 
   return (
     <div
       ref={ref}
       className={`transition-all duration-700 ease-out ${
-        isInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+        hasAnimated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
       } ${className}`}
-      style={{ transitionDelay: `${delay}ms` }}
+      style={{ transitionDelay: hasAnimated ? `${delay}ms` : "0ms" }}
     >
       {children}
     </div>
@@ -78,13 +93,13 @@ const EnhancedButton = ({
   onClick?: (e: React.MouseEvent) => void
 }) => {
   const sizeClasses = {
-    default: "px-6 py-3 text-sm",
-    lg: "px-8 py-4 text-base",
-    xl: "px-10 py-5 text-lg",
+    default: "px-4 py-2 text-sm sm:px-6 sm:py-3",
+    lg: "px-6 py-3 text-sm sm:px-8 sm:py-4 sm:text-base",
+    xl: "px-8 py-4 text-base sm:px-10 sm:py-5 sm:text-lg",
   }
 
   return (
-    <Link href={href} className={`group relative inline-block ${className}`} onClick={onClick}>
+    <Link href={href} className={`group relative inline-block justify-center ${className}`} onClick={onClick}>
       <Button
         className={`relative font-semibold ${sizeClasses[size]} ${
           primary
@@ -100,6 +115,41 @@ const EnhancedButton = ({
 
 // Enhanced background with emerald gradients
 const EnhancedBackground = () => {
+  const [mounted, setMounted] = useState(false)
+  const [particleCount, setParticleCount] = useState(30)
+
+  useEffect(() => {
+    setMounted(true)
+    setParticleCount(window.innerWidth < 768 ? 15 : 30)
+
+    // Add animation styles
+    const style = document.createElement("style")
+    style.textContent = `
+      @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
+      }
+      @keyframes pulse-glow {
+        0%, 100% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.3); }
+        50% { box-shadow: 0 0 40px rgba(16, 185, 129, 0.6); }
+      }
+      @keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+      }
+    `
+    document.head.appendChild(style)
+    return () => {
+      if (style.parentNode) {
+        document.head.removeChild(style)
+      }
+    }
+  }, [])
+
+  if (!mounted) {
+    return null // Return null on server-side to avoid hydration mismatch
+  }
+
   return (
     <div className="fixed inset-0 -z-10 overflow-hidden">
       {/* Base emerald gradient */}
@@ -121,7 +171,7 @@ const EnhancedBackground = () => {
 
       {/* Light floating particles */}
       <div className="absolute inset-0">
-        {Array.from({ length: 30 }).map((_, i) => (
+        {Array.from({ length: particleCount }).map((_, i) => (
           <div
             key={i}
             className="absolute w-1 h-1 bg-emerald-400/15 rounded-full"
@@ -138,103 +188,179 @@ const EnhancedBackground = () => {
   )
 }
 
-// Hero Section with polished text and fixed shadow
+// Lottie Player Component
+const LottiePlayer = ({ src, className = "" }: { src: string; className?: string }) => {
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) {
+    return (
+      <div className={`flex items-center justify-center ${className}`}>
+        <div className="animate-pulse">
+          <Zap className="w-16 h-16 text-emerald-400" />
+        </div>
+      </div>
+    )
+  }
+
+  const DotLottieReact = React.lazy(() =>
+    import("@lottiefiles/dotlottie-react").then((module) => ({
+      default: module.DotLottieReact,
+    })),
+  )
+
+  return (
+    <div className={className} style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <React.Suspense
+        fallback={
+          <div className="flex items-center justify-center h-full w-full">
+            <div className="animate-pulse">
+              <Zap className="w-16 h-16 text-emerald-400" />
+            </div>
+          </div>
+        }
+      >
+        <DotLottieReact src={src} loop autoplay style={{ width: "100%", height: "100%" }} />
+      </React.Suspense>
+    </div>
+  )
+}
+
+// Hero Section with enhanced effects and Lottie
 function HeroSection() {
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Full background image */}
       <div className="absolute inset-0 z-0">
-        <img
-          src="/images/workout.webp"
-          alt="Gym Background"
-          className="w-full h-full object-cover"
-        />
+        <img src="/images/hero.jpg" alt="Gym Background" className="w-full h-full object-cover" />
         {/* Enhanced overlay with emerald tints */}
         <div className="absolute inset-0 bg-gradient-to-b from-emerald-900/85 via-gray-900/75 to-emerald-900/90" />
         <div className="absolute inset-0 bg-gradient-to-r from-emerald-900/25 via-transparent to-cyan-900/25" />
       </div>
 
       {/* Main content */}
-      <div className="relative z-20 container mx-auto px-4 text-center">
-        <FadeIn delay={100}>
-          <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-emerald-500/25 to-cyan-500/25 backdrop-blur-md border border-emerald-500/40 text-emerald-300 text-sm font-medium mb-8 shadow-2xl">
-            <Zap className="w-4 h-4 animate-pulse" />
-            Powered by Advanced AI Technology
-          </div>
-        </FadeIn>
+      <div className="relative z-20 container mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          {/* Left side - Text content */}
+          <div className="text-center lg:text-left">
+            <FadeIn delay={100}>
+              <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-emerald-500/25 to-cyan-500/25 backdrop-blur-md border border-emerald-500/40 text-emerald-300 text-sm font-medium mb-8 shadow-2xl">
+                <Zap className="w-4 h-4" />
+                Powered by Advanced AI Technology
+              </div>
+            </FadeIn>
 
-        <FadeIn delay={200}>
-          {/* Fixed: Shadow behind text, BRO with gradient white */}
-          <h1 className="text-6xl md:text-8xl lg:text-9xl font-bold mb-8 leading-tight">
-            <span
-              className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-cyan-400 to-emerald-500 filter brightness-110"
-              style={{
-                filter: "drop-shadow(0 8px 16px rgba(0, 0, 0, 0.6)) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4))",
-              }}
-            >
-              AI Gym
-            </span>
-            <span
-              className="bg-clip-text text-transparent bg-gradient-to-b from-white via-gray-100 to-gray-300 ml-4"
-              style={{
-                filter: "drop-shadow(0 8px 16px rgba(0, 0, 0, 0.6)) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4))",
-              }}
-            >
-              BRO
-            </span>
-          </h1>
-        </FadeIn>
+            <FadeIn delay={200}>
+              {/* Enhanced title with compelling copywriting */}
+              <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-6xl xl:text-7xl 2xl:text-8xl font-bold mb-8 leading-tight">
+                <span
+                  className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-cyan-400 to-emerald-500 filter brightness-110 relative font-black"
+                  style={{
+                    filter:
+                      "drop-shadow(0 12px 24px rgba(0, 0, 0, 0.8)) drop-shadow(0 6px 12px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 40px rgba(16, 185, 129, 0.5))",
+                    fontFamily: "'Inter', 'Helvetica Neue', sans-serif",
+                    fontWeight: 900,
+                    letterSpacing: "-0.02em",
+                  }}
+                >
+                  Transform
+                </span>
+                <br />
+                <span
+                  className="bg-clip-text text-transparent bg-gradient-to-b from-white via-gray-100 to-gray-300 relative font-black"
+                  style={{
+                    filter:
+                      "drop-shadow(0 12px 24px rgba(0, 0, 0, 0.8)) drop-shadow(0 6px 12px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 40px rgba(16, 185, 129, 0.5))",
+                    fontFamily: "'Inter', 'Helvetica Neue', sans-serif",
+                    fontWeight: 900,
+                    letterSpacing: "-0.02em",
+                  }}
+                >
+                  Your Body
+                </span>
+              </h1>
+            </FadeIn>
 
-        <FadeIn delay={300}>
-          {/* More polished copywriting */}
-          <div className="text-xl md:text-2xl lg:text-3xl mb-12 text-gray-100 max-w-5xl mx-auto leading-relaxed">
-            <p className="mb-6 font-light">
-              Meet your{" "}
-              <span className="text-emerald-400 font-semibold bg-emerald-400/15 px-3 py-1 rounded-lg border border-emerald-400/30">
-                AI-powered fitness coach
-              </span>{" "}
-              and{" "}
-              <span className="text-cyan-400 font-semibold bg-cyan-400/15 px-3 py-1 rounded-lg border border-cyan-400/30">
-                nutrition expert
-              </span>
-            </p>
-            <p className="text-lg md:text-xl lg:text-2xl font-medium">
-              Transform your body with{" "}
-              <span className="text-white font-bold bg-white/10 px-2 py-1 rounded-md">science-backed workouts</span> and{" "}
-              <span className="text-white font-bold bg-white/10 px-2 py-1 rounded-md">personalized meal plans</span>{" "}
-              designed specifically for{" "}
-              <span className="text-emerald-400 font-semibold underline decoration-emerald-400/60 decoration-2 underline-offset-4">
-                your unique goals
-              </span>
-            </p>
-          </div>
-        </FadeIn>
+            <FadeIn delay={300}>
+              {/* Enhanced copywriting */}
+              <div className="text-base sm:text-lg md:text-xl lg:text-xl mb-8 lg:mb-10 text-gray-100 leading-relaxed">
+                <p className="mb-6 font-light">
+                  Meet your{" "}
+                  <span className="text-emerald-400 font-semibold bg-emerald-400/15 px-2 py-1 rounded-lg border border-emerald-400/30 hover:bg-emerald-400/25 transition-colors">
+                    AI-powered fitness coach
+                  </span>{" "}
+                  and{" "}
+                  <span className="text-cyan-400 font-semibold bg-cyan-400/15 px-2 py-1 rounded-lg border border-cyan-400/30 hover:bg-cyan-400/25 transition-colors">
+                    nutrition expert
+                  </span>
+                </p>
+              </div>
+            </FadeIn>
 
-        <FadeIn delay={400}>
-          <div className="flex flex-col sm:flex-row gap-6 justify-center items-center max-w-lg mx-auto">
-            <EnhancedButton primary href="#products" size="xl" className="w-full sm:w-auto">
-              Start Your Transformation
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </EnhancedButton>
-          </div>
-        </FadeIn>
-
-        <FadeIn delay={500}>
-          <div className="mt-16 text-sm text-gray-400 flex items-center justify-center gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Unlock Progress</span>
+            {/* Mobile Lottie - Only show on mobile */}
+            <div className="lg:hidden mb-12">
+              <FadeIn delay={350}>
+                <LottiePlayer src="/lottie/hero.json" className="w-full h-[400px] mx-auto" />
+              </FadeIn>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-              <span>Eat Smarter</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Real Results</span>
-            </div>
+
+            <FadeIn delay={400}>
+              <div className="flex flex-col gap-4 justify-center lg:justify-start items-center lg:items-start max-w-lg mx-auto lg:mx-0">
+                <EnhancedButton
+                  primary
+                  href="#products"
+                  size="xl"
+                  className="w-full sm:w-auto group"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    const element = document.getElementById("products")
+                    if (element) {
+                      element.scrollIntoView({
+                        behavior: "smooth",
+                        block: "start",
+                      })
+                    }
+                  }}
+                >
+                  <span className="relative">
+                    Start Your Transformation
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  </span>
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </EnhancedButton>
+              </div>
+            </FadeIn>
+
+            <FadeIn delay={500}>
+              <div className="mt-16 text-sm text-gray-400 flex items-center justify-center lg:justify-start gap-4 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-emerald-400" />
+                  <span>Unlock Progress</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-cyan-400" />
+                  <span>Eat Smarter</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-emerald-400" />
+                  <span>Real Results</span>
+                </div>
+              </div>
+            </FadeIn>
           </div>
-        </FadeIn>
+
+          {/* Right side - Lottie animation (Desktop only) */}
+          <div className="hidden lg:block">
+            <FadeIn delay={600}>
+              <div className="relative">
+                <LottiePlayer src="/lottie/hero.json" className="w-full h-[500px]" />
+              </div>
+            </FadeIn>
+          </div>
+        </div>
       </div>
     </section>
   )
@@ -243,10 +369,10 @@ function HeroSection() {
 // Product cards section
 function ProductsSection() {
   return (
-    <section id="products" className="relative py-24">
-      <div className="container mx-auto px-4">
+    <section id="products" className="relative py-8 sm:py-12 md:py-16 lg:py-20" style={{ scrollMarginTop: "80px" }}>
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <FadeIn delay={100}>
-          <div className="text-center mb-16">
+          <div className="text-center mb-8 lg:mb-12">
             <h2 className="text-4xl md:text-5xl font-bold mb-6">
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-cyan-400">
                 We Have These 2 Products
@@ -260,7 +386,7 @@ function ProductsSection() {
           </div>
         </FadeIn>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl mx-auto">
           {/* Workout Plan Card */}
           <FadeIn delay={200}>
             <div className="group relative">
@@ -280,11 +406,11 @@ function ProductsSection() {
                   </div>
                 </div>
 
-                <div className="p-8">
-                  <h3 className="text-3xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-cyan-400">
+                <div className="p-4 sm:p-6 lg:p-8">
+                  <h3 className="text-2xl sm:text-3xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-cyan-400">
                     Custom Workout Plans
                   </h3>
-                  <p className="text-gray-300 mb-6 text-lg leading-relaxed">
+                  <p className="text-gray-300 mb-6 text-base sm:text-lg leading-relaxed">
                     AI-generated workout routines tailored to your fitness level, available equipment, and specific
                     goals with progressive overload tracking.
                   </p>
@@ -341,11 +467,11 @@ function ProductsSection() {
                   </div>
                 </div>
 
-                <div className="p-8">
-                  <h3 className="text-3xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-emerald-400">
+                <div className="p-4 sm:p-6 lg:p-8">
+                  <h3 className="text-2xl sm:text-3xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-emerald-400">
                     Tailored Meal Plans
                   </h3>
-                  <p className="text-gray-300 mb-6 text-lg leading-relaxed">
+                  <p className="text-gray-300 mb-6 text-base sm:text-lg leading-relaxed">
                     Personalized nutrition plans that match your dietary preferences while supporting your health goals
                     with complete macro tracking.
                   </p>
@@ -391,8 +517,12 @@ function ProductsSection() {
 // Workout Plan Preview Section with enhanced explanations
 function WorkoutPlanSection() {
   return (
-    <section id="workout-plan-preview" className="relative py-24 overflow-hidden">
-      <div className="container px-4 mx-auto relative z-10">
+    <section
+      id="workout-plan-preview"
+      className="relative py-8 sm:py-12 md:py-16 lg:py-20 overflow-hidden"
+      style={{ scrollMarginTop: "80px" }}
+    >
+      <div className="container px-4 sm:px-6 lg:px-8 mx-auto relative z-10">
         <div className="max-w-4xl mx-auto text-center mb-16">
           <FadeIn delay={100}>
             <div className="inline-block px-6 py-3 rounded-full bg-gradient-to-r from-emerald-500/25 to-cyan-500/25 backdrop-blur-md border border-emerald-500/40 text-emerald-300 text-sm font-medium mb-6 shadow-lg shadow-emerald-500/10">
@@ -404,7 +534,7 @@ function WorkoutPlanSection() {
           </FadeIn>
 
           <FadeIn delay={200}>
-            <h2 className="text-4xl md:text-5xl font-bold mb-6 drop-shadow-lg">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-6 drop-shadow-lg">
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-cyan-400">
                 Your Complete Workout Report
               </span>
@@ -412,7 +542,7 @@ function WorkoutPlanSection() {
           </FadeIn>
 
           <FadeIn delay={300}>
-            <div className="text-xl text-gray-200 mb-8 space-y-4">
+            <div className="text-lg sm:text-xl text-gray-200 mb-8 space-y-4">
               <p className="drop-shadow-md">
                 Get a comprehensive workout analysis that goes beyond basic exercise lists. Our AI generates detailed
                 reports with <span className="text-emerald-400 font-semibold">progressive overload tracking</span>,{" "}
@@ -433,8 +563,8 @@ function WorkoutPlanSection() {
             <div className="bg-gradient-to-br from-gray-900/80 to-gray-800/80 backdrop-blur-sm rounded-3xl border border-emerald-500/30 p-8 shadow-2xl shadow-emerald-500/10 hover:shadow-emerald-500/20 hover:border-emerald-500/50 transition-all duration-500">
               <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 h-full">
                 {/* Enhanced Report Preview - Better 9:16 integration */}
-                <div className="lg:col-span-2">
-                  <div className="bg-gradient-to-br from-gray-800/60 to-gray-700/60 rounded-2xl border border-emerald-500/25 p-6 h-full backdrop-blur-sm">
+                <div className="md:col-span-2">
+                  <div className="h-full">
                     <div className="flex items-center justify-between mb-6">
                       <h3 className="text-2xl font-bold text-emerald-400 flex items-center gap-3">
                         <div className="p-2 rounded-lg bg-emerald-500/20 border border-emerald-500/30">
@@ -443,7 +573,7 @@ function WorkoutPlanSection() {
                         Workout Report
                       </h3>
                       <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/30">
-                        <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                        <div className="w-2 h-2 rounded-full bg-emerald-400" />
                         <span className="text-emerald-300 text-sm font-medium">Live Preview</span>
                       </div>
                     </div>
@@ -451,7 +581,7 @@ function WorkoutPlanSection() {
                       <img
                         src="/placeholder.svg?height=640&width=360"
                         alt="Workout Report Preview"
-                        className="w-full rounded-xl border-2 border-emerald-500/30 group-hover:border-emerald-400/50 group-hover:scale-[1.02] transition-all duration-500 shadow-lg shadow-emerald-500/20"
+                        className="w-full rounded-lg group-hover:scale-[1.02] transition-all duration-500"
                         style={{ aspectRatio: "9/16" }}
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-emerald-900/30 via-transparent to-transparent rounded-xl" />
@@ -480,20 +610,20 @@ function WorkoutPlanSection() {
                 </div>
 
                 {/* Charts Section - Better organized */}
-                <div className="lg:col-span-3">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
+                <div className="md:col-span-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 h-full">
                     {/* Weekly Schedule */}
-                    <div className="bg-gradient-to-br from-gray-800/60 to-gray-700/60 rounded-2xl border border-emerald-500/25 p-6 backdrop-blur-sm">
+                    <div className="bg-gradient-to-br from-gray-800/60 to-gray-700/60 rounded-2xl border border-emerald-500/25 p-4 sm:p-6 backdrop-blur-sm">
                       <h3 className="text-xl font-bold text-emerald-400 mb-4 flex items-center gap-2">
                         <Clock className="w-5 h-5" />
                         Weekly Schedule
                       </h3>
-                      <div className="grid grid-cols-7 gap-2">
+                      <div className="grid grid-cols-7 gap-1 sm:gap-2">
                         {["M", "T", "W", "T", "F", "S", "S"].map((day, index) => (
                           <div key={index} className="text-center">
-                            <div className="text-sm text-gray-400 mb-2 font-medium">{day}</div>
+                            <div className="text-xs sm:text-sm text-gray-400 mb-1 sm:mb-2 font-medium">{day}</div>
                             <div
-                              className={`h-16 rounded-lg ${
+                              className={`h-12 sm:h-16 rounded-lg ${
                                 index < 5
                                   ? "bg-gradient-to-b from-emerald-500/25 to-cyan-500/25 border border-emerald-500/40"
                                   : "bg-gray-700/60 border border-gray-600/40"
@@ -545,7 +675,7 @@ function WorkoutPlanSection() {
                         <Target className="w-5 h-5" />
                         Progress Tracking Dashboard
                       </h3>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                         {[
                           {
                             label: "Weekly Goal",
@@ -578,7 +708,7 @@ function WorkoutPlanSection() {
                         ].map((metric, index) => (
                           <div
                             key={index}
-                            className={`${metric.bg} rounded-lg p-4 border hover:border-emerald-500/40 transition-all duration-300 cursor-pointer hover:scale-105`}
+                            className={`${metric.bg} rounded-lg p-3 sm:p-4 border hover:border-emerald-500/40 transition-all duration-300 cursor-pointer hover:scale-105`}
                           >
                             <div className="text-sm text-gray-400 mb-1 font-medium">{metric.label}</div>
                             <div className={`text-2xl font-bold ${metric.color}`}>{metric.value}</div>
@@ -607,7 +737,7 @@ function WorkoutPlanSection() {
                     Get a comprehensive workout report with detailed analytics, progressive overload tracking,
                     performance metrics, and personalized recommendations that evolve with your fitness journey.
                   </p>
-                  <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="flex flex-col gap-4 justify-center lg:justify-start items-center lg:items-start max-w-lg mx-auto lg:mx-0">
                     <EnhancedButton primary href="/workout-plan" size="lg">
                       Generate Workout Plan
                       <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -616,7 +746,7 @@ function WorkoutPlanSection() {
                 </div>
                 <div className="w-full md:w-1/3 p-6 md:p-0 flex justify-center">
                   <div className="relative w-40 h-40">
-                    <div className="absolute inset-0 rounded-full bg-gradient-to-r from-emerald-500/25 to-cyan-500/25 animate-pulse"></div>
+                    <div className="absolute inset-0 rounded-full bg-gradient-to-r from-emerald-500/25 to-cyan-500/25"></div>
                     <div className="absolute inset-4 rounded-full bg-gradient-to-br from-emerald-500/30 to-cyan-500/30 backdrop-blur-sm border border-emerald-500/40 flex items-center justify-center">
                       <Dumbbell className="h-16 w-16 text-white opacity-90" />
                     </div>
@@ -634,8 +764,12 @@ function WorkoutPlanSection() {
 // Meal Plan Preview Section with fixed macro chart
 function MealPlanSection() {
   return (
-    <section id="meal-plan-preview" className="relative py-24 overflow-hidden">
-      <div className="container px-4 mx-auto relative z-10">
+    <section
+      id="meal-plan-preview"
+      className="relative py-8 sm:py-12 md:py-16 lg:py-20 overflow-hidden"
+      style={{ scrollMarginTop: "80px" }}
+    >
+      <div className="container px-4 sm:px-6 lg:px-8 mx-auto relative z-10">
         <div className="max-w-4xl mx-auto text-center mb-16">
           <FadeIn delay={100}>
             <div className="inline-block px-6 py-3 rounded-full bg-gradient-to-r from-emerald-500/25 to-cyan-500/25 backdrop-blur-md border border-cyan-500/40 text-cyan-300 text-sm font-medium mb-6 shadow-lg shadow-cyan-500/10">
@@ -647,7 +781,7 @@ function MealPlanSection() {
           </FadeIn>
 
           <FadeIn delay={200}>
-            <h2 className="text-4xl md:text-5xl font-bold mb-6 drop-shadow-lg">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-6 drop-shadow-lg">
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-cyan-400">
                 Your Complete Nutrition Report
               </span>
@@ -655,7 +789,7 @@ function MealPlanSection() {
           </FadeIn>
 
           <FadeIn delay={300}>
-            <div className="text-xl text-gray-200 mb-8 space-y-4">
+            <div className="text-lg sm:text-xl text-gray-200 mb-8 space-y-4">
               <p className="drop-shadow-md">
                 Receive a detailed nutrition analysis that goes beyond simple calorie counting. Our AI creates
                 comprehensive reports with <span className="text-cyan-400 font-semibold">macro breakdowns</span>,{" "}
@@ -676,8 +810,8 @@ function MealPlanSection() {
             <div className="bg-gradient-to-br from-gray-900/80 to-gray-800/80 backdrop-blur-sm rounded-3xl border border-cyan-500/30 p-8 shadow-2xl shadow-cyan-500/10 hover:shadow-cyan-500/20 hover:border-cyan-500/50 transition-all duration-500">
               <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 h-full">
                 {/* Enhanced Report Preview */}
-                <div className="lg:col-span-2">
-                  <div className="bg-gradient-to-br from-gray-800/60 to-gray-700/60 rounded-2xl border border-cyan-500/25 p-6 h-full backdrop-blur-sm">
+                <div className="md:col-span-2">
+                  <div className="h-full">
                     <div className="flex items-center justify-between mb-6">
                       <h3 className="text-2xl font-bold text-cyan-400 flex items-center gap-3">
                         <div className="p-2 rounded-lg bg-cyan-500/20 border border-cyan-500/30">
@@ -686,7 +820,7 @@ function MealPlanSection() {
                         Nutrition Report
                       </h3>
                       <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/20 border border-cyan-500/30">
-                        <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                        <div className="w-2 h-2 rounded-full bg-cyan-400" />
                         <span className="text-cyan-300 text-sm font-medium">Live Preview</span>
                       </div>
                     </div>
@@ -694,7 +828,7 @@ function MealPlanSection() {
                       <img
                         src="/placeholder.svg?height=640&width=360"
                         alt="Meal Plan Report Preview"
-                        className="w-full rounded-xl border-2 border-cyan-500/30 group-hover:border-cyan-400/50 group-hover:scale-[1.02] transition-all duration-500 shadow-lg shadow-cyan-500/20"
+                        className="w-full rounded-lg group-hover:scale-[1.02] transition-all duration-500"
                         style={{ aspectRatio: "9/16" }}
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-cyan-900/30 via-transparent to-transparent rounded-xl" />
@@ -723,8 +857,8 @@ function MealPlanSection() {
                 </div>
 
                 {/* Charts Section */}
-                <div className="lg:col-span-3">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
+                <div className="md:col-span-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 h-full">
                     {/* Fixed Macronutrient Distribution - Proper circular pie chart */}
                     <div className="bg-gradient-to-br from-gray-800/60 to-gray-700/60 rounded-2xl border border-cyan-500/25 p-6 backdrop-blur-sm">
                       <h3 className="text-xl font-bold text-cyan-400 mb-4 flex items-center gap-2">
@@ -732,7 +866,7 @@ function MealPlanSection() {
                         Macro Distribution
                       </h3>
                       <div className="flex items-center justify-center">
-                        <div className="relative w-36 h-36">
+                        <div className="relative w-20 h-20 sm:w-24 sm:h-24 md:w-36 md:h-36">
                           <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
                             {/* Background circle */}
                             <circle cx="50" cy="50" r="35" fill="none" stroke="#374151" strokeWidth="8" />
@@ -885,7 +1019,7 @@ function MealPlanSection() {
                         <Target className="w-5 h-5" />
                         Nutrition Insights
                       </h3>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                         {[
                           {
                             label: "Daily Protein",
@@ -918,7 +1052,7 @@ function MealPlanSection() {
                         ].map((metric, index) => (
                           <div
                             key={index}
-                            className={`${metric.bg} rounded-lg p-4 border hover:border-cyan-500/40 transition-all duration-300 cursor-pointer hover:scale-105`}
+                            className={`${metric.bg} rounded-lg p-3 sm:p-4 border hover:border-cyan-500/40 transition-all duration-300 cursor-pointer hover:scale-105`}
                           >
                             <div className="text-sm text-gray-400 mb-1 font-medium">{metric.label}</div>
                             <div className={`text-2xl font-bold ${metric.color}`}>{metric.value}</div>
@@ -947,7 +1081,7 @@ function MealPlanSection() {
                     Get a comprehensive nutrition report with detailed macro analysis, meal schedules, shopping lists,
                     supplement recommendations, and personalized meal planning that adapts to your lifestyle.
                   </p>
-                  <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="flex flex-col gap-4 justify-center lg:justify-start items-center lg:items-start max-w-lg mx-auto lg:mx-0">
                     <EnhancedButton primary href="/meal-plan" size="lg">
                       Generate Meal Plan
                       <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -956,7 +1090,7 @@ function MealPlanSection() {
                 </div>
                 <div className="w-full md:w-1/3 p-6 md:p-0 flex justify-center">
                   <div className="relative w-40 h-40">
-                    <div className="absolute inset-0 rounded-full bg-gradient-to-r from-emerald-500/25 to-cyan-500/25 animate-pulse"></div>
+                    <div className="absolute inset-0 rounded-full bg-gradient-to-r from-emerald-500/25 to-cyan-500/25"></div>
                     <div className="absolute inset-4 rounded-full bg-gradient-to-br from-emerald-500/30 to-cyan-500/30 backdrop-blur-sm border border-cyan-500/40 flex items-center justify-center">
                       <Utensils className="h-16 w-16 text-white opacity-90" />
                     </div>
@@ -997,12 +1131,12 @@ function BenefitsSection() {
   ]
 
   return (
-    <section className="relative py-24">
-      <div className="container mx-auto px-4">
+    <section className="relative py-8 sm:py-12 md:py-16 lg:py-20">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <FadeIn delay={100}>
           <div className="text-center mb-16">
             <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-emerald-500/25 to-cyan-500/25 backdrop-blur-md border border-emerald-500/40 text-emerald-300 text-sm font-medium mb-6">
-              <Heart className="w-4 h-4 text-pink-400 animate-pulse" />
+              <Heart className="w-4 h-4 text-pink-400" />
               Why Choose AI GymBRO
             </div>
             <h2 className="text-4xl md:text-5xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-cyan-400">
@@ -1014,16 +1148,16 @@ function BenefitsSection() {
           </div>
         </FadeIn>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           {benefits.map((benefit, index) => (
             <FadeIn key={index} delay={200 + index * 100}>
-              <div className="group relative">
-                <div className="relative bg-gray-800/60 backdrop-blur-sm p-6 rounded-xl border border-gray-700 group-hover:border-emerald-500/40 transition-all duration-300 h-full hover:shadow-xl hover:shadow-emerald-500/15 hover:-translate-y-1">
+              <div className="group relative h-full">
+                <div className="relative bg-gray-800/60 backdrop-blur-sm p-4 sm:p-6 rounded-xl border border-gray-700 group-hover:border-emerald-500/40 transition-all duration-300 h-full hover:shadow-xl hover:shadow-emerald-500/15 hover:-translate-y-1 flex flex-col">
                   <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500/25 to-cyan-500/25 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 border border-emerald-500/30">
                     <benefit.icon className="w-6 h-6 text-emerald-400" />
                   </div>
                   <h3 className="text-xl font-bold mb-3 text-white">{benefit.title}</h3>
-                  <p className="text-gray-300 leading-relaxed">{benefit.description}</p>
+                  <p className="text-gray-300 leading-relaxed flex-grow">{benefit.description}</p>
                 </div>
               </div>
             </FadeIn>
@@ -1038,7 +1172,7 @@ function BenefitsSection() {
 function Footer() {
   return (
     <footer className="bg-gray-950 border-t border-gray-800">
-      <div className="container mx-auto px-4 py-12">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <FadeIn delay={100}>
             <div>
@@ -1105,18 +1239,6 @@ function Footer() {
 
 // Main component
 export default function Home() {
-  useEffect(() => {
-    const style = document.createElement("style")
-    style.textContent = `
-      @keyframes float {
-        0%, 100% { transform: translateY(0px); }
-        50% { transform: translateY(-10px); }
-      }
-    `
-    document.head.appendChild(style)
-    return () => document.head.removeChild(style)
-  }, [])
-
   return (
     <div className="min-h-screen relative">
       <EnhancedBackground />
