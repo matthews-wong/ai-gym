@@ -188,12 +188,27 @@ const EnhancedBackground = () => {
   )
 }
 
-// Lottie Player Component
 const LottiePlayer = ({ src, className = "" }: { src: string; className?: string }) => {
   const [mounted, setMounted] = useState(false)
+  const [key, setKey] = useState(0)
+  const [showSpinner, setShowSpinner] = useState(false)
 
   useEffect(() => {
     setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    const handleResize = () => {
+      setShowSpinner(true)
+      // Short delay to show spinner, then reload
+      setTimeout(() => {
+        setKey(prev => prev + 1)
+        setShowSpinner(false)
+      }, 300)
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
   }, [])
 
   if (!mounted) {
@@ -201,6 +216,16 @@ const LottiePlayer = ({ src, className = "" }: { src: string; className?: string
       <div className={`flex items-center justify-center ${className}`}>
         <div className="animate-pulse">
           <Zap className="w-16 h-16 text-emerald-400" />
+        </div>
+      </div>
+    )
+  }
+
+  if (showSpinner) {
+    return (
+      <div className={`flex items-center justify-center ${className}`}>
+        <div className="animate-spin">
+          <div className="w-8 h-8 border-4 border-emerald-400 border-t-transparent rounded-full"></div>
         </div>
       </div>
     )
@@ -223,11 +248,18 @@ const LottiePlayer = ({ src, className = "" }: { src: string; className?: string
           </div>
         }
       >
-        <DotLottieReact src={src} loop autoplay style={{ width: "100%", height: "100%" }} />
+        <DotLottieReact 
+          key={key}
+          src={src} 
+          loop 
+          autoplay 
+          style={{ width: "100%", height: "100%" }} 
+        />
       </React.Suspense>
     </div>
   )
 }
+
 
 // Hero Section with enhanced effects and Lottie
 function HeroSection() {
@@ -303,7 +335,7 @@ function HeroSection() {
             {/* Mobile Lottie - Only show on mobile */}
             <div className="lg:hidden mb-12">
               <FadeIn delay={350}>
-                <LottiePlayer src="/lottie/hero.json" className="w-full h-[400px] mx-auto" />
+                <LottiePlayer src="/lottie/hero.lottie" className="w-full h-[300px] mx-auto" />
               </FadeIn>
             </div>
 
@@ -356,7 +388,7 @@ function HeroSection() {
           <div className="hidden lg:block">
             <FadeIn delay={600}>
               <div className="relative">
-                <LottiePlayer src="/lottie/hero.json" className="w-full h-[500px]" />
+                <LottiePlayer src="/lottie/hero.lottie" className="w-full h-[600px]" />
               </div>
             </FadeIn>
           </div>
@@ -393,7 +425,7 @@ function ProductsSection() {
               <div className="relative bg-gray-900/80 backdrop-blur-sm rounded-2xl border border-gray-800 group-hover:border-emerald-500/40 transition-all duration-300 overflow-hidden h-full hover:shadow-2xl hover:shadow-emerald-500/20">
                 <div className="relative h-64 overflow-hidden">
                   <img
-                    src="/placeholder.svg?height=400&width=600"
+                    src="/images/workout.webp"
                     alt="Custom Workout Plans"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
@@ -454,7 +486,7 @@ function ProductsSection() {
               <div className="relative bg-gray-900/80 backdrop-blur-sm rounded-2xl border border-gray-800 group-hover:border-cyan-500/40 transition-all duration-300 overflow-hidden h-full hover:shadow-2xl hover:shadow-cyan-500/20">
                 <div className="relative h-64 overflow-hidden">
                   <img
-                    src="/placeholder.svg?height=400&width=600"
+                    src="/images/meal-plan.webp"
                     alt="Tailored Meal Plans"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
