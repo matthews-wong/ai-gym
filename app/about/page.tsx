@@ -1,159 +1,82 @@
 "use client"
 
-import type React from "react"
-
+import React from "react"
+import Image from 'next/image';
 import { useState, useEffect } from "react"
-import Image from "next/image"
 import Link from "next/link"
-import { ArrowRight, Users, Award, Clock, CheckCircle, Heart, Dumbbell, Zap, Star, Sparkles } from "lucide-react"
-
+import {
+  ArrowRight,
+  Dumbbell,
+  Utensils,
+  Zap,
+  Trophy,
+  Heart,
+  BarChart3,
+  PieChart,
+  Target,
+  Clock,
+  TrendingUp,
+  Users,
+  Database,
+  Brain,
+  CheckCircle,
+  Search,
+  FileText,
+  Cpu,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 
-// Animation keyframes as a style element that will be injected
-const animationKeyframes = `
-@keyframes float {
-  0% { transform: translateY(0px) translateX(0px); }
-  50% { transform: translateY(-20px) translateX(10px); }
-  100% { transform: translateY(0px) translateX(0px); }
-}
-
-@keyframes ping-slow {
-  0% { transform: scale(1); opacity: 0.8; }
-  50% { transform: scale(1.2); opacity: 0.4; }
-  100% { transform: scale(1); opacity: 0.8; }
-}
-
-@keyframes spin-slow {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-@keyframes shimmer {
-  0% { background-position: -1000px 0; }
-  100% { background-position: 1000px 0; }
-}
-
-@keyframes pulse-glow {
-  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
-  70% { box-shadow: 0 0 0 15px rgba(16, 185, 129, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-}
-`
-
-// Enhanced 3D background component
-const EnhancedBackground = () => {
-  return (
-    <div className="absolute inset-0 -z-10 overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-black to-gray-900" />
-      <div className="absolute inset-0 bg-black bg-[radial-gradient(circle_at_center,rgba(0,220,130,0.18),transparent_80%)]" />
-      <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_top_right,rgba(0,200,255,0.12),transparent_70%)]" />
-      <div className="absolute bottom-0 left-0 w-full h-full bg-[radial-gradient(circle_at_bottom_left,rgba(100,0,255,0.08),transparent_70%)]" />
-      <div className="absolute inset-0 overflow-hidden">
-        <DynamicElements />
-      </div>
-    </div>
-  )
-}
-
-// Dynamic background elements with enhanced animations
-const DynamicElements = () => {
-  const [mounted, setMounted] = useState(false)
+// Lightweight animation hook
+const useInView = (threshold = 0.1) => {
+  const [isInView, setIsInView] = useState(false)
+  const [element, setElement] = useState(null)
 
   useEffect(() => {
-    setMounted(true)
-    return () => {}
-  }, [])
+    if (!element) return
 
-  if (!mounted) return null
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        // Only update state if we're in the browser
+        if (typeof window !== "undefined") {
+          setIsInView(entry.isIntersecting)
+        }
+      },
+      { threshold },
+    )
 
-  return (
-    <>
-      {/* Enhanced floating orbs with more varied movement */}
-      {Array.from({ length: 12 }).map((_, i) => (
-        <div
-          key={i}
-          className="absolute rounded-full"
-          style={{
-            width: `${Math.random() * 400 + 200}px`,
-            height: `${Math.random() * 400 + 200}px`,
-            left: `${Math.random() * 100}%`,
-            top: `${Math.random() * 100}%`,
-            opacity: Math.random() * 0.25 + 0.05,
-            background: `radial-gradient(circle at center, ${
-              ["rgba(16,185,129,0.4)", "rgba(6,182,212,0.4)", "rgba(59,130,246,0.4)", "rgba(124,58,237,0.3)"][
-                Math.floor(Math.random() * 4)
-              ]
-            }, transparent)`,
-            transform: `scale(${Math.random() + 0.5})`,
-            filter: `blur(${Math.random() * 60 + 100}px)`,
-            animation: `float ${Math.random() * 30 + 40}s ease-in-out infinite ${Math.random() * 10}s alternate`,
-          }}
-        />
-      ))}
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [element, threshold])
 
-      {/* Enhanced grid lines with subtle glow effect */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(16,185,129,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(16,185,129,0.03)_1px,transparent_1px)] bg-[size:60px_60px]" />
-
-      {/* Subtle particle effect */}
-      <div
-        className="absolute inset-0"
-        style={{
-          backgroundImage: "radial-gradient(rgba(16, 185, 129, 0.1) 1px, transparent 1px)",
-          backgroundSize: "40px 40px",
-          backgroundPosition: "0 0",
-        }}
-      />
-    </>
-  )
+  return [setElement, isInView] as const
 }
 
-// Enhanced animation component
-interface EnhancedAnimationProps {
-  children: React.ReactNode
-  delay?: number
-  duration?: number
-  direction?: "up" | "down" | "left" | "right"
-  distance?: number
-  className?: string
-}
-
-const EnhancedAnimation = ({
+// Lightweight animation component
+const FadeIn = ({
   children,
   delay = 0,
-  duration = 1000,
-  direction = "up",
-  distance = 8,
   className = "",
-}: EnhancedAnimationProps) => {
-  const [isVisible, setIsVisible] = useState(false)
+}: {
+  children: React.ReactNode
+  delay?: number
+  className?: string
+}) => {
+  const [ref, isInView] = useInView()
+  const [hasAnimated, setHasAnimated] = useState(false)
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsVisible(true), delay)
-    return () => clearTimeout(timer)
-  }, [delay])
-
-  const getTransformValue = () => {
-    if (!isVisible) {
-      switch (direction) {
-        case "up":
-          return `translate-y-[${distance}px] opacity-0`
-        case "down":
-          return `translate-y-[-${distance}px] opacity-0`
-        case "left":
-          return `translate-x-[${distance}px] opacity-0`
-        case "right":
-          return `translate-x-[-${distance}px] opacity-0`
-        default:
-          return `translate-y-[${distance}px] opacity-0`
-      }
+    if (isInView && !hasAnimated) {
+      setHasAnimated(true)
     }
-    return "translate-y-0 translate-x-0 opacity-100"
-  }
+  }, [isInView, hasAnimated])
 
   return (
     <div
-      className={`transition-all ease-out ${getTransformValue()} ${className}`}
-      style={{ transitionDuration: `${duration}ms` }}
+      ref={ref}
+      className={`transition-all duration-700 ease-out ${
+        hasAnimated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+      } ${className}`}
+      style={{ transitionDelay: hasAnimated ? `${delay}ms` : "0ms" }}
     >
       {children}
     </div>
@@ -161,561 +84,743 @@ const EnhancedAnimation = ({
 }
 
 // Enhanced button component
-interface EnhancedButtonProps {
+const EnhancedButton = ({
+  children,
+  primary = false,
+  href,
+  className = "",
+  size = "default",
+  onClick,
+}: {
   children: React.ReactNode
   primary?: boolean
   href: string
   className?: string
   size?: "default" | "lg" | "xl"
-}
-
-const EnhancedButton = ({ children, primary = false, href, className = "", size = "default" }: EnhancedButtonProps) => {
+  onClick?: (e: React.MouseEvent) => void
+}) => {
   const sizeClasses = {
-    default: "text-sm py-2 px-4",
-    lg: "text-base py-2.5 px-6",
-    xl: "text-lg py-3 px-8",
+    default: "px-4 py-2 text-sm sm:px-6 sm:py-3",
+    lg: "px-6 py-3 text-sm sm:px-8 sm:py-4 sm:text-base",
+    xl: "px-8 py-4 text-base sm:px-10 sm:py-5 sm:text-lg",
   }
 
   return (
-    <Link href={href} className={`group relative w-full sm:w-auto ${className}`}>
-      <div className="absolute -inset-0.5 rounded-lg bg-gradient-to-r from-emerald-500 to-cyan-500 opacity-50 blur-sm transition-all duration-500 group-hover:opacity-70 group-hover:blur-md" />
+    <Link href={href} className={`group relative inline-block justify-center ${className}`} onClick={onClick}>
       <Button
-        className={`relative w-full font-semibold ${sizeClasses[size]} ${
+        className={`relative font-semibold ${sizeClasses[size]} ${
           primary
-            ? "bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white border-0"
-            : "bg-gray-900/80 hover:bg-gray-800 text-white border border-emerald-500/30 hover:border-emerald-400"
-        } transition-all duration-300`}
+            ? "bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white border-0 hover:shadow-xl hover:shadow-emerald-500/30"
+            : "bg-gray-900/90 hover:bg-gray-800 text-white border border-emerald-500/30 hover:border-emerald-400 hover:shadow-xl hover:shadow-emerald-500/25"
+        } transition-all duration-300 rounded-lg hover:scale-105 hover:-translate-y-1`}
       >
-        {children}
+        <span className="relative z-10 flex items-center justify-center gap-2">{children}</span>
       </Button>
     </Link>
   )
 }
 
-// Team member card component
-interface TeamMemberProps {
-  name: string
-  role: string
-  bio: string
-  imageSrc: string
-  delay?: number
-}
-
-const TeamMember = ({ name, role, bio, imageSrc, delay = 0 }: TeamMemberProps) => {
-  return (
-    <EnhancedAnimation delay={delay}>
-      <div className="group relative">
-        <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-2xl opacity-0 group-hover:opacity-30 transition duration-500 blur-md"></div>
-        <div className="relative bg-gray-900/80 backdrop-blur-sm p-6 rounded-2xl border border-gray-800 group-hover:border-emerald-500/30 transition-all duration-300 h-full flex flex-col">
-          <div className="relative w-24 h-24 mx-auto mb-6 rounded-full overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-cyan-500 p-0.5 rounded-full z-10"></div>
-            <Image
-              src={imageSrc || "/placeholder.svg"}
-              alt={name}
-              width={96}
-              height={96}
-              className="w-full h-full object-cover object-center rounded-full relative z-0 transition-transform duration-700 group-hover:scale-105"
-            />
-          </div>
-
-          <h3 className="text-xl font-bold mb-1 text-center bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-300">
-            {name}
-          </h3>
-
-          <div className="flex items-center justify-center mb-4">
-            <span className="inline-block h-0.5 w-8 bg-gradient-to-r from-emerald-500 to-cyan-500 mr-2"></span>
-            <p className="text-emerald-400 font-medium text-sm">{role}</p>
-            <span className="inline-block h-0.5 w-8 bg-gradient-to-r from-cyan-500 to-emerald-500 ml-2"></span>
-          </div>
-
-          <p className="text-gray-300 text-center flex-grow">{bio}</p>
-
-          <div className="mt-4 h-0.5 w-0 bg-gradient-to-r from-emerald-500 to-cyan-500 transition-all duration-500 group-hover:w-full mx-auto"></div>
-        </div>
-      </div>
-    </EnhancedAnimation>
-  )
-}
-
-// Timeline item component
-interface TimelineItemProps {
-  year: string
-  title: string
-  description: string
-  icon: React.ElementType
-  delay?: number
-}
-
-const TimelineItem = ({ year, title, description, icon: Icon, delay = 0 }: TimelineItemProps) => {
-  return (
-    <EnhancedAnimation delay={delay}>
-      <div className="relative pl-10 pb-10 last:pb-0">
-        {/* Vertical line */}
-        <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gradient-to-b from-emerald-500 to-cyan-500 opacity-30"></div>
-
-        {/* Icon */}
-        <div className="absolute left-0 top-0 w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 border border-emerald-500/30 flex items-center justify-center">
-          <Icon className="w-4 h-4 text-emerald-400" />
-        </div>
-
-        {/* Content */}
-        <div className="bg-gray-900/50 backdrop-blur-sm p-5 rounded-xl border border-gray-800 hover:border-emerald-500/30 transition-all duration-300">
-          <div className="inline-block px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-sm font-medium mb-2">
-            {year}
-          </div>
-          <h3 className="text-xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-300">
-            {title}
-          </h3>
-          <p className="text-gray-300">{description}</p>
-        </div>
-      </div>
-    </EnhancedAnimation>
-  )
-}
-
-// Testimonial component
-interface TestimonialProps {
-  quote: string
-  author: string
-  role: string
-  rating: number
-  delay?: number
-}
-
-const Testimonial = ({ quote, author, role, rating, delay = 0 }: TestimonialProps) => {
-  return (
-    <EnhancedAnimation delay={delay}>
-      <div className="group relative">
-        <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-2xl opacity-0 group-hover:opacity-20 transition duration-500 blur-md"></div>
-        <div className="relative bg-gray-900/60 backdrop-blur-sm p-6 rounded-2xl border border-gray-800 group-hover:border-emerald-500/30 transition-all duration-300">
-          <div className="flex items-center mb-4">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Star key={i} className={`w-5 h-5 ${i < rating ? "text-yellow-400 fill-yellow-400" : "text-gray-600"}`} />
-            ))}
-          </div>
-
-          <p className="text-gray-300 mb-6 italic">"{quote}"</p>
-
-          <div className="flex items-center">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500/30 to-cyan-500/30 flex items-center justify-center mr-3">
-              <Users className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h4 className="font-bold text-white">{author}</h4>
-              <p className="text-sm text-emerald-400">{role}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </EnhancedAnimation>
-  )
-}
-
-// Stats component
-interface StatProps {
-  value: string
-  label: string
-  icon: React.ElementType
-  delay?: number
-}
-
-const Stat = ({ value, label, icon: Icon, delay = 0 }: StatProps) => {
-  return (
-    <EnhancedAnimation delay={delay}>
-      <div className="relative group">
-        <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-xl opacity-0 group-hover:opacity-30 transition duration-500 blur-md"></div>
-        <div className="relative bg-gray-900/60 backdrop-blur-sm p-6 rounded-xl border border-gray-800 group-hover:border-emerald-500/30 transition-all duration-300 flex flex-col items-center">
-          <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 flex items-center justify-center mb-4">
-            <Icon className="w-7 h-7 text-emerald-400" />
-          </div>
-
-          <h3 className="text-3xl font-bold mb-1 bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-cyan-400">
-            {value}
-          </h3>
-
-          <p className="text-gray-300 text-center">{label}</p>
-        </div>
-      </div>
-    </EnhancedAnimation>
-  )
-}
-
-// Main About Us component
-export default function AboutUs() {
-  const [isMounted, setIsMounted] = useState(false)
+// Enhanced background with emerald gradients
+const EnhancedBackground = () => {
+  const [mounted, setMounted] = useState(false)
+  const [particleCount, setParticleCount] = useState(30)
 
   useEffect(() => {
-    // Add the animation keyframes to the document
-    if (typeof document !== "undefined") {
-      const style = document.createElement("style")
-      style.textContent = animationKeyframes
-      document.head.appendChild(style)
+    setMounted(true)
+    setParticleCount(window.innerWidth < 768 ? 15 : 30)
 
-      setIsMounted(true)
-
-      return () => {
-        if (style && document.head.contains(style)) {
-          document.head.removeChild(style)
-        }
+    // Add animation styles
+    const style = document.createElement("style")
+    style.textContent = `
+      @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
       }
-    } else {
-      setIsMounted(true)
+      @keyframes pulse-glow {
+        0%, 100% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.3); }
+        50% { box-shadow: 0 0 40px rgba(16, 185, 129, 0.6); }
+      }
+      @keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+      }
+    `
+    document.head.appendChild(style)
+    return () => {
+      if (style.parentNode) {
+        document.head.removeChild(style)
+      }
     }
   }, [])
 
+  if (!mounted) {
+    return null // Return null on server-side to avoid hydration mismatch
+  }
+
   return (
-    <div className="relative min-h-screen flex flex-col items-center overflow-hidden py-16 px-4">
-      <EnhancedBackground />
+    <div className="fixed inset-0 -z-10 overflow-hidden">
+      {/* Base emerald gradient */}
+      <div className="absolute inset-0 bg-gradient-to-br from-emerald-950 via-gray-950 to-emerald-900" />
 
-      {/* Hero Section */}
-      <div className="text-center px-4 sm:px-6 max-w-5xl mx-auto pt-8 mb-20">
-        <EnhancedAnimation delay={0}>
-          <div className="inline-block px-4 py-2 rounded-full bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 backdrop-blur-md border border-emerald-500/30 text-emerald-400 text-sm font-medium mb-6">
-            <span className="flex items-center">
-              <Users className="w-4 h-4 mr-2" />
-              Our Story
-            </span>
-          </div>
-        </EnhancedAnimation>
+      {/* Subtle emerald accent gradients */}
+      <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-emerald-500/5 via-transparent to-cyan-500/5" />
+      <div className="absolute bottom-0 right-0 w-full h-full bg-gradient-to-tl from-emerald-400/3 via-transparent to-transparent" />
 
-        <EnhancedAnimation delay={100}>
-          <h1 className="text-5xl md:text-6xl font-bold mb-6 sm:mb-8">
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-cyan-400 to-emerald-500">
-              About AI GymBRO
-            </span>
-          </h1>
-        </EnhancedAnimation>
+      {/* Animated emerald orbs */}
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-gradient-to-r from-emerald-500/8 to-cyan-500/8 rounded-full blur-3xl animate-pulse" />
+      <div
+        className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-gradient-to-r from-cyan-500/6 to-emerald-500/6 rounded-full blur-3xl animate-pulse"
+        style={{ animationDelay: "2s" }}
+      />
 
-        <EnhancedAnimation delay={200}>
-          <p className="text-xl sm:text-2xl mb-8 sm:mb-10 text-gray-200 max-w-3xl mx-auto leading-relaxed">
-            We're on a mission to make personalized fitness and nutrition accessible to everyone through the power of
-            artificial intelligence.
-          </p>
-        </EnhancedAnimation>
+      {/* Subtle grid pattern */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(16,185,129,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(16,185,129,0.03)_1px,transparent_1px)] bg-[size:60px_60px]" />
+
+      {/* Light floating particles */}
+      <div className="absolute inset-0">
+        {Array.from({ length: particleCount }).map((_, i) => (
+          <div
+            key={i}
+            className="absolute w-1 h-1 bg-emerald-400/15 rounded-full"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animation: `float ${3 + Math.random() * 4}s ease-in-out infinite`,
+              animationDelay: `${Math.random() * 5}s`,
+            }}
+          />
+        ))}
       </div>
+    </div>
+  )
+}
 
-      {/* Our Mission Section */}
-      <div className="w-full max-w-6xl mx-auto px-4 mb-24">
-        <EnhancedAnimation delay={300}>
-          <div className="relative">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-2xl opacity-20 blur-lg"></div>
-            <div className="relative bg-gray-900/70 backdrop-blur-sm p-8 md:p-12 rounded-2xl border border-emerald-500/20 overflow-hidden">
-              <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl -mr-48 -mt-48"></div>
-              <div className="absolute bottom-0 left-0 w-96 h-96 bg-cyan-500/5 rounded-full blur-3xl -ml-48 -mb-48"></div>
+// Hero section for About page
+function AboutHeroSection() {
+  return (
+    <section className="relative py-16 sm:py-20 md:py-24 lg:py-32 overflow-hidden">
+      {/* Gradient background with seamless transitions */}
+      <div className="absolute inset-0">
+        {/* Main background */}
+        <div className="absolute inset-0 bg-gradient-to-b from-gray-950 via-gray-950 to-transparent" />
+        {/* Top gradient transition - 20% gradual translucent */}
+        <div className="absolute top-0 left-0 w-full h-[20%] bg-gradient-to-b from-black/80 via-black/40 to-transparent" />
+        {/* Bottom gradient transition - 20% gradual translucent */}
+        <div className="absolute bottom-0 left-0 w-full h-[20%] bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+      </div>
+      
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <div className="max-w-4xl mx-auto text-center">
+          <FadeIn delay={100}>
+            <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-emerald-500/25 to-cyan-500/25 backdrop-blur-md border border-emerald-500/40 text-emerald-300 text-sm font-medium mb-8 shadow-lg shadow-emerald-500/10">
+              <Heart className="w-4 h-4 text-pink-400" />
+              About AI GymBRO
+            </div>
+          </FadeIn>
 
-              <div className="grid md:grid-cols-2 gap-10 items-center relative">
-                <div>
-                  <div className="inline-block px-4 py-1 rounded-full bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 backdrop-blur-md border border-emerald-500/30 text-emerald-400 text-sm font-medium mb-4">
-                    Our Mission
+          <FadeIn delay={200}>
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-8 leading-tight">
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-cyan-400">
+                Democratizing
+              </span>
+              <br />
+              <span className="text-white">Fitness & Nutrition</span>
+            </h1>
+          </FadeIn>
+
+          <FadeIn delay={300}>
+            <p className="text-xl sm:text-2xl text-gray-300 mb-12 leading-relaxed max-w-3xl mx-auto">
+              AI GymBRO is a web app designed to democratize workout planning and meal planning for everyone. 
+              We believe that structured planning should be accessible to all, not just those who can afford premium services.
+            </p>
+          </FadeIn>
+
+          <FadeIn delay={400}>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <EnhancedButton primary href="#mission" size="lg">
+                Our Mission
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </EnhancedButton>
+              <EnhancedButton href="#how-it-works" size="lg">
+                How It Works
+                <Target className="w-5 h-5" />
+              </EnhancedButton>
+            </div>
+          </FadeIn>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// Mission section
+function MissionSection() {
+  return (
+    <section id="mission" className="relative py-16 sm:py-20 md:py-24 lg:py-32" style={{ scrollMarginTop: "80px" }}>
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+          {/* Left side - Content */}
+          <div>
+            <FadeIn delay={100}>
+              <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-emerald-500/25 to-cyan-500/25 backdrop-blur-md border border-emerald-500/40 text-emerald-300 text-sm font-medium mb-6">
+                <Users className="w-4 h-4" />
+                Our Mission
+              </div>
+            </FadeIn>
+
+            <FadeIn delay={200}>
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-8">
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-cyan-400">
+                  Accessible Fitness
+                </span>
+                <br />
+                <span className="text-white">For Everyone</span>
+              </h2>
+            </FadeIn>
+
+            <FadeIn delay={300}>
+              <div className="space-y-6 text-lg text-gray-300 leading-relaxed">
+                <p>
+                  Usually, personalized workout and meal planning services are expensive and exclusive. 
+                  We want to change that by making these essential tools available to everyone, regardless of their budget.
+                </p>
+                
+                <p>
+                  <span className="text-emerald-400 font-semibold bg-emerald-400/15 px-3 py-1 rounded-lg border border-emerald-400/30">
+                    We are not here to replace nutritionists or workout coaches.
+                  </span>
+                </p>
+                
+                <p>
+                  We are here to facilitate you so that you can have structured planning, because{" "}
+                  <span className="text-cyan-400 font-bold text-xl bg-cyan-400/15 px-3 py-2 rounded-lg border border-cyan-400/30 inline-block my-2">
+                    great actions need structured planning
+                  </span>
+                </p>
+                
+                <p>
+                  Our AI-powered platform provides you with the foundation and structure you need to succeed, 
+                  while still encouraging you to work with professionals when needed.
+                </p>
+              </div>
+            </FadeIn>
+          </div>
+
+          {/* Right side - Image */}
+          <div>
+            <FadeIn delay={400}>
+              <div className="relative">
+                <Image
+                  src="/placeholder.svg?height=600&width=500"
+                  alt="Diverse group of people exercising together in a community gym setting, representing accessibility and inclusivity in fitness"
+                  width={500}
+                  height={600}
+                  className="w-full rounded-2xl shadow-2xl shadow-emerald-500/20"
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-emerald-900/30 via-transparent to-transparent rounded-2xl" />
+              </div>
+            </FadeIn>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// How it works section with improved seamless transitions
+function HowItWorksSection() {
+  return (
+    <section id="how-it-works" className="relative py-16 sm:py-20 md:py-24 lg:py-32" style={{ scrollMarginTop: "80px" }}>
+      {/* Enhanced gradient background with seamless transitions */}
+      <div className="absolute inset-0">
+        {/* Main background */}
+        <div className="absolute inset-0 bg-gradient-to-b from-gray-950 via-gray-950 to-transparent" />
+        {/* Top gradient transition - 20% gradual translucent */}
+        <div className="absolute top-0 left-0 w-full h-[20%] bg-gradient-to-b from-black/80 via-black/40 to-transparent" />
+        {/* Bottom gradient transition - 20% gradual translucent */}
+        <div className="absolute bottom-0 left-0 w-full h-[20%] bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+      </div>
+      
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <div className="max-w-4xl mx-auto text-center mb-16">
+          <FadeIn delay={100}>
+            <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-emerald-500/25 to-cyan-500/25 backdrop-blur-md border border-cyan-500/40 text-cyan-300 text-sm font-medium mb-6 shadow-lg shadow-cyan-500/10">
+              <Zap className="w-4 h-4" />
+              How It Works
+            </div>
+          </FadeIn>
+
+          <FadeIn delay={200}>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-6">
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-cyan-400">
+                Simple Process,
+              </span>
+              <br />
+              <span className="text-white">Powerful Results</span>
+            </h2>
+          </FadeIn>
+
+          <FadeIn delay={300}>
+            <p className="text-xl text-gray-300 leading-relaxed">
+              Our AI-powered system works the same way for both workout and meal planning, 
+              ensuring you get personalized, data-driven recommendations.
+            </p>
+          </FadeIn>
+        </div>
+
+        <div className="space-y-24">
+          {/* Step 1: Input Form - Image */}
+          <FadeIn delay={400}>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+              {/* Content */}
+              <div>
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500/25 to-cyan-500/25 flex items-center justify-center border border-emerald-500/30">
+                    <Target className="w-6 h-6 text-emerald-400" />
                   </div>
-                  <h2 className="text-3xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-cyan-400">
-                    Democratizing Fitness Through AI
-                  </h2>
-                  <p className="text-gray-300 mb-6 leading-relaxed">
-                    At AI GymBRO, we believe that everyone deserves access to high-quality, personalized fitness and
-                    nutrition guidance. Our mission is to leverage cutting-edge artificial intelligence to make
-                    expert-level coaching accessible to all, regardless of budget or location.
-                  </p>
-                  <p className="text-gray-300 mb-6 leading-relaxed">
-                    We're committed to breaking down barriers to fitness by providing customized workout and meal plans
-                    that adapt to your unique needs, preferences, and constraints. Our AI-powered platform delivers the
-                    personalization of a private coach at a fraction of the cost.
-                  </p>
-                  <div className="flex flex-col sm:flex-row gap-4 mt-8">
-                    <EnhancedButton primary href="/workout-plan" size="lg">
-                      Try It Now <ArrowRight className="ml-2 h-5 w-5" />
-                    </EnhancedButton>
-                  </div>
+                  <div className="text-emerald-400 font-bold text-lg">Step 1</div>
                 </div>
+                
+                <h3 className="text-2xl sm:text-3xl font-bold mb-4 text-white">
+                  Fill Your Inputs
+                </h3>
+                
+                <p className="text-lg text-gray-300 leading-relaxed">
+                  Tell us about your goals - whether you're looking for deficit or bulking for meal planning, 
+                  or your fitness objectives for workout planning. Our comprehensive form captures all the 
+                  details we need to create your personalized plan.
+                </p>
+              </div>
 
+              {/* Image */}
+              <div>
                 <div className="relative">
-                  <div className="absolute -inset-4 bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 rounded-2xl opacity-50 blur-lg"></div>
-                  <div className="relative aspect-square rounded-2xl overflow-hidden border border-emerald-500/30">
-                    <Image
-                      src="/images/mission.png"
-                      alt="Our Mission"
-                      width={600}
-                      height={600}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                    <div className="absolute bottom-0 left-0 right-0 p-6">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Sparkles className="w-5 h-5 text-emerald-400" />
-                        <span className="text-emerald-400 font-medium">AI-Powered Fitness</span>
+                  <Image
+                    src="/placeholder.svg?height=400&width=600"
+                    alt="User interface showing a form with various input fields for fitness goals, dietary preferences, and personal information"
+                    width={600}
+                    height={400}
+                    className="w-full rounded-2xl shadow-2xl shadow-emerald-500/20"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-emerald-900/20 via-transparent to-transparent rounded-2xl" />
+                </div>
+              </div>
+            </div>
+          </FadeIn>
+
+          {/* Step 2: AI Processing - Fixed RAG Diagram */}
+          <FadeIn delay={500}>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center lg:grid-flow-col-dense">
+              {/* Content */}
+              <div className="lg:col-start-2">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-cyan-500/25 to-emerald-500/25 flex items-center justify-center border border-cyan-500/30">
+                    <Brain className="w-6 h-6 text-cyan-400" />
+                  </div>
+                  <div className="text-cyan-400 font-bold text-lg">Step 2</div>
+                </div>
+                
+                <h3 className="text-2xl sm:text-3xl font-bold mb-4 text-white">
+                  AI Processing with RAG
+                </h3>
+                
+                <p className="text-lg text-gray-300 leading-relaxed">
+                  Our AI uses Retrieval-Augmented Generation (RAG) to process your data. It retrieves relevant information 
+                  from our knowledge base and generates personalized recommendations based on your unique inputs and preferences.
+                </p>
+              </div>
+
+              {/* Fixed RAG Diagram */}
+              <div className="lg:col-start-1">
+                <div className="relative bg-gradient-to-br from-gray-900/50 to-gray-800/50 rounded-2xl p-8 border border-cyan-500/20 shadow-2xl shadow-cyan-500/10">
+                  <div className="w-full h-[400px] relative">
+                    {/* RAG Process Flow - Properly aligned */}
+                    <div className="flex flex-col items-center h-full justify-between py-4">
+                      
+                      {/* User Query - Top */}
+                      <div className="flex justify-center w-full">
+                        <div className="bg-gradient-to-r from-cyan-500/20 to-emerald-500/20 border border-cyan-400/30 rounded-lg p-4 text-center min-w-[140px]">
+                          <Users className="w-6 h-6 text-cyan-400 mx-auto mb-2" />
+                          <div className="text-cyan-300 text-sm font-semibold">USER QUERY</div>
+                        </div>
                       </div>
-                      <p className="text-white text-lg font-medium">Personalized plans for everyone</p>
+
+                      {/* Arrow Down */}
+                      <div className="flex justify-center">
+                        <div className="w-0.5 h-8 bg-gradient-to-b from-cyan-400/60 to-emerald-400/60"></div>
+                      </div>
+
+                      {/* Middle Row - Retrieval and Knowledge Base */}
+                      <div className="flex justify-between items-center w-full px-4">
+                        <div className="bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 border border-emerald-400/30 rounded-lg p-4 text-center min-w-[120px]">
+                          <Search className="w-6 h-6 text-emerald-400 mx-auto mb-2" />
+                          <div className="text-emerald-300 text-sm font-semibold">RETRIEVAL</div>
+                        </div>
+                        
+                        {/* Horizontal Arrow */}
+                        <div className="flex-1 h-0.5 bg-gradient-to-r from-emerald-400/60 to-blue-400/60 mx-4"></div>
+                        
+                        <div className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-400/30 rounded-lg p-4 text-center min-w-[120px]">
+                          <Database className="w-6 h-6 text-blue-400 mx-auto mb-2" />
+                          <div className="text-blue-300 text-sm font-semibold">KNOWLEDGE BASE</div>
+                        </div>
+                      </div>
+
+                      {/* Arrow Down */}
+                      <div className="flex justify-center">
+                        <div className="w-0.5 h-8 bg-gradient-to-b from-emerald-400/60 to-yellow-400/60"></div>
+                      </div>
+
+                      {/* Generation - Bottom */}
+                      <div className="flex justify-center w-full">
+                        <div className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-400/30 rounded-lg p-4 text-center min-w-[140px]">
+                          <Cpu className="w-6 h-6 text-yellow-400 mx-auto mb-2" />
+                          <div className="text-yellow-300 text-sm font-semibold">GENERATION</div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        </EnhancedAnimation>
-      </div>
+          </FadeIn>
 
-      {/* Our Values Section */}
-      <div className="w-full max-w-6xl mx-auto px-4 mb-24">
-        <EnhancedAnimation delay={400}>
-          <div className="text-center mb-16">
-            <div className="inline-block px-4 py-1 rounded-full bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 backdrop-blur-md border border-emerald-500/30 text-emerald-400 text-sm font-medium mb-4">
-              <span className="flex items-center justify-center">
-                <Heart className="w-4 h-4 mr-2" />
-                Our Core Values
-              </span>
-            </div>
-            <h2 className="text-4xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-cyan-400">
-              What Drives Us Forward
-            </h2>
-            <p className="text-xl text-gray-200 max-w-3xl mx-auto">
-              Our values shape everything we do, from product development to customer support
-            </p>
-          </div>
-        </EnhancedAnimation>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          <EnhancedAnimation delay={500}>
-            <div className="relative group">
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-2xl opacity-0 group-hover:opacity-30 transition duration-500 blur-md"></div>
-              <div className="relative bg-gray-900/80 backdrop-blur-sm p-8 rounded-2xl border border-gray-800 group-hover:border-emerald-500/30 transition-all duration-300 h-full">
-                <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 flex items-center justify-center mb-6">
-                  <Users className="h-8 w-8 text-emerald-400" />
+          {/* Step 3: Data Integration - Fixed Alignment */}
+          <FadeIn delay={600}>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+              {/* Content */}
+              <div>
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500/25 to-cyan-500/25 flex items-center justify-center border border-emerald-500/30">
+                    <Database className="w-6 h-6 text-emerald-400" />
+                  </div>
+                  <div className="text-emerald-400 font-bold text-lg">Step 3</div>
                 </div>
-                <h3 className="text-2xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-cyan-400">
-                  Accessibility
+                
+                <h3 className="text-2xl sm:text-3xl font-bold mb-4 text-white">
+                  Data Integration
                 </h3>
-                <p className="text-gray-300">
-                  We believe quality fitness guidance should be available to everyone, regardless of budget or location.
-                  Our platform makes expert-level coaching accessible to all.
+                
+                <p className="text-lg text-gray-300 leading-relaxed">
+                  We gather insights from TikTok and YouTube influencers, then use RAG (Retrieval-Augmented Generation) 
+                  with our healthy food database to ensure you get the most comprehensive and up-to-date recommendations.
                 </p>
               </div>
-            </div>
-          </EnhancedAnimation>
 
-          <EnhancedAnimation delay={600}>
-            <div className="relative group">
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-2xl opacity-0 group-hover:opacity-30 transition duration-500 blur-md"></div>
-              <div className="relative bg-gray-900/80 backdrop-blur-sm p-8 rounded-2xl border border-gray-800 group-hover:border-emerald-500/30 transition-all duration-300 h-full">
-                <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 flex items-center justify-center mb-6">
-                  <Dumbbell className="h-8 w-8 text-emerald-400" />
+              {/* Fixed Data Integration Animation */}
+              <div>
+                <div className="relative bg-gradient-to-br from-gray-900/50 to-gray-800/50 rounded-2xl p-8 border border-emerald-500/20 shadow-2xl shadow-emerald-500/10">
+                  <div className="w-full h-[400px] relative">
+                    {/* Central Hub */}
+                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                      <div className="w-20 h-20 bg-gradient-to-r from-emerald-500/30 to-cyan-500/30 rounded-full border-2 border-emerald-400/50 flex items-center justify-center animate-pulse">
+                        <Database className="w-10 h-10 text-emerald-400" />
+                      </div>
+                      {/* Pulsing rings */}
+                      <div className="absolute inset-0 w-20 h-20 border-2 border-emerald-400/20 rounded-full animate-ping" />
+                      <div className="absolute -inset-2 w-24 h-24 border border-emerald-400/10 rounded-full animate-ping" style={{ animationDelay: '1s' }} />
+                    </div>
+                    
+                    {/* Data sources positioned around the center */}
+                    {/* TikTok - Top Left */}
+                    <div className="absolute top-8 left-8 bg-gradient-to-r from-pink-500/25 to-pink-600/25 p-4 rounded-xl border border-pink-500/40 backdrop-blur-sm shadow-lg animate-pulse">
+                      <div className="text-pink-400 text-sm font-semibold flex items-center gap-2">
+                        <div className="w-3 h-3 bg-pink-400 rounded-full animate-pulse" />
+                        TikTok
+                      </div>
+                    </div>
+                    
+                    {/* YouTube - Top Right */}
+                    <div className="absolute top-8 right-8 bg-gradient-to-r from-red-500/25 to-red-600/25 p-4 rounded-xl border border-red-500/40 backdrop-blur-sm shadow-lg animate-pulse" style={{ animationDelay: '0.5s' }}>
+                      <div className="text-red-400 text-sm font-semibold flex items-center gap-2">
+                        <div className="w-3 h-3 bg-red-400 rounded-full animate-pulse" />
+                        YouTube
+                      </div>
+                    </div>
+                    
+                    {/* Health Sites - Bottom Left */}
+                    <div className="absolute bottom-8 left-8 bg-gradient-to-r from-blue-500/25 to-blue-600/25 p-4 rounded-xl border border-blue-500/40 backdrop-blur-sm shadow-lg animate-pulse" style={{ animationDelay: '1s' }}>
+                      <div className="text-blue-400 text-sm font-semibold flex items-center gap-2">
+                        <div className="w-3 h-3 bg-blue-400 rounded-full animate-pulse" />
+                        Health Sites
+                      </div>
+                    </div>
+                    
+                    {/* Food DB - Bottom Right */}
+                    <div className="absolute bottom-8 right-8 bg-gradient-to-r from-green-500/25 to-green-600/25 p-4 rounded-xl border border-green-500/40 backdrop-blur-sm shadow-lg animate-pulse" style={{ animationDelay: '1.5s' }}>
+                      <div className="text-green-400 text-sm font-semibold flex items-center gap-2">
+                        <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse" />
+                        Food DB
+                      </div>
+                    </div>
+                    
+                    {/* Connection lines from each corner to center */}
+                    <svg className="absolute inset-0 w-full h-full pointer-events-none">
+                      <defs>
+                        <linearGradient id="connectionGradient1" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="rgba(236, 72, 153, 0.4)" />
+                          <stop offset="100%" stopColor="rgba(16, 185, 129, 0.4)" />
+                        </linearGradient>
+                        <linearGradient id="connectionGradient2" x1="100%" y1="0%" x2="0%" y2="100%">
+                          <stop offset="0%" stopColor="rgba(239, 68, 68, 0.4)" />
+                          <stop offset="100%" stopColor="rgba(16, 185, 129, 0.4)" />
+                        </linearGradient>
+                        <linearGradient id="connectionGradient3" x1="0%" y1="100%" x2="100%" y2="0%">
+                          <stop offset="0%" stopColor="rgba(59, 130, 246, 0.4)" />
+                          <stop offset="100%" stopColor="rgba(16, 185, 129, 0.4)" />
+                        </linearGradient>
+                        <linearGradient id="connectionGradient4" x1="100%" y1="100%" x2="0%" y2="0%">
+                          <stop offset="0%" stopColor="rgba(34, 197, 94, 0.4)" />
+                          <stop offset="100%" stopColor="rgba(16, 185, 129, 0.4)" />
+                        </linearGradient>
+                      </defs>
+                      
+                      {/* Lines from corners to center */}
+                      <line x1="80" y1="60" x2="200" y2="200" stroke="url(#connectionGradient1)" strokeWidth="2" strokeDasharray="4,4" className="animate-pulse" />
+                      <line x1="320" y1="60" x2="200" y2="200" stroke="url(#connectionGradient2)" strokeWidth="2" strokeDasharray="4,4" className="animate-pulse" style={{ animationDelay: '0.5s' }} />
+                      <line x1="80" y1="340" x2="200" y2="200" stroke="url(#connectionGradient3)" strokeWidth="2" strokeDasharray="4,4" className="animate-pulse" style={{ animationDelay: '1s' }} />
+                      <line x1="320" y1="340" x2="200" y2="200" stroke="url(#connectionGradient4)" strokeWidth="2" strokeDasharray="4,4" className="animate-pulse" style={{ animationDelay: '1.5s' }} />
+                    </svg>
+                  </div>
                 </div>
-                <h3 className="text-2xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-cyan-400">
-                  Personalization
-                </h3>
-                <p className="text-gray-300">
-                  We understand that every body is different. Our AI creates truly personalized plans that adapt to your
-                  unique needs, preferences, and constraints.
-                </p>
               </div>
             </div>
-          </EnhancedAnimation>
+          </FadeIn>
 
-          <EnhancedAnimation delay={700}>
-            <div className="relative group">
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-2xl opacity-0 group-hover:opacity-30 transition duration-500 blur-md"></div>
-              <div className="relative bg-gray-900/80 backdrop-blur-sm p-8 rounded-2xl border border-gray-800 group-hover:border-emerald-500/30 transition-all duration-300 h-full">
-                <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 flex items-center justify-center mb-6">
-                  <Zap className="h-8 w-8 text-emerald-400" />
+          {/* Step 4: Results - Image */}
+          <FadeIn delay={700}>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center lg:grid-flow-col-dense">
+              {/* Content */}
+              <div className="lg:col-start-2">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-cyan-500/25 to-emerald-500/25 flex items-center justify-center border border-cyan-500/30">
+                    <CheckCircle className="w-6 h-6 text-cyan-400" />
+                  </div>
+                  <div className="text-cyan-400 font-bold text-lg">Step 4</div>
                 </div>
-                <h3 className="text-2xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-cyan-400">
-                  Innovation
+                
+                <h3 className="text-2xl sm:text-3xl font-bold mb-4 text-white">
+                  Personalized Plan
                 </h3>
-                <p className="text-gray-300">
-                  We're constantly pushing the boundaries of what's possible with AI in fitness. Our platform evolves
-                  with the latest research and technology to deliver the best results.
+                
+                <p className="text-lg text-gray-300 leading-relaxed">
+                  Receive your customized workout or meal plan, structured and ready to help you achieve your goals. 
+                  Your plan is tailored specifically to your inputs, preferences, and objectives.
                 </p>
               </div>
+
+              {/* Image */}
+              <div className="lg:col-start-1">
+                <div className="relative">
+                  <Image
+                    src="/placeholder.svg?height=400&width=600"
+                    alt="Clean, organized meal plan and workout schedule displayed on a tablet or phone screen"
+                    width={600}
+                    height={400}
+                    className="w-full rounded-2xl shadow-2xl shadow-cyan-500/20"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-cyan-900/20 via-transparent to-transparent rounded-2xl" />
+                </div>
+              </div>
             </div>
-          </EnhancedAnimation>
+          </FadeIn>
         </div>
       </div>
+    </section>
+  )
+}
 
-      {/* Our Team Section */}
-      <div className="w-full max-w-6xl mx-auto px-4 mb-24">
-        <EnhancedAnimation delay={800}>
-          <div className="text-center mb-16">
-            <div className="inline-block px-4 py-1 rounded-full bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 backdrop-blur-md border border-emerald-500/30 text-emerald-400 text-sm font-medium mb-4">
-              <span className="flex items-center justify-center">
-                <Users className="w-4 h-4 mr-2" />
-                Meet Our Team
-              </span>
-            </div>
-            <h2 className="text-4xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-cyan-400">
-              The Minds Behind AI GymBRO
-            </h2>
-            <p className="text-xl text-gray-200 max-w-3xl mx-auto">
-              Our diverse team of experts is passionate about combining fitness science with cutting-edge AI technology
-            </p>
-          </div>
-        </EnhancedAnimation>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          <TeamMember
-            name="Matthews Wong"
-            role="Founder & Lead Developer"
-            bio="Fitness enthusiast and AI specialist with a passion for making expert-level fitness guidance accessible to everyone."
-            imageSrc="/images/profile-pic.png"    
-            delay={900}
-          />
-          
-        </div>
-      </div>
-
-      {/* Our Journey Section */}
-      <div className="w-full max-w-6xl mx-auto px-4 mb-24">
-        <EnhancedAnimation delay={1200}>
-          <div className="text-center mb-16">
-            <div className="inline-block px-4 py-1 rounded-full bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 backdrop-blur-md border border-emerald-500/30 text-emerald-400 text-sm font-medium mb-4">
-              <span className="flex items-center justify-center">
-                <Clock className="w-4 h-4 mr-2" />
-                Our Journey
-              </span>
-            </div>
-            <h2 className="text-4xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-cyan-400">
-              The Evolution of AI GymBRO
-            </h2>
-            <p className="text-xl text-gray-200 max-w-3xl mx-auto">
-              From idea to reality: how we're transforming the fitness industry with AI
-            </p>
-          </div>
-        </EnhancedAnimation>
-
-        <div className="max-w-3xl mx-auto">
-          <TimelineItem
-            year="2021"
-            title="The Idea Takes Shape"
-            description="Matthews Wong, frustrated by the lack of affordable, personalized fitness guidance, envisions an AI-powered solution that can deliver expert-level coaching to everyone."
-            icon={Sparkles}
-            delay={1300}
-          />
-          <TimelineItem
-            year="2022"
-            title="Research & Development"
-            description="Our team begins developing the core AI algorithms, collaborating with fitness experts and nutritionists to ensure the platform delivers truly effective, science-based recommendations."
-            icon={Zap}
-            delay={1400}
-          />
-          <TimelineItem
-            year="2023"
-            title="Beta Launch"
-            description="AI GymBRO launches in beta with a small group of users, gathering valuable feedback and continuously improving the platform's recommendations and user experience."
-            icon={Award}
-            delay={1500}
-          />
-          <TimelineItem
-            year="2024"
-            title="Public Release"
-            description="After months of refinement, AI GymBRO officially launches to the public, making personalized fitness and nutrition guidance accessible to thousands of users worldwide."
-            icon={CheckCircle}
-            delay={1600}
-          />
-        </div>
-      </div>
-
-      {/* Stats Section */}
-      <div className="w-full max-w-6xl mx-auto px-4 mb-24">
-        <EnhancedAnimation delay={1700}>
-          <div className="text-center mb-16">
-            <div className="inline-block px-4 py-1 rounded-full bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 backdrop-blur-md border border-emerald-500/30 text-emerald-400 text-sm font-medium mb-4">
-              <span className="flex items-center justify-center">
-                <Award className="w-4 h-4 mr-2" />
-                Our Impact
-              </span>
-            </div>
-            <h2 className="text-4xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-cyan-400">
-              AI GymBRO By The Numbers
-            </h2>
-          </div>
-        </EnhancedAnimation>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-          <Stat value="10,000+" label="Active Users" icon={Users} delay={1800} />
-          <Stat value="50,000+" label="Workout Plans Generated" icon={Dumbbell} delay={1850} />
-          <Stat value="35,000+" label="Meal Plans Created" icon={Heart} delay={1900} />
-          <Stat value="92%" label="User Satisfaction" icon={Award} delay={1950} />
-        </div>
-      </div>
-
-      {/* Testimonials Section */}
-      <div className="w-full max-w-6xl mx-auto px-4 mb-24">
-        <EnhancedAnimation delay={2000}>
-          <div className="text-center mb-16">
-            <div className="inline-block px-4 py-1 rounded-full bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 backdrop-blur-md border border-emerald-500/30 text-emerald-400 text-sm font-medium mb-4">
-              <span className="flex items-center justify-center">
-                <Users className="w-4 h-4 mr-2" />
-                Testimonials
-              </span>
-            </div>
-            <h2 className="text-4xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-cyan-400">
-              What Our Users Say
-            </h2>
-          </div>
-        </EnhancedAnimation>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <Testimonial
-            quote="AI GymBRO has completely transformed my fitness journey. The personalized workout plans adapt perfectly to my busy schedule and limited equipment, and I've seen more progress in 3 months than I did in a year of following generic programs."
-            author="Alex Thompson"
-            role="Software Engineer"
-            rating={5}
-            delay={2100}
-          />
-          <Testimonial
-            quote="As someone with dietary restrictions, finding meal plans that work for me has always been a challenge. AI GymBRO created a nutrition plan that perfectly balances my needs while keeping meals interesting and delicious."
-            author="Jamie Rodriguez"
-            role="Marketing Manager"
-            rating={5}
-            delay={2150}
-          />
-          <Testimonial
-            quote="The level of personalization is incredible. It feels like having a personal trainer and nutritionist in my pocket, but at a fraction of the cost. I recommend AI GymBRO to everyone I know who's serious about fitness."
-            author="Sam Wilson"
-            role="Healthcare Professional"
-            rating={4}
-            delay={2200}
-          />
-          <Testimonial
-            quote="I was skeptical about an AI creating effective workout plans, but I'm completely sold now. The progressive overload is perfectly calibrated, and the variety keeps me engaged. Best fitness investment I've made."
-            author="Taylor Kim"
-            role="Small Business Owner"
-            rating={1}
-            delay={2250}
-          />
-        </div>
-      </div>
-
-      {/* CTA Section */}
-      <div className="w-full max-w-4xl mx-auto px-4 mb-24">
-        <EnhancedAnimation delay={2300}>
-          <div className="relative">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-2xl opacity-20 blur-lg"></div>
-            <div className="relative bg-gray-900/70 backdrop-blur-sm p-8 md:p-12 rounded-2xl border border-emerald-500/20 text-center">
-              <h2 className="text-3xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-cyan-400">
-                Ready to Transform Your Fitness Journey?
+// From the creator section with Next.js Image and proper sizing
+function FromTheCreatorSection() {
+  return (
+    <section className="relative py-16 sm:py-20 md:py-24 lg:py-32">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-6xl mx-auto">
+          <FadeIn delay={100}>
+            <div className="text-center mb-16">
+              <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-emerald-500/25 to-cyan-500/25 backdrop-blur-md border border-emerald-500/40 text-emerald-300 text-sm font-medium mb-6">
+                <Heart className="w-4 h-4 text-pink-400" />
+                From the Creator
+              </div>
+              
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-6">
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-cyan-400">
+                  Meet the Mind
+                </span>
+                <br />
+                <span className="text-white">Behind AI GymBRO</span>
               </h2>
-              <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-                Join thousands of users who are achieving their fitness goals with AI GymBRO's personalized plans.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <EnhancedButton primary href="/workout-plan" size="xl">
-                  Create Your Workout Plan <ArrowRight className="ml-2 h-5 w-5" />
-                </EnhancedButton>
-                <EnhancedButton href="/meal-plan" size="xl">
-                  Create Your Meal Plan <ArrowRight className="ml-2 h-5 w-5" />
-                </EnhancedButton>
+            </div>
+          </FadeIn>
+
+          <FadeIn delay={200}>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+              {/* Content */}
+              <div>
+                <div className="space-y-6 text-lg text-gray-300 leading-relaxed">
+                  <p>
+                    Hi there! I'm the creator of AI GymBRO, and I'm passionate about making fitness and nutrition 
+                    accessible to everyone. As someone who has struggled with finding affordable, personalized 
+                    fitness guidance, I understand the challenges many people face.
+                  </p>
+                  
+                  <p>
+                    <span className="text-emerald-400 font-semibold bg-emerald-400/15 px-3 py-1 rounded-lg border border-emerald-400/30">
+                      My mission is simple: democratize fitness planning.
+                    </span>
+                  </p>
+                  
+                  <p>
+                    I believe that everyone deserves access to structured, personalized fitness and nutrition plans, 
+                    regardless of their budget. That's why I built AI GymBRO - to bridge the gap between expensive 
+                    personal training and generic one-size-fits-all solutions.
+                  </p>
+                  
+                  <p>
+                    This platform represents countless hours of research, development, and testing to ensure 
+                    you get the best possible recommendations for your unique goals and lifestyle.
+                  </p>
+                </div>
+              </div>
+
+              {/* Creator photo section with Next.js Image */}
+              <div className="flex justify-center lg:justify-end">
+                <div className="relative">
+                  {/* Container - smaller than the image */}
+                  <div className="relative w-80 h-96 bg-gradient-to-br from-gray-900/80 to-gray-800/80 rounded-3xl border border-emerald-500/20 shadow-2xl shadow-emerald-500/10 overflow-hidden backdrop-blur-sm">
+                    {/* Background pattern */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-cyan-500/5" />
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-emerald-400/10 to-transparent rounded-full" />
+                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-cyan-400/10 to-transparent rounded-full" />
+                    
+                    {/* Container content area */}
+                    <div className="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-gray-900/90 via-gray-900/60 to-transparent">
+                      <div className="text-left">
+                        <h3 className="text-2xl font-bold text-white mb-2">Matthews Wong</h3>
+                        <p className="text-emerald-400 text-base font-medium mb-4">Founder & Developer</p>
+                        <div className="flex justify-start">
+                          <a
+                            href="https://www.matthewswong.tech"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 rounded-xl text-emerald-300 text-sm font-medium transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-emerald-500/20"
+                          >
+                            Visit Portfolio
+                            <ArrowRight className="w-4 h-4" />
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Founder image - extends outside the container */}
+                  <div className="absolute -top-16 -right-8 w-96 h-[500px] rounded-3xl overflow-hidden border-2 border-emerald-400/30 shadow-xl backdrop-blur-sm">
+                    <Image
+                      src="/founder.png"
+                      alt="Matthews Wong - Founder and Developer of AI GymBRO"
+                      width={384}
+                      height={500}
+                      className="w-full h-full object-cover"
+                      priority
+                    />
+                  </div>
+                  
+                  {/* Enhanced drop shadow effect */}
+                  <div className="absolute -bottom-6 left-6 right-6 h-12 bg-emerald-500/15 rounded-full blur-2xl" />
+                  <div className="absolute -bottom-3 left-8 right-8 h-6 bg-emerald-500/10 rounded-full blur-xl" />
+                </div>
               </div>
             </div>
-          </div>
-        </EnhancedAnimation>
+          </FadeIn>
+        </div>
       </div>
+    </section>
+  )
+}
 
-      {/* Footer */}
-      <EnhancedAnimation delay={2400}>
-        <footer className="w-full text-center z-10 pb-8">
-          <div className="text-gray-500 text-sm">© {new Date().getFullYear()} AI GymBRO. All rights reserved.</div>
-        </footer>
-      </EnhancedAnimation>
-    </div>
+// Footer component
+function Footer() {
+  return (
+    <footer className="bg-gray-950 border-t border-gray-800">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <FadeIn delay={100}>
+            <div>
+              <h2 className="text-3xl font-bold mb-4">
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-cyan-400 to-emerald-500">
+                  AI Gym
+                  <span className="bg-clip-text text-transparent bg-gradient-to-b from-white via-gray-100 to-gray-300">
+                    BRO
+                  </span>
+                </span>
+              </h2>
+              <p className="text-gray-400 mb-6 max-w-md leading-relaxed">
+                Your personal AI trainer and nutritionist. Generate customized workout and meal plans tailored to your
+                specific goals and lifestyle.
+              </p>
+            </div>
+          </FadeIn>
+
+          <FadeIn delay={200}>
+            <div>
+              <h3 className="text-lg font-semibold text-white mb-4">Get Started</h3>
+              <div className="space-y-3">
+                <Link
+                  href="/workout-plan"
+                  className="flex items-center gap-3 text-gray-400 hover:text-emerald-400 transition-colors group"
+                >
+                  <Dumbbell className="w-5 h-5 text-emerald-500 group-hover:scale-110 transition-transform" />
+                  Generate Workout Plan
+                  <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+                </Link>
+                <Link
+                  href="/meal-plan"
+                  className="flex items-center gap-3 text-gray-400 hover:text-cyan-400 transition-colors group"
+                >
+                  <Utensils className="w-5 h-5 text-cyan-500 group-hover:scale-110 transition-transform" />
+                  Generate Meal Plan
+                  <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+                </Link>
+              </div>
+            </div>
+          </FadeIn>
+        </div>
+
+        <FadeIn delay={300}>
+          <div className="pt-8 mt-8 border-t border-gray-800 flex flex-col md:flex-row justify-between items-center">
+            <p className="text-gray-500 text-sm">© {new Date().getFullYear()} AI GymBRO. All rights reserved.</p>
+            <p className="text-gray-500 text-sm mt-4 md:mt-0">
+              Built by{" "}
+              <a
+                href="https://www.matthewswong.tech"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-emerald-400 hover:text-emerald-300 transition-colors"
+              >
+                Matthews Wong
+              </a>
+            </p>
+          </div>
+        </FadeIn>
+      </div>
+    </footer>
+  )
+}
+
+// Main About page component
+export default function AboutPage() {
+  return (
+    <main className="min-h-screen bg-gray-950 text-white relative">
+      <EnhancedBackground />
+      <AboutHeroSection />
+      <MissionSection />
+      <HowItWorksSection />
+      <FromTheCreatorSection />
+      <Footer />
+    </main>
   )
 }
 

@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-
+import Image from 'next/image';
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import {
@@ -261,17 +261,25 @@ const LottiePlayer = ({ src, className = "" }: { src: string; className?: string
 }
 
 
-// Hero Section with enhanced effects and Lottie
 function HeroSection() {
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-      {/* Full background image */}
+      {/* Full background image - static for better performance */}
       <div className="absolute inset-0 z-0">
-        <img src="/images/hero.jpg" alt="Gym Background" className="w-full h-full object-cover" />
-        {/* Enhanced overlay with emerald tints */}
-        <div className="absolute inset-0 bg-gradient-to-b from-emerald-900/85 via-gray-900/75 to-emerald-900/90" />
+        <Image 
+          src="/images/hero.jpg" 
+          alt="Gym Background" 
+          fill
+          className="object-cover"
+          priority
+        />
+        {/* Enhanced overlay with natural gradient transition */}
+        <div className="absolute inset-0 bg-gradient-to-b from-emerald-900/85 via-gray-900/75 to-gray-950/90" />
         <div className="absolute inset-0 bg-gradient-to-r from-emerald-900/25 via-transparent to-cyan-900/25" />
       </div>
+
+      {/* Smooth transition gradient at bottom */}
+      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-gray-950 via-gray-950/80 to-transparent z-10" />
 
       {/* Main content */}
       <div className="relative z-20 container mx-auto px-4 sm:px-6 lg:px-8">
@@ -279,15 +287,15 @@ function HeroSection() {
           {/* Left side - Text content */}
           <div className="text-center lg:text-left">
             <FadeIn delay={100}>
-              <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-emerald-500/25 to-cyan-500/25 backdrop-blur-md border border-emerald-500/40 text-emerald-300 text-sm font-medium mb-8 shadow-2xl">
-                <Zap className="w-4 h-4" />
+              <div className="inline-flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 rounded-full bg-gradient-to-r from-emerald-500/25 to-cyan-500/25 backdrop-blur-md border border-emerald-500/40 text-emerald-300 text-xs sm:text-sm font-medium mb-8 shadow-2xl">
+                <Zap className="w-3 h-3 sm:w-4 sm:h-4" />
                 Powered by Advanced AI Technology
               </div>
             </FadeIn>
 
             <FadeIn delay={200}>
               {/* Enhanced title with compelling copywriting */}
-              <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-6xl xl:text-7xl 2xl:text-8xl font-bold mb-8 leading-tight">
+              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-5xl xl:text-6xl 2xl:text-7xl font-bold mb-6 sm:mb-8 leading-tight">
                 <span
                   className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-cyan-400 to-emerald-500 filter brightness-110 relative font-black"
                   style={{
@@ -298,7 +306,7 @@ function HeroSection() {
                     letterSpacing: "-0.02em",
                   }}
                 >
-                  Transform
+                  Data-Driven Gains
                 </span>
                 <br />
                 <span
@@ -311,21 +319,21 @@ function HeroSection() {
                     letterSpacing: "-0.02em",
                   }}
                 >
-                  Your Body
+                  Just For You
                 </span>
               </h1>
             </FadeIn>
 
             <FadeIn delay={300}>
-              {/* Enhanced copywriting */}
-              <div className="text-base sm:text-lg md:text-xl lg:text-xl mb-8 lg:mb-10 text-gray-100 leading-relaxed">
+              {/* Enhanced copywriting with responsive highlights */}
+              <div className="text-lg sm:text-xl md:text-2xl lg:text-xl mb-8 lg:mb-10 text-gray-100 leading-relaxed">
                 <p className="mb-6 font-light">
                   Meet your{" "}
-                  <span className="text-emerald-400 font-semibold bg-emerald-400/15 px-2 py-1 rounded-lg border border-emerald-400/30 hover:bg-emerald-400/25 transition-colors">
+                  <span className="inline-block text-emerald-400 font-semibold bg-emerald-400/15 px-2 sm:px-2 py-1 sm:py-1 mx-1 my-1 rounded-lg border border-emerald-400/30 hover:bg-emerald-400/25 transition-colors text-lg sm:text-lg md:text-xl lg:text-xl whitespace-nowrap">
                     AI-powered fitness coach
                   </span>{" "}
                   and{" "}
-                  <span className="text-cyan-400 font-semibold bg-cyan-400/15 px-2 py-1 rounded-lg border border-cyan-400/30 hover:bg-cyan-400/25 transition-colors">
+                  <span className="inline-block text-cyan-400 font-semibold bg-cyan-400/15 px-2 sm:px-2 py-1 sm:py-1 mx-1 my-1 rounded-lg border border-cyan-400/30 hover:bg-cyan-400/25 transition-colors text-lg sm:text-lg md:text-xl lg:text-xl whitespace-nowrap">
                     nutrition expert
                   </span>
                 </p>
@@ -366,8 +374,9 @@ function HeroSection() {
               </div>
             </FadeIn>
 
+            {/* Hide bullet points on mobile */}
             <FadeIn delay={500}>
-              <div className="mt-16 text-sm text-gray-400 flex items-center justify-center lg:justify-start gap-4 flex-wrap">
+              <div className="hidden sm:flex mt-16 text-sm text-gray-400 items-center justify-center lg:justify-start gap-4 flex-wrap">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-emerald-400" />
                   <span>Unlock Progress</span>
@@ -402,7 +411,13 @@ function HeroSection() {
 function ProductsSection() {
   return (
     <section id="products" className="relative py-8 sm:py-12 md:py-16 lg:py-20" style={{ scrollMarginTop: "80px" }}>
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Gradient background - solid at top, transparent from 50% down */}
+      <div className="absolute inset-0 bg-gradient-to-b from-gray-950 via-gray-950 to-transparent" style={{ background: 'linear-gradient(to bottom, rgb(3, 7, 18) 0%, rgb(3, 7, 18) 50%, transparent 100%)' }} />
+      
+      {/* Smooth transition gradient at top */}
+      <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-gray-950 via-gray-950/80 to-transparent" />
+      
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <FadeIn delay={100}>
           <div className="text-center mb-8 lg:mb-12">
             <h2 className="text-4xl md:text-5xl font-bold mb-6">
@@ -424,10 +439,12 @@ function ProductsSection() {
             <div className="group relative">
               <div className="relative bg-gray-900/80 backdrop-blur-sm rounded-2xl border border-gray-800 group-hover:border-emerald-500/40 transition-all duration-300 overflow-hidden h-full hover:shadow-2xl hover:shadow-emerald-500/20">
                 <div className="relative h-64 overflow-hidden">
-                  <img
+                  <Image
                     src="/images/workout.webp"
                     alt="Custom Workout Plans"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform duration-500"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/50 to-transparent" />
                   <div className="absolute top-4 right-4 bg-emerald-500/25 backdrop-blur-md rounded-lg p-3 border border-emerald-500/40">
@@ -485,10 +502,12 @@ function ProductsSection() {
             <div className="group relative">
               <div className="relative bg-gray-900/80 backdrop-blur-sm rounded-2xl border border-gray-800 group-hover:border-cyan-500/40 transition-all duration-300 overflow-hidden h-full hover:shadow-2xl hover:shadow-cyan-500/20">
                 <div className="relative h-64 overflow-hidden">
-                  <img
+                  <Image
                     src="/images/meal-plan.webp"
                     alt="Tailored Meal Plans"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform duration-500"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/50 to-transparent" />
                   <div className="absolute top-4 right-4 bg-cyan-500/25 backdrop-blur-md rounded-lg p-3 border border-cyan-500/40">
@@ -545,6 +564,7 @@ function ProductsSection() {
     </section>
   )
 }
+
 
 // Workout Plan Preview Section with enhanced explanations
 function WorkoutPlanSection() {
@@ -610,11 +630,14 @@ function WorkoutPlanSection() {
                       </div>
                     </div>
                     <div className="relative group">
-                      <img
+                      <Image
                         src="/placeholder.svg?height=640&width=360"
                         alt="Workout Report Preview"
+                        width={360}
+                        height={640}
                         className="w-full rounded-lg group-hover:scale-[1.02] transition-all duration-500"
                         style={{ aspectRatio: "9/16" }}
+                        loading="lazy"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-emerald-900/30 via-transparent to-transparent rounded-xl" />
                       <div className="absolute bottom-6 left-6 right-6">
@@ -857,11 +880,14 @@ function MealPlanSection() {
                       </div>
                     </div>
                     <div className="relative group">
-                      <img
+                      <Image
                         src="/placeholder.svg?height=640&width=360"
                         alt="Meal Plan Report Preview"
+                        width={360}
+                        height={640}
                         className="w-full rounded-lg group-hover:scale-[1.02] transition-all duration-500"
                         style={{ aspectRatio: "9/16" }}
+                        loading="lazy"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-cyan-900/30 via-transparent to-transparent rounded-xl" />
                       <div className="absolute bottom-6 left-6 right-6">
@@ -1283,3 +1309,4 @@ export default function Home() {
     </div>
   )
 }
+
