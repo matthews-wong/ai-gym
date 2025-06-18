@@ -1,0 +1,50 @@
+# AI GymBRO - Robots.txt
+# Founded and Developed by Matthews Wong from Indonesia
+# https://aigymbro.web.id
+
+# Allow all web crawlers to access all content
+User-agent: *
+Allow: /
+
+# Specific instructions for major search engines
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 1
+
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 1
+
+User-agent: Slurp
+Allow: /
+Crawl-delay: 1
+
+# Block common unwanted bots
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: MJ12bot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /
+
+# Allow favicon and common assets
+Allow: /favicon.ico
+Allow: /favicon-*.png
+Allow: /apple-touch-icon.png
+Allow: /android-chrome-*.png
+Allow: /site.webmanifest
+
+# Allow important files
+Allow: /sitemap.xml
+Allow: /robots.txt
+
+# Sitemap location
+Sitemap: https://aigymbro.web.id/sitemap.xml
+
+# Host declaration (helps with canonical URL)
+Host: https://aigymbro.web.id
