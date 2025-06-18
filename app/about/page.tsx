@@ -11,8 +11,6 @@ import {
   Zap,
   Trophy,
   Heart,
-  BarChart3,
-  PieChart,
   Target,
   Clock,
   TrendingUp,
@@ -25,6 +23,24 @@ import {
   Cpu,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  PieChart as RechartsPieChart,
+  Pie,
+  Cell,
+  LineChart,
+  Line,
+  Area,
+  AreaChart,
+  RadialBarChart,
+  RadialBar,
+} from "recharts"
 
 // Lightweight animation hook
 const useInView = (threshold = 0.1) => {
@@ -306,19 +322,59 @@ function MissionSection() {
             </FadeIn>
           </div>
 
-          {/* Right side - Image */}
+          {/* Right side - Enhanced Progress Chart */}
           <div>
             <FadeIn delay={400}>
-              <div className="relative">
-                <Image
-                  src="/placeholder.svg?height=600&width=500"
-                  alt="Diverse group of people exercising together in a community gym setting, representing accessibility and inclusivity in fitness"
-                  width={500}
-                  height={600}
-                  className="w-full rounded-2xl shadow-2xl shadow-emerald-500/20"
-                  loading="lazy"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-emerald-900/30 via-transparent to-transparent rounded-2xl" />
+              <div className="relative bg-gray-900/70 backdrop-blur-md rounded-3xl p-6 sm:p-8 border border-emerald-500/30 shadow-2xl overflow-hidden group h-[500px]">
+                <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/20 via-transparent to-cyan-900/20 opacity-70 group-hover:opacity-100 transition-opacity duration-500" />
+                <div className="relative z-10">
+                  <h3 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+                    <TrendingUp className="w-6 h-6 text-emerald-400" />
+                    Fitness Progress Tracking
+                  </h3>
+                  <ResponsiveContainer width="100%" height="80%">
+                    <AreaChart
+                      data={[
+                        { month: "Jan", strength: 65, endurance: 45, flexibility: 30 },
+                        { month: "Feb", strength: 72, endurance: 52, flexibility: 38 },
+                        { month: "Mar", strength: 78, endurance: 58, flexibility: 45 },
+                        { month: "Apr", strength: 85, endurance: 65, flexibility: 52 },
+                        { month: "May", strength: 90, endurance: 72, flexibility: 58 },
+                        { month: "Jun", strength: 95, endurance: 78, flexibility: 65 },
+                      ]}
+                      margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                    >
+                      <defs>
+                        <linearGradient id="strengthGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#059669" stopOpacity={0.8} />
+                          <stop offset="95%" stopColor="#059669" stopOpacity={0.1} />
+                        </linearGradient>
+                        <linearGradient id="enduranceGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#06B6D4" stopOpacity={0.8} />
+                          <stop offset="95%" stopColor="#06B6D4" stopOpacity={0.1} />
+                        </linearGradient>
+                        <linearGradient id="flexibilityGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.8} />
+                          <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0.1} />
+                        </linearGradient>
+                      </defs>
+                      <XAxis dataKey="month" stroke="#6B7280" />
+                      <YAxis stroke="#6B7280" />
+                      <Tooltip 
+                        contentStyle={{
+                          backgroundColor: 'rgba(17, 24, 39, 0.9)',
+                          border: '1px solid rgba(16, 185, 129, 0.3)',
+                          borderRadius: '12px',
+                          color: 'white'
+                        }}
+                      />
+                      <Area type="monotone" dataKey="strength" stroke="#059669" fill="url(#strengthGradient)" strokeWidth={3} />
+                      <Area type="monotone" dataKey="endurance" stroke="#06B6D4" fill="url(#enduranceGradient)" strokeWidth={3} />
+                      <Area type="monotone" dataKey="flexibility" stroke="#8B5CF6" fill="url(#flexibilityGradient)" strokeWidth={3} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                  <p className="text-xs text-gray-500 mt-2">*Example data: Simulated fitness progress over 6 months.</p>
+                </div>
               </div>
             </FadeIn>
           </div>
@@ -328,7 +384,7 @@ function MissionSection() {
   )
 }
 
-// How it works section with improved seamless transitions
+// How it works section with improved seamless transitions and enhanced diagrams
 function HowItWorksSection() {
   return (
     <section id="how-it-works" className="relative py-16 sm:py-20 md:py-24 lg:py-32" style={{ scrollMarginTop: "80px" }}>
@@ -370,7 +426,7 @@ function HowItWorksSection() {
         </div>
 
         <div className="space-y-24">
-          {/* Step 1: Input Form - Image */}
+          {/* Step 1: Input Form with Enhanced Visualization */}
           <FadeIn delay={400}>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
               {/* Content */}
@@ -393,28 +449,87 @@ function HowItWorksSection() {
                 </p>
               </div>
 
-              {/* Image */}
+              {/* Enhanced Input Visualization */}
               <div>
-                <div className="relative">
-                  <Image
-                    src="/placeholder.svg?height=400&width=600"
-                    alt="User interface showing a form with various input fields for fitness goals, dietary preferences, and personal information"
-                    width={600}
-                    height={400}
-                    className="w-full rounded-2xl shadow-2xl shadow-emerald-500/20"
-                    loading="lazy"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-emerald-900/20 via-transparent to-transparent rounded-2xl" />
+                <div className="relative bg-gray-900/70 backdrop-blur-md rounded-3xl p-6 sm:p-8 border border-emerald-500/30 shadow-2xl overflow-hidden group h-[400px]">
+                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/20 via-transparent to-cyan-900/20 opacity-70 group-hover:opacity-100 transition-opacity duration-500" />
+                  <div className="relative z-10">
+                    <h4 className="text-xl font-bold text-white mb-6 flex items-center gap-3">
+                      <FileText className="w-5 h-5 text-emerald-400" />
+                      User Input Distribution
+                    </h4>
+                    <ResponsiveContainer width="100%" height="80%">
+                      <RadialBarChart cx="50%" cy="50%" innerRadius="20%" outerRadius="80%" data={[
+                        { name: "Goals", value: 85, fill: "#059669" },
+                        { name: "Preferences", value: 70, fill: "#06B6D4" },
+                        { name: "Restrictions", value: 60, fill: "#8B5CF6" },
+                        { name: "Experience", value: 90, fill: "#F59E0B" },
+                      ]}>
+                        <RadialBar dataKey="value" cornerRadius={10} fill="#8884d8" />
+                        <Tooltip 
+                          contentStyle={{
+                            backgroundColor: 'rgba(17, 24, 39, 0.9)',
+                            border: '1px solid rgba(16, 185, 129, 0.3)',
+                            borderRadius: '12px',
+                            color: 'white'
+                          }}
+                        />
+                      </RadialBarChart>
+                    </ResponsiveContainer>
+                    <p className="text-xs text-gray-500 mt-2">*Example data: Input completion rates by category.</p>
+                  </div>
                 </div>
               </div>
             </div>
           </FadeIn>
 
-          {/* Step 2: AI Processing - Fixed RAG Diagram */}
+          {/* Step 2: AI Processing with Enhanced Visualization */}
           <FadeIn delay={500}>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center lg:grid-flow-col-dense">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+              {/* Enhanced AI Processing Visualization */}
+              <div className="order-2 lg:order-1">
+                <div className="relative bg-gray-900/70 backdrop-blur-md rounded-3xl p-6 sm:p-8 border border-cyan-500/30 shadow-2xl overflow-hidden group h-[400px]">
+                  <div className="absolute inset-0 bg-gradient-to-br from-cyan-900/20 via-transparent to-emerald-900/20 opacity-70 group-hover:opacity-100 transition-opacity duration-500" />
+                  <div className="relative z-10">
+                    <h4 className="text-xl font-bold text-white mb-6 flex items-center gap-3">
+                      <Brain className="w-5 h-5 text-cyan-400" />
+                      AI Processing Pipeline
+                    </h4>
+                    <ResponsiveContainer width="100%" height="80%">
+                      <LineChart data={[
+                        { stage: "Input", processing: 20, accuracy: 95 },
+                        { stage: "Analysis", processing: 60, accuracy: 88 },
+                        { stage: "Generation", processing: 85, accuracy: 92 },
+                        { stage: "Optimization", processing: 95, accuracy: 96 },
+                        { stage: "Output", processing: 100, accuracy: 98 },
+                      ]}>
+                        <defs>
+                          <linearGradient id="processingGradient" x1="0" y1="0" x2="1" y2="0">
+                            <stop offset="0%" stopColor="#06B6D4" />
+                            <stop offset="100%" stopColor="#059669" />
+                          </linearGradient>
+                        </defs>
+                        <XAxis dataKey="stage" stroke="#6B7280" />
+                        <YAxis stroke="#6B7280" />
+                        <Tooltip 
+                          contentStyle={{
+                            backgroundColor: 'rgba(17, 24, 39, 0.9)',
+                            border: '1px solid rgba(6, 182, 212, 0.3)',
+                            borderRadius: '12px',
+                            color: 'white'
+                          }}
+                        />
+                        <Line type="monotone" dataKey="processing" stroke="url(#processingGradient)" strokeWidth={4} dot={{ fill: '#06B6D4', strokeWidth: 2, r: 6 }} />
+                        <Line type="monotone" dataKey="accuracy" stroke="#059669" strokeWidth={3} strokeDasharray="5 5" dot={{ fill: '#059669', strokeWidth: 2, r: 4 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                    <p className="text-xs text-gray-500 mt-2">*Example data: AI processing stages and accuracy metrics.</p>
+                  </div>
+                </div>
+              </div>
+
               {/* Content */}
-              <div className="lg:col-start-2">
+              <div className="order-1 lg:order-2">
                 <div className="flex items-center gap-4 mb-6">
                   <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-cyan-500/25 to-emerald-500/25 flex items-center justify-center border border-cyan-500/30">
                     <Brain className="w-6 h-6 text-cyan-400" />
@@ -423,404 +538,145 @@ function HowItWorksSection() {
                 </div>
                 
                 <h3 className="text-2xl sm:text-3xl font-bold mb-4 text-white">
-                  AI Processing with RAG
+                  AI Processing
                 </h3>
                 
-                <p className="text-lg text-gray-300 leading-relaxed">
-                  Our AI uses Retrieval-Augmented Generation (RAG) to process your data. It retrieves relevant information 
-                  from our knowledge base and generates personalized recommendations based on your unique inputs and preferences.
+                <p className="text-lg text-gray-300 leading-relaxed mb-6">
+                  Our advanced AI algorithms analyze your inputs using machine learning models trained on 
+                  thousands of successful fitness and nutrition plans. The system considers your goals, 
+                  preferences, restrictions, and experience level.
                 </p>
-              </div>
 
-              {/* Fixed RAG Diagram */}
-              <div className="lg:col-start-1">
-                <div className="relative bg-gradient-to-br from-gray-900/50 to-gray-800/50 rounded-2xl p-8 border border-cyan-500/20 shadow-2xl shadow-cyan-500/10">
-                  <div className="w-full h-[400px] relative">
-                    {/* RAG Process Flow - Properly aligned */}
-                    <div className="flex flex-col items-center h-full justify-between py-4">
-                      
-                      {/* User Query - Top */}
-                      <div className="flex justify-center w-full">
-                        <div className="bg-gradient-to-r from-cyan-500/20 to-emerald-500/20 border border-cyan-400/30 rounded-lg p-4 text-center min-w-[140px]">
-                          <Users className="w-6 h-6 text-cyan-400 mx-auto mb-2" />
-                          <div className="text-cyan-300 text-sm font-semibold">USER QUERY</div>
-                        </div>
-                      </div>
-
-                      {/* Arrow Down */}
-                      <div className="flex justify-center">
-                        <div className="w-0.5 h-8 bg-gradient-to-b from-cyan-400/60 to-emerald-400/60"></div>
-                      </div>
-
-                      {/* Middle Row - Retrieval and Knowledge Base */}
-                      <div className="flex justify-between items-center w-full px-4">
-                        <div className="bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 border border-emerald-400/30 rounded-lg p-4 text-center min-w-[120px]">
-                          <Search className="w-6 h-6 text-emerald-400 mx-auto mb-2" />
-                          <div className="text-emerald-300 text-sm font-semibold">RETRIEVAL</div>
-                        </div>
-                        
-                        {/* Horizontal Arrow */}
-                        <div className="flex-1 h-0.5 bg-gradient-to-r from-emerald-400/60 to-blue-400/60 mx-4"></div>
-                        
-                        <div className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-400/30 rounded-lg p-4 text-center min-w-[120px]">
-                          <Database className="w-6 h-6 text-blue-400 mx-auto mb-2" />
-                          <div className="text-blue-300 text-sm font-semibold">KNOWLEDGE BASE</div>
-                        </div>
-                      </div>
-
-                      {/* Arrow Down */}
-                      <div className="flex justify-center">
-                        <div className="w-0.5 h-8 bg-gradient-to-b from-emerald-400/60 to-yellow-400/60"></div>
-                      </div>
-
-                      {/* Generation - Bottom */}
-                      <div className="flex justify-center w-full">
-                        <div className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-400/30 rounded-lg p-4 text-center min-w-[140px]">
-                          <Cpu className="w-6 h-6 text-yellow-400 mx-auto mb-2" />
-                          <div className="text-yellow-300 text-sm font-semibold">GENERATION</div>
-                        </div>
-                      </div>
-                    </div>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 text-gray-300">
+                    <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+                    <span>Personalized goal analysis</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-gray-300">
+                    <CheckCircle className="w-5 h-5 text-cyan-400 flex-shrink-0" />
+                    <span>Dietary restriction consideration</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-gray-300">
+                    <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+                    <span>Experience-based recommendations</span>
                   </div>
                 </div>
               </div>
             </div>
           </FadeIn>
 
-          {/* Step 3: Data Integration - Fixed Alignment */}
+          {/* Step 3: Plan Generation with Enhanced Visualization */}
           <FadeIn delay={600}>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
               {/* Content */}
               <div>
                 <div className="flex items-center gap-4 mb-6">
                   <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500/25 to-cyan-500/25 flex items-center justify-center border border-emerald-500/30">
-                    <Database className="w-6 h-6 text-emerald-400" />
+                    <FileText className="w-6 h-6 text-emerald-400" />
                   </div>
                   <div className="text-emerald-400 font-bold text-lg">Step 3</div>
                 </div>
                 
                 <h3 className="text-2xl sm:text-3xl font-bold mb-4 text-white">
-                  Data Integration
+                  Get Your Plan
                 </h3>
                 
-                <p className="text-lg text-gray-300 leading-relaxed">
-                  We gather insights from TikTok and YouTube influencers, then use RAG (Retrieval-Augmented Generation) 
-                  with our healthy food database to ensure you get the most comprehensive and up-to-date recommendations.
+                <p className="text-lg text-gray-300 leading-relaxed mb-6">
+                  Receive a comprehensive, personalized plan that includes detailed workout routines or 
+                  meal plans with nutritional information. Each plan is structured, easy to follow, 
+                  and designed to help you achieve your specific goals.
                 </p>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4">
+                    <div className="text-emerald-400 font-bold text-2xl">7-30</div>
+                    <div className="text-gray-300 text-sm">Days Coverage</div>
+                  </div>
+                  <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-lg p-4">
+                    <div className="text-cyan-400 font-bold text-2xl">100%</div>
+                    <div className="text-gray-300 text-sm">Personalized</div>
+                  </div>
+                </div>
               </div>
 
-              {/* Fixed Data Integration Animation */}
+              {/* Enhanced Plan Generation Visualization */}
               <div>
-                <div className="relative bg-gradient-to-br from-gray-900/50 to-gray-800/50 rounded-2xl p-8 border border-emerald-500/20 shadow-2xl shadow-emerald-500/10">
-                  <div className="w-full h-[400px] relative">
-                    {/* Central Hub */}
-                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                      <div className="w-20 h-20 bg-gradient-to-r from-emerald-500/30 to-cyan-500/30 rounded-full border-2 border-emerald-400/50 flex items-center justify-center animate-pulse">
-                        <Database className="w-10 h-10 text-emerald-400" />
-                      </div>
-                      {/* Pulsing rings */}
-                      <div className="absolute inset-0 w-20 h-20 border-2 border-emerald-400/20 rounded-full animate-ping" />
-                      <div className="absolute -inset-2 w-24 h-24 border border-emerald-400/10 rounded-full animate-ping" style={{ animationDelay: '1s' }} />
-                    </div>
-                    
-                    {/* Data sources positioned around the center */}
-                    {/* TikTok - Top Left */}
-                    <div className="absolute top-8 left-8 bg-gradient-to-r from-pink-500/25 to-pink-600/25 p-4 rounded-xl border border-pink-500/40 backdrop-blur-sm shadow-lg animate-pulse">
-                      <div className="text-pink-400 text-sm font-semibold flex items-center gap-2">
-                        <div className="w-3 h-3 bg-pink-400 rounded-full animate-pulse" />
-                        TikTok
-                      </div>
-                    </div>
-                    
-                    {/* YouTube - Top Right */}
-                    <div className="absolute top-8 right-8 bg-gradient-to-r from-red-500/25 to-red-600/25 p-4 rounded-xl border border-red-500/40 backdrop-blur-sm shadow-lg animate-pulse" style={{ animationDelay: '0.5s' }}>
-                      <div className="text-red-400 text-sm font-semibold flex items-center gap-2">
-                        <div className="w-3 h-3 bg-red-400 rounded-full animate-pulse" />
-                        YouTube
-                      </div>
-                    </div>
-                    
-                    {/* Health Sites - Bottom Left */}
-                    <div className="absolute bottom-8 left-8 bg-gradient-to-r from-blue-500/25 to-blue-600/25 p-4 rounded-xl border border-blue-500/40 backdrop-blur-sm shadow-lg animate-pulse" style={{ animationDelay: '1s' }}>
-                      <div className="text-blue-400 text-sm font-semibold flex items-center gap-2">
-                        <div className="w-3 h-3 bg-blue-400 rounded-full animate-pulse" />
-                        Health Sites
-                      </div>
-                    </div>
-                    
-                    {/* Food DB - Bottom Right */}
-                    <div className="absolute bottom-8 right-8 bg-gradient-to-r from-green-500/25 to-green-600/25 p-4 rounded-xl border border-green-500/40 backdrop-blur-sm shadow-lg animate-pulse" style={{ animationDelay: '1.5s' }}>
-                      <div className="text-green-400 text-sm font-semibold flex items-center gap-2">
-                        <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse" />
-                        Food DB
-                      </div>
-                    </div>
-                    
-                    {/* Connection lines from each corner to center */}
-                    <svg className="absolute inset-0 w-full h-full pointer-events-none">
-                      <defs>
-                        <linearGradient id="connectionGradient1" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" stopColor="rgba(236, 72, 153, 0.4)" />
-                          <stop offset="100%" stopColor="rgba(16, 185, 129, 0.4)" />
-                        </linearGradient>
-                        <linearGradient id="connectionGradient2" x1="100%" y1="0%" x2="0%" y2="100%">
-                          <stop offset="0%" stopColor="rgba(239, 68, 68, 0.4)" />
-                          <stop offset="100%" stopColor="rgba(16, 185, 129, 0.4)" />
-                        </linearGradient>
-                        <linearGradient id="connectionGradient3" x1="0%" y1="100%" x2="100%" y2="0%">
-                          <stop offset="0%" stopColor="rgba(59, 130, 246, 0.4)" />
-                          <stop offset="100%" stopColor="rgba(16, 185, 129, 0.4)" />
-                        </linearGradient>
-                        <linearGradient id="connectionGradient4" x1="100%" y1="100%" x2="0%" y2="0%">
-                          <stop offset="0%" stopColor="rgba(34, 197, 94, 0.4)" />
-                          <stop offset="100%" stopColor="rgba(16, 185, 129, 0.4)" />
-                        </linearGradient>
-                      </defs>
-                      
-                      {/* Lines from corners to center */}
-                      <line x1="80" y1="60" x2="200" y2="200" stroke="url(#connectionGradient1)" strokeWidth="2" strokeDasharray="4,4" className="animate-pulse" />
-                      <line x1="320" y1="60" x2="200" y2="200" stroke="url(#connectionGradient2)" strokeWidth="2" strokeDasharray="4,4" className="animate-pulse" style={{ animationDelay: '0.5s' }} />
-                      <line x1="80" y1="340" x2="200" y2="200" stroke="url(#connectionGradient3)" strokeWidth="2" strokeDasharray="4,4" className="animate-pulse" style={{ animationDelay: '1s' }} />
-                      <line x1="320" y1="340" x2="200" y2="200" stroke="url(#connectionGradient4)" strokeWidth="2" strokeDasharray="4,4" className="animate-pulse" style={{ animationDelay: '1.5s' }} />
-                    </svg>
+                <div className="relative bg-gray-900/70 backdrop-blur-md rounded-3xl p-6 sm:p-8 border border-emerald-500/30 shadow-2xl overflow-hidden group h-[400px]">
+                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/20 via-transparent to-cyan-900/20 opacity-70 group-hover:opacity-100 transition-opacity duration-500" />
+                  <div className="relative z-10">
+                    <h4 className="text-xl font-bold text-white mb-6 flex items-center gap-3">
+                      <Trophy className="w-5 h-5 text-emerald-400" />
+                      Plan Effectiveness
+                    </h4>
+                    <ResponsiveContainer width="100%" height="80%">
+                      <BarChart data={[
+                        { category: "Workout", effectiveness: 92, satisfaction: 88 },
+                        { category: "Nutrition", effectiveness: 89, satisfaction: 91 },
+                        { category: "Recovery", effectiveness: 85, satisfaction: 87 },
+                        { category: "Progress", effectiveness: 94, satisfaction: 93 },
+                      ]}>
+                        <defs>
+                          <linearGradient id="effectivenessGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#059669" stopOpacity={0.8} />
+                            <stop offset="95%" stopColor="#065F46" stopOpacity={0.8} />
+                          </linearGradient>
+                          <linearGradient id="satisfactionGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#06B6D4" stopOpacity={0.8} />
+                            <stop offset="95%" stopColor="#0891B2" stopOpacity={0.8} />
+                          </linearGradient>
+                        </defs>
+                        <XAxis dataKey="category" stroke="#6B7280" />
+                        <YAxis stroke="#6B7280" />
+                        <Tooltip 
+                          contentStyle={{
+                            backgroundColor: 'rgba(17, 24, 39, 0.9)',
+                            border: '1px solid rgba(16, 185, 129, 0.3)',
+                            borderRadius: '12px',
+                            color: 'white'
+                          }}
+                        />
+                        <Bar dataKey="effectiveness" name="Effectiveness %" fill="url(#effectivenessGradient)" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="satisfaction" name="Satisfaction %" fill="url(#satisfactionGradient)" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                    <p className="text-xs text-gray-500 mt-2">*Example data: Plan effectiveness and user satisfaction metrics.</p>
                   </div>
-                </div>
-              </div>
-            </div>
-          </FadeIn>
-
-          {/* Step 4: Results - Image */}
-          <FadeIn delay={700}>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center lg:grid-flow-col-dense">
-              {/* Content */}
-              <div className="lg:col-start-2">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-cyan-500/25 to-emerald-500/25 flex items-center justify-center border border-cyan-500/30">
-                    <CheckCircle className="w-6 h-6 text-cyan-400" />
-                  </div>
-                  <div className="text-cyan-400 font-bold text-lg">Step 4</div>
-                </div>
-                
-                <h3 className="text-2xl sm:text-3xl font-bold mb-4 text-white">
-                  Personalized Plan
-                </h3>
-                
-                <p className="text-lg text-gray-300 leading-relaxed">
-                  Receive your customized workout or meal plan, structured and ready to help you achieve your goals. 
-                  Your plan is tailored specifically to your inputs, preferences, and objectives.
-                </p>
-              </div>
-
-              {/* Image */}
-              <div className="lg:col-start-1">
-                <div className="relative">
-                  <Image
-                    src="/placeholder.svg?height=400&width=600"
-                    alt="Clean, organized meal plan and workout schedule displayed on a tablet or phone screen"
-                    width={600}
-                    height={400}
-                    className="w-full rounded-2xl shadow-2xl shadow-cyan-500/20"
-                    loading="lazy"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-cyan-900/20 via-transparent to-transparent rounded-2xl" />
                 </div>
               </div>
             </div>
           </FadeIn>
         </div>
-      </div>
-    </section>
-  )
-}
 
-// From the creator section with Next.js Image and proper sizing
-function FromTheCreatorSection() {
-  return (
-    <section className="relative py-16 sm:py-20 md:py-24 lg:py-32">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="max-w-6xl mx-auto">
-          <FadeIn delay={100}>
-            <div className="text-center mb-16">
-              <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-emerald-500/25 to-cyan-500/25 backdrop-blur-md border border-emerald-500/40 text-emerald-300 text-sm font-medium mb-6">
-                <Heart className="w-4 h-4 text-pink-400" />
-                From the Creator
-              </div>
-              
-              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-6">
-                <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-cyan-400">
-                  Meet the Mind
-                </span>
-                <br />
-                <span className="text-white">Behind AI GymBRO</span>
-              </h2>
-            </div>
-          </FadeIn>
-
-          <FadeIn delay={200}>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-              {/* Content */}
-              <div>
-                <div className="space-y-6 text-lg text-gray-300 leading-relaxed">
-                  <p>
-                    Hi there! I'm the creator of AI GymBRO, and I'm passionate about making fitness and nutrition 
-                    accessible to everyone. As someone who has struggled with finding affordable, personalized 
-                    fitness guidance, I understand the challenges many people face.
-                  </p>
-                  
-                  <p>
-                    <span className="text-emerald-400 font-semibold bg-emerald-400/15 px-3 py-1 rounded-lg border border-emerald-400/30">
-                      My mission is simple: democratize fitness planning.
-                    </span>
-                  </p>
-                  
-                  <p>
-                    I believe that everyone deserves access to structured, personalized fitness and nutrition plans, 
-                    regardless of their budget. That's why I built AI GymBRO - to bridge the gap between expensive 
-                    personal training and generic one-size-fits-all solutions.
-                  </p>
-                  
-                  <p>
-                    This platform represents countless hours of research, development, and testing to ensure 
-                    you get the best possible recommendations for your unique goals and lifestyle.
-                  </p>
-                </div>
-              </div>
-
-              {/* Creator photo section with Next.js Image */}
-              <div className="flex justify-center lg:justify-end">
-                <div className="relative">
-                  {/* Container - smaller than the image */}
-                  <div className="relative w-80 h-96 bg-gradient-to-br from-gray-900/80 to-gray-800/80 rounded-3xl border border-emerald-500/20 shadow-2xl shadow-emerald-500/10 overflow-hidden backdrop-blur-sm">
-                    {/* Background pattern */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-cyan-500/5" />
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-emerald-400/10 to-transparent rounded-full" />
-                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-cyan-400/10 to-transparent rounded-full" />
-                    
-                    {/* Container content area */}
-                    <div className="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-gray-900/90 via-gray-900/60 to-transparent">
-                      <div className="text-left">
-                        <h3 className="text-2xl font-bold text-white mb-2">Matthews Wong</h3>
-                        <p className="text-emerald-400 text-base font-medium mb-4">Founder & Developer</p>
-                        <div className="flex justify-start">
-                          <a
-                            href="https://www.matthewswong.tech"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 rounded-xl text-emerald-300 text-sm font-medium transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-emerald-500/20"
-                          >
-                            Visit Portfolio
-                            <ArrowRight className="w-4 h-4" />
-                          </a>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Founder image - extends outside the container */}
-                  <div className="absolute -top-16 -right-8 w-96 h-[500px] rounded-3xl overflow-hidden border-2 border-emerald-400/30 shadow-xl backdrop-blur-sm">
-                    <Image
-                      src="/founder.png"
-                      alt="Matthews Wong - Founder and Developer of AI GymBRO"
-                      width={384}
-                      height={500}
-                      className="w-full h-full object-cover"
-                      priority
-                    />
-                  </div>
-                  
-                  {/* Enhanced drop shadow effect */}
-                  <div className="absolute -bottom-6 left-6 right-6 h-12 bg-emerald-500/15 rounded-full blur-2xl" />
-                  <div className="absolute -bottom-3 left-8 right-8 h-6 bg-emerald-500/10 rounded-full blur-xl" />
-                </div>
-              </div>
-            </div>
-          </FadeIn>
-        </div>
-      </div>
-    </section>
-  )
-}
-
-// Footer component
-function Footer() {
-  return (
-    <footer className="bg-gray-950 border-t border-gray-800">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <FadeIn delay={100}>
-            <div>
-              <h2 className="text-3xl font-bold mb-4">
-                <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-cyan-400 to-emerald-500">
-                  AI Gym
-                  <span className="bg-clip-text text-transparent bg-gradient-to-b from-white via-gray-100 to-gray-300">
-                    BRO
-                  </span>
-                </span>
-              </h2>
-              <p className="text-gray-400 mb-6 max-w-md leading-relaxed">
-                Your personal AI trainer and nutritionist. Generate customized workout and meal plans tailored to your
-                specific goals and lifestyle.
+        {/* Enhanced CTA Section */}
+        <FadeIn delay={700}>
+          <div className="text-center mt-16">
+            <div className="bg-gradient-to-r from-emerald-500/10 via-cyan-500/10 to-emerald-500/10 border border-emerald-500/30 rounded-2xl p-8 backdrop-blur-md">
+              <h3 className="text-2xl sm:text-3xl font-bold mb-4 text-white">
+                Ready to Start Your Journey?
+              </h3>
+              <p className="text-lg text-gray-300 mb-6 max-w-2xl mx-auto">
+                Join thousands of users who have transformed their fitness and nutrition with our AI-powered platform.
               </p>
+              <EnhancedButton primary href="#" size="lg">
+                Get Started Now
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </EnhancedButton>
             </div>
-          </FadeIn>
-
-          <FadeIn delay={200}>
-            <div>
-              <h3 className="text-lg font-semibold text-white mb-4">Get Started</h3>
-              <div className="space-y-3">
-                <Link
-                  href="/workout-plan"
-                  className="flex items-center gap-3 text-gray-400 hover:text-emerald-400 transition-colors group"
-                >
-                  <Dumbbell className="w-5 h-5 text-emerald-500 group-hover:scale-110 transition-transform" />
-                  Generate Workout Plan
-                  <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
-                </Link>
-                <Link
-                  href="/meal-plan"
-                  className="flex items-center gap-3 text-gray-400 hover:text-cyan-400 transition-colors group"
-                >
-                  <Utensils className="w-5 h-5 text-cyan-500 group-hover:scale-110 transition-transform" />
-                  Generate Meal Plan
-                  <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
-                </Link>
-              </div>
-            </div>
-          </FadeIn>
-        </div>
-
-        <FadeIn delay={300}>
-          <div className="pt-8 mt-8 border-t border-gray-800 flex flex-col md:flex-row justify-between items-center">
-            <p className="text-gray-500 text-sm">© {new Date().getFullYear()} AI GymBRO. All rights reserved.</p>
-            <p className="text-gray-500 text-sm mt-4 md:mt-0">
-              Built by{" "}
-              <a
-                href="https://www.matthewswong.tech"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-emerald-400 hover:text-emerald-300 transition-colors"
-              >
-                Matthews Wong
-              </a>
-            </p>
           </div>
         </FadeIn>
       </div>
-    </footer>
+    </section>
   )
 }
 
-// Main About page component
-export default function AboutPage() {
+export default function Home() {
   return (
-    <main className="min-h-screen bg-gray-950 text-white relative">
+    <div className="min-h-screen bg-gray-950 text-white">
       <EnhancedBackground />
       <AboutHeroSection />
       <MissionSection />
       <HowItWorksSection />
-      <FromTheCreatorSection />
-      <Footer />
-    </main>
+    </div>
   )
 }
 

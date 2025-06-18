@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"
+        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
+        http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
+  
+  <!-- Homepage -->
+  <url>
+    <loc>https://aigymbro.web.id/</loc>
+    <lastmod>2025-06-18</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://aigymbro.web.id/android-chrome-512x512.png</image:loc>
+      <image:title>AI GymBRO - Your AI Fitness Partner</image:title>
+      <image:caption>Transform your fitness with AI-powered workout and meal plans</image:caption>
+    </image:image>
+  </url>
+  
+  <!-- About Page -->
+  <url>
+    <loc>https://aigymbro.web.id/about</loc>
+    <lastmod>2025-06-18</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://aigymbro.web.id/android-chrome-512x512.png</image:loc>
+      <image:title>About AI GymBRO - Founded by Matthews Wong</image:title>
+      <image:caption>Learn about AI GymBRO and Matthews Wong, the founder from Indonesia</image:caption>
+    </image:image>
+  </url>
+  
+  <!-- Workout Plan Page -->
+  <url>
+    <loc>https://aigymbro.web.id/workout-plan</loc>
+    <lastmod>2025-06-18</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://aigymbro.web.id/android-chrome-512x512.png</image:loc>
+      <image:title>AI Workout Plans - Personalized Training</image:title>
+      <image:caption>Generate personalized workout plans using artificial intelligence</image:caption>
+    </image:image>
+  </url>
+  
+  <!-- Meal Plan Page -->
+  <url>
+    <loc>https://aigymbro.web.id/meal-plan</loc>
+    <lastmod>2025-06-18</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://aigymbro.web.id/android-chrome-512x512.png</image:loc>
+      <image:title>AI Meal Plans - Custom Nutrition</image:title>
+      <image:caption>Create custom meal plans tailored to your fitness goals</image:caption>
+    </image:image>
+  </url>
+  
+</urlset>

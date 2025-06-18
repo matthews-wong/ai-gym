@@ -192,7 +192,7 @@ export function Navbar() {
                     <span className="text-sm text-slate-400">Main dashboard</span>
                   </div>
                 </Link>
-
+  
                 <Link
                   href="/about"
                   className="flex items-center gap-4 text-lg text-slate-100 hover:text-white py-4 px-5 rounded-2xl bg-slate-900/50 hover:bg-slate-800/50 border border-slate-800/50 hover:border-slate-700 transition-all duration-300 group"
