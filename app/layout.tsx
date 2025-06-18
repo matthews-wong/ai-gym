@@ -289,7 +289,7 @@ export default function RootLayout({
         
         {/* Google Analytics (replace with your actual GA4 ID) */}
         <Script
-          src="https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID"
+          src="https://www.googletagmanager.com/gtag/js?id=GTM-KMV59MWT"
           strategy="afterInteractive"
         />
         <Script id="google-analytics" strategy="afterInteractive">
@@ -297,7 +297,7 @@ export default function RootLayout({
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
-            gtag('config', 'GA_MEASUREMENT_ID');
+            gtag('config', 'GTM-KMV59MWT');
           `}
         </Script>
         
