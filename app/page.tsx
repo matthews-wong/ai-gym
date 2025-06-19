@@ -1,23 +1,12 @@
 "use client"
 
 import React from "react"
-import Image from 'next/image';
+import Image from "next/image"
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import {
-  ArrowRight,
-  Dumbbell,
-  Utensils,
-  Zap,
-  Trophy,
-  Heart,
-  BarChart3,
-  PieChart,
-  Target,
-  Clock,
-  TrendingUp,
-} from "lucide-react"
+import { ArrowRight, Dumbbell, Utensils, Zap, Trophy, Heart, BarChart3, Target, Clock, TrendingUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
 
 // Lightweight animation hook
 const useInView = (threshold = 0.1) => {
@@ -113,77 +102,62 @@ const EnhancedButton = ({
   )
 }
 
-// Enhanced background with emerald gradients
+// Optimized background - loads after critical content
 const EnhancedBackground = () => {
   const [mounted, setMounted] = useState(false)
-  const [particleCount, setParticleCount] = useState(30)
+  const [shouldLoadBackground, setShouldLoadBackground] = useState(false)
 
   useEffect(() => {
     setMounted(true)
-    setParticleCount(window.innerWidth < 768 ? 15 : 30)
 
-    // Add animation styles
-    const style = document.createElement("style")
-    style.textContent = `
-      @keyframes float {
-        0%, 100% { transform: translateY(0px); }
-        50% { transform: translateY(-10px); }
-      }
-      @keyframes pulse-glow {
-        0%, 100% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.3); }
-        50% { box-shadow: 0 0 40px rgba(16, 185, 129, 0.6); }
-      }
-      @keyframes shimmer {
-        0% { transform: translateX(-100%); }
-        100% { transform: translateX(100%); }
-      }
-    `
-    document.head.appendChild(style)
-    return () => {
-      if (style.parentNode) {
-        document.head.removeChild(style)
-      }
-    }
+    // Delay background loading to prioritize LCP
+    const timer = setTimeout(() => {
+      setShouldLoadBackground(true)
+    }, 1000) // Load background after 1 second
+
+    return () => clearTimeout(timer)
   }, [])
 
-  if (!mounted) {
-    return null // Return null on server-side to avoid hydration mismatch
-  }
-
+  // Return minimal background immediately for better LCP
   return (
     <div className="fixed inset-0 -z-10 overflow-hidden">
-      {/* Base emerald gradient */}
+      {/* Critical base gradient - loads immediately for LCP */}
       <div className="absolute inset-0 bg-gradient-to-br from-emerald-950 via-gray-950 to-emerald-900" />
 
-      {/* Subtle emerald accent gradients */}
-      <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-emerald-500/5 via-transparent to-cyan-500/5" />
-      <div className="absolute bottom-0 right-0 w-full h-full bg-gradient-to-tl from-emerald-400/3 via-transparent to-transparent" />
+      {/* Non-critical animated elements - load after LCP */}
+      {mounted && shouldLoadBackground && (
+        <>
+          {/* Subtle emerald accent gradients */}
+          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-emerald-500/5 via-transparent to-cyan-500/5" />
+          <div className="absolute bottom-0 right-0 w-full h-full bg-gradient-to-tl from-emerald-400/3 via-transparent to-transparent" />
 
-      {/* Animated emerald orbs */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-gradient-to-r from-emerald-500/8 to-cyan-500/8 rounded-full blur-3xl animate-pulse" />
-      <div
-        className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-gradient-to-r from-cyan-500/6 to-emerald-500/6 rounded-full blur-3xl animate-pulse"
-        style={{ animationDelay: "2s" }}
-      />
-
-      {/* Subtle grid pattern */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(16,185,129,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(16,185,129,0.03)_1px,transparent_1px)] bg-[size:60px_60px]" />
-
-      {/* Light floating particles */}
-      <div className="absolute inset-0">
-        {Array.from({ length: particleCount }).map((_, i) => (
+          {/* Animated emerald orbs */}
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-gradient-to-r from-emerald-500/8 to-cyan-500/8 rounded-full blur-3xl animate-pulse" />
           <div
-            key={i}
-            className="absolute w-1 h-1 bg-emerald-400/15 rounded-full"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animation: `float ${3 + Math.random() * 4}s ease-in-out infinite`,
-              animationDelay: `${Math.random() * 5}s`,
-            }}
+            className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-gradient-to-r from-cyan-500/6 to-emerald-500/6 rounded-full blur-3xl animate-pulse"
+            style={{ animationDelay: "2s" }}
           />
-        ))}
-      </div>
+
+          {/* Subtle grid pattern */}
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(16,185,129,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(16,185,129,0.03)_1px,transparent_1px)] bg-[size:60px_60px]" />
+
+          {/* Light floating particles */}
+          <div className="absolute inset-0">
+            {Array.from({ length: window.innerWidth < 768 ? 15 : 30 }).map((_, i) => (
+              <div
+                key={i}
+                className="absolute w-1 h-1 bg-emerald-400/15 rounded-full"
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  top: `${Math.random() * 100}%`,
+                  animation: `float ${3 + Math.random() * 4}s ease-in-out infinite`,
+                  animationDelay: `${Math.random() * 5}s`,
+                }}
+              />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -202,20 +176,20 @@ const LottiePlayer = ({ src, className = "" }: { src: string; className?: string
       setShowSpinner(true)
       // Short delay to show spinner, then reload
       setTimeout(() => {
-        setKey(prev => prev + 1)
+        setKey((prev) => prev + 1)
         setShowSpinner(false)
       }, 300)
     }
 
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
+    window.addEventListener("resize", handleResize)
+    return () => window.removeEventListener("resize", handleResize)
   }, [])
 
   if (!mounted) {
     return (
       <div className={`flex items-center justify-center ${className}`}>
-        <div className="animate-pulse">
-          <Zap className="w-16 h-16 text-emerald-400" />
+        <div className="w-full h-full bg-transparent flex items-center justify-center">
+          <div className="w-16 h-16 border-4 border-emerald-400/30 border-t-emerald-400 rounded-full animate-spin opacity-50"></div>
         </div>
       </div>
     )
@@ -242,36 +216,34 @@ const LottiePlayer = ({ src, className = "" }: { src: string; className?: string
       <React.Suspense
         fallback={
           <div className="flex items-center justify-center h-full w-full">
-            <div className="animate-pulse">
-              <Zap className="w-16 h-16 text-emerald-400" />
+            <div className="w-full h-full bg-transparent flex items-center justify-center">
+              <div className="w-16 h-16 border-4 border-emerald-400/30 border-t-emerald-400 rounded-full animate-spin opacity-50"></div>
             </div>
           </div>
         }
       >
-        <DotLottieReact 
-          key={key}
-          src={src} 
-          loop 
-          autoplay 
-          style={{ width: "100%", height: "100%" }} 
-        />
+        <DotLottieReact key={key} src={src} loop autoplay style={{ width: "100%", height: "100%" }} />
       </React.Suspense>
     </div>
   )
 }
 
-
 function HeroSection() {
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-      {/* Full background image - static for better performance */}
+      {/* Optimized hero background image - highest priority for LCP */}
       <div className="absolute inset-0 z-0">
-        <Image 
-          src="/images/hero.jpg" 
-          alt="Gym Background" 
+        <Image
+          src="/images/hero.jpg"
+          alt="Gym Background"
           fill
           className="object-cover"
           priority
+          fetchPriority="high"
+          quality={85}
+          placeholder="blur"
+          blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
+          sizes="100vw"
         />
         {/* Enhanced overlay with natural gradient transition */}
         <div className="absolute inset-0 bg-gradient-to-b from-emerald-900/85 via-gray-900/75 to-gray-950/90" />
@@ -412,11 +384,14 @@ function ProductsSection() {
   return (
     <section id="products" className="relative py-8 sm:py-12 md:py-16 lg:py-20" style={{ scrollMarginTop: "80px" }}>
       {/* Gradient background - solid at top, transparent from 50% down */}
-      <div className="absolute inset-0 bg-gradient-to-b from-gray-950 via-gray-950 to-transparent" style={{ background: 'linear-gradient(to bottom, rgb(3, 7, 18) 0%, rgb(3, 7, 18) 50%, transparent 100%)' }} />
-      
+      <div
+        className="absolute inset-0 bg-gradient-to-b from-gray-950 via-gray-950 to-transparent"
+        style={{ background: "linear-gradient(to bottom, rgb(3, 7, 18) 0%, rgb(3, 7, 18) 50%, transparent 100%)" }}
+      />
+
       {/* Smooth transition gradient at top */}
       <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-gray-950 via-gray-950/80 to-transparent" />
-      
+
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <FadeIn delay={100}>
           <div className="text-center mb-8 lg:mb-12">
@@ -445,6 +420,7 @@ function ProductsSection() {
                     fill
                     className="object-cover group-hover:scale-105 transition-transform duration-500"
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                    loading="lazy"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/50 to-transparent" />
                   <div className="absolute top-4 right-4 bg-emerald-500/25 backdrop-blur-md rounded-lg p-3 border border-emerald-500/40">
@@ -508,6 +484,7 @@ function ProductsSection() {
                     fill
                     className="object-cover group-hover:scale-105 transition-transform duration-500"
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                    loading="lazy"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/50 to-transparent" />
                   <div className="absolute top-4 right-4 bg-cyan-500/25 backdrop-blur-md rounded-lg p-3 border border-cyan-500/40">
@@ -565,7 +542,6 @@ function ProductsSection() {
   )
 }
 
-
 // Workout Plan Preview Section with enhanced explanations
 function WorkoutPlanSection() {
   return (
@@ -614,7 +590,7 @@ function WorkoutPlanSection() {
           <FadeIn delay={400}>
             <div className="bg-gradient-to-br from-gray-900/80 to-gray-800/80 backdrop-blur-sm rounded-3xl border border-emerald-500/30 p-8 shadow-2xl shadow-emerald-500/10 hover:shadow-emerald-500/20 hover:border-emerald-500/50 transition-all duration-500">
               <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 h-full">
-                {/* Enhanced Report Preview - Better 9:16 integration */}
+                {/* Enhanced Report Preview - Fixed aspect ratio for PDF screenshots */}
                 <div className="md:col-span-2">
                   <div className="h-full">
                     <div className="flex items-center justify-between mb-6">
@@ -631,22 +607,23 @@ function WorkoutPlanSection() {
                     </div>
                     <div className="relative group">
                       <Image
-                        src="/placeholder.svg?height=640&width=360"
+                        src="/images/meal-plan-example.webp"
                         alt="Workout Report Preview"
-                        width={360}
-                        height={640}
+                        width={400}
+                        height={500}
                         className="w-full rounded-lg group-hover:scale-[1.02] transition-all duration-500"
-                        style={{ aspectRatio: "9/16" }}
+                        style={{ aspectRatio: "4/5" }}
                         loading="lazy"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-emerald-900/30 via-transparent to-transparent rounded-xl" />
+                      {/* Lighter overlay for better text visibility */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-emerald-900/10 via-transparent to-transparent rounded-xl" />
                       <div className="absolute bottom-6 left-6 right-6">
-                        <div className="bg-emerald-500/25 backdrop-blur-md rounded-xl p-4 border border-emerald-500/40">
-                          <div className="text-emerald-300 font-semibold text-sm mb-1">Advanced Analytics</div>
-                          <div className="text-white text-xs">Complete workout breakdown with progress tracking</div>
+                        <div className="bg-white/90 backdrop-blur-md rounded-xl p-4 border border-emerald-500/40 shadow-lg">
+                          <div className="text-emerald-700 font-semibold text-sm mb-1">Advanced Analytics</div>
+                          <div className="text-gray-800 text-xs">Complete workout breakdown with progress tracking</div>
                           <div className="flex items-center gap-2 mt-2">
-                            <Target className="w-3 h-3 text-emerald-400" />
-                            <span className="text-emerald-300 text-xs">Goal-oriented programming</span>
+                            <Target className="w-3 h-3 text-emerald-600" />
+                            <span className="text-emerald-700 text-xs">Goal-oriented programming</span>
                           </div>
                         </div>
                       </div>
@@ -667,32 +644,58 @@ function WorkoutPlanSection() {
                 {/* Charts Section - Better organized */}
                 <div className="md:col-span-3">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 h-full">
-                    {/* Weekly Schedule */}
+                    {/* Weekly Schedule with Recharts */}
                     <div className="bg-gradient-to-br from-gray-800/60 to-gray-700/60 rounded-2xl border border-emerald-500/25 p-4 sm:p-6 backdrop-blur-sm">
                       <h3 className="text-xl font-bold text-emerald-400 mb-4 flex items-center gap-2">
                         <Clock className="w-5 h-5" />
                         Weekly Schedule
                       </h3>
-                      <div className="grid grid-cols-7 gap-1 sm:gap-2">
-                        {["M", "T", "W", "T", "F", "S", "S"].map((day, index) => (
-                          <div key={index} className="text-center">
-                            <div className="text-xs sm:text-sm text-gray-400 mb-1 sm:mb-2 font-medium">{day}</div>
-                            <div
-                              className={`h-12 sm:h-16 rounded-lg ${
-                                index < 5
-                                  ? "bg-gradient-to-b from-emerald-500/25 to-cyan-500/25 border border-emerald-500/40"
-                                  : "bg-gray-700/60 border border-gray-600/40"
-                              } flex items-center justify-center hover:scale-105 transition-transform duration-300 cursor-pointer`}
-                            >
-                              {index < 5 && (
-                                <div className="text-xs text-emerald-300 font-medium px-1 py-1 rounded-md bg-emerald-900/60 border border-emerald-500/30">
-                                  {["Upper", "Lower", "Push", "Pull", "Core"][index]}
-                                </div>
-                              )}
-                              {index >= 5 && <div className="text-xs text-gray-500 font-medium">Rest</div>}
-                            </div>
-                          </div>
-                        ))}
+                      <div className="text-xs text-gray-400 mb-2 italic">
+                        This is example data - we will generate yours based on your given data
+                      </div>
+                      <div className="h-48">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart
+                            data={[
+                              { day: "Mon", intensity: 85, type: "Upper" },
+                              { day: "Tue", intensity: 75, type: "Lower" },
+                              { day: "Wed", intensity: 90, type: "Push" },
+                              { day: "Thu", intensity: 80, type: "Pull" },
+                              { day: "Fri", intensity: 70, type: "Core" },
+                              { day: "Sat", intensity: 20, type: "Rest" },
+                              { day: "Sun", intensity: 30, type: "Rest" },
+                            ]}
+                            margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                            <XAxis
+                              dataKey="day"
+                              axisLine={false}
+                              tickLine={false}
+                              tick={{ fill: "#9CA3AF", fontSize: 12 }}
+                            />
+                            <YAxis hide />
+                            <Tooltip
+                              contentStyle={{
+                                backgroundColor: "#1F2937",
+                                border: "1px solid #10B981",
+                                borderRadius: "8px",
+                                color: "#FFFFFF",
+                              }}
+                              formatter={(value, name) => [
+                                name === "intensity" ? `${value}% Intensity` : value,
+                                name === "intensity" ? "Workout" : "Type",
+                              ]}
+                            />
+                            <Bar dataKey="intensity" fill="url(#workoutGradient)" radius={[4, 4, 0, 0]} />
+                            <defs>
+                              <linearGradient id="workoutGradient" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#10B981" />
+                                <stop offset="100%" stopColor="#06B6D4" />
+                              </linearGradient>
+                            </defs>
+                          </BarChart>
+                        </ResponsiveContainer>
                       </div>
                     </div>
 
@@ -702,6 +705,9 @@ function WorkoutPlanSection() {
                         <TrendingUp className="w-5 h-5" />
                         Exercise Distribution
                       </h3>
+                      <div className="text-xs text-gray-400 mb-2 italic">
+                        This is example data - we will generate yours based on your given data
+                      </div>
                       <div className="space-y-4">
                         {[
                           { name: "Strength Training", value: 65, color: "from-emerald-500 to-cyan-500" },
@@ -724,13 +730,16 @@ function WorkoutPlanSection() {
                       </div>
                     </div>
 
-                    {/* Progress Metrics */}
-                    <div className="md:col-span-2 bg-gradient-to-br from-gray-800/60 to-gray-700/60 rounded-2xl border border-emerald-500/25 p-6 backdrop-blur-sm">
+                    {/* Progress Metrics - Reduced gaps */}
+                    <div className="md:col-span-2 bg-gradient-to-br from-gray-800/60 to-gray-700/60 rounded-2xl border border-emerald-500/25 p-4 sm:p-6 backdrop-blur-sm">
                       <h3 className="text-xl font-bold text-emerald-400 mb-4 flex items-center gap-2">
                         <Target className="w-5 h-5" />
                         Progress Tracking Dashboard
                       </h3>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="text-xs text-gray-400 mb-2 italic">
+                        This is example data - we will generate yours based on your given data
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                         {[
                           {
                             label: "Weekly Goal",
@@ -763,10 +772,10 @@ function WorkoutPlanSection() {
                         ].map((metric, index) => (
                           <div
                             key={index}
-                            className={`${metric.bg} rounded-lg p-3 sm:p-4 border hover:border-emerald-500/40 transition-all duration-300 cursor-pointer hover:scale-105`}
+                            className={`${metric.bg} rounded-lg p-3 border hover:border-emerald-500/40 transition-all duration-300 cursor-pointer hover:scale-105`}
                           >
-                            <div className="text-sm text-gray-400 mb-1 font-medium">{metric.label}</div>
-                            <div className={`text-2xl font-bold ${metric.color}`}>{metric.value}</div>
+                            <div className="text-xs sm:text-sm text-gray-400 mb-1 font-medium">{metric.label}</div>
+                            <div className={`text-lg sm:text-2xl font-bold ${metric.color}`}>{metric.value}</div>
                             <div className="text-xs text-gray-500">{metric.unit}</div>
                           </div>
                         ))}
@@ -864,7 +873,7 @@ function MealPlanSection() {
           <FadeIn delay={400}>
             <div className="bg-gradient-to-br from-gray-900/80 to-gray-800/80 backdrop-blur-sm rounded-3xl border border-cyan-500/30 p-8 shadow-2xl shadow-cyan-500/10 hover:shadow-cyan-500/20 hover:border-cyan-500/50 transition-all duration-500">
               <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 h-full">
-                {/* Enhanced Report Preview */}
+                {/* Enhanced Report Preview - Fixed aspect ratio for PDF screenshots */}
                 <div className="md:col-span-2">
                   <div className="h-full">
                     <div className="flex items-center justify-between mb-6">
@@ -881,22 +890,23 @@ function MealPlanSection() {
                     </div>
                     <div className="relative group">
                       <Image
-                        src="/placeholder.svg?height=640&width=360"
+                        src="/images/meal-plan-example.webp"
                         alt="Meal Plan Report Preview"
-                        width={360}
-                        height={640}
+                        width={400}
+                        height={500}
                         className="w-full rounded-lg group-hover:scale-[1.02] transition-all duration-500"
-                        style={{ aspectRatio: "9/16" }}
+                        style={{ aspectRatio: "4/5" }}
                         loading="lazy"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-cyan-900/30 via-transparent to-transparent rounded-xl" />
+                      {/* Lighter overlay for better text visibility */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-cyan-900/10 via-transparent to-transparent rounded-xl" />
                       <div className="absolute bottom-6 left-6 right-6">
-                        <div className="bg-cyan-500/25 backdrop-blur-md rounded-xl p-4 border border-cyan-500/40">
-                          <div className="text-cyan-300 font-semibold text-sm mb-1">Nutrition Analytics</div>
-                          <div className="text-white text-xs">Complete meal breakdown with macro tracking</div>
+                        <div className="bg-white/90 backdrop-blur-md rounded-xl p-4 border border-cyan-500/40 shadow-lg">
+                          <div className="text-cyan-700 font-semibold text-sm mb-1">Nutrition Analytics</div>
+                          <div className="text-gray-800 text-xs">Complete meal breakdown with macro tracking</div>
                           <div className="flex items-center gap-2 mt-2">
-                            <Utensils className="w-3 h-3 text-cyan-400" />
-                            <span className="text-cyan-300 text-xs">Personalized meal planning</span>
+                            <Utensils className="w-3 h-3 text-cyan-600" />
+                            <span className="text-cyan-700 text-xs">Personalized meal planning</span>
                           </div>
                         </div>
                       </div>
@@ -917,103 +927,86 @@ function MealPlanSection() {
                 {/* Charts Section */}
                 <div className="md:col-span-3">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 h-full">
-                    {/* Fixed Macronutrient Distribution - Proper circular pie chart */}
+                    {/* Interactive Macronutrient Distribution with Recharts */}
                     <div className="bg-gradient-to-br from-gray-800/60 to-gray-700/60 rounded-2xl border border-cyan-500/25 p-6 backdrop-blur-sm">
-                      <h3 className="text-xl font-bold text-cyan-400 mb-4 flex items-center gap-2">
+                      <h3 className="text-xl font-bold text-cyan-400 mb-2 flex items-center gap-2">
                         <PieChart className="w-5 h-5" />
                         Macro Distribution
                       </h3>
-                      <div className="flex items-center justify-center">
-                        <div className="relative w-20 h-20 sm:w-24 sm:h-24 md:w-36 md:h-36">
-                          <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
-                            {/* Background circle */}
-                            <circle cx="50" cy="50" r="35" fill="none" stroke="#374151" strokeWidth="8" />
-
-                            {/* Protein slice - 40% */}
-                            <circle
-                              cx="50"
-                              cy="50"
-                              r="35"
-                              fill="none"
-                              stroke="#0ea5e9"
-                              strokeWidth="8"
-                              strokeDasharray="87.96"
-                              strokeDashoffset="52.78"
-                              className="transition-all duration-1000 hover:stroke-width-10"
-                            />
-
-                            {/* Carbs slice - 35% */}
-                            <circle
-                              cx="50"
-                              cy="50"
-                              r="35"
-                              fill="none"
-                              stroke="#06b6d4"
-                              strokeWidth="8"
-                              strokeDasharray="76.97"
-                              strokeDashoffset="46.18"
-                              transform="rotate(144 50 50)"
-                              className="transition-all duration-1000 hover:stroke-width-10"
-                            />
-
-                            {/* Fats slice - 25% */}
-                            <circle
-                              cx="50"
-                              cy="50"
-                              r="35"
-                              fill="none"
-                              stroke="#0891b2"
-                              strokeWidth="8"
-                              strokeDasharray="54.98"
-                              strokeDashoffset="32.99"
-                              transform="rotate(270 50 50)"
-                              className="transition-all duration-1000 hover:stroke-width-10"
-                            />
-
-                            {/* Center text */}
-                            <text
-                              x="50"
-                              y="45"
-                              textAnchor="middle"
-                              fill="white"
-                              fontSize="10"
-                              fontWeight="bold"
-                              transform="rotate(90 50 50)"
+                      <div className="text-xs text-gray-400 mb-4 italic">
+                        This is example data - we will generate yours based on your given data
+                      </div>
+                      <div className="h-48">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={[
+                                { name: "Protein", value: 40 },
+                                { name: "Carbs", value: 35 },
+                                { name: "Fats", value: 25 },
+                              ]}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={40}
+                              outerRadius={80}
+                              paddingAngle={3}
+                              dataKey="value"
                             >
-                              2,100
-                            </text>
-                            <text
-                              x="50"
-                              y="55"
-                              textAnchor="middle"
-                              fill="#9CA3AF"
-                              fontSize="6"
-                              transform="rotate(90 50 50)"
-                            >
-                              calories
-                            </text>
-                          </svg>
-                        </div>
+                              <Cell fill="#0ea5e9" />
+                              <Cell fill="#06b6d4" />
+                              <Cell fill="#0891b2" />
+                            </Pie>
+                            <Tooltip
+                              contentStyle={{
+                                backgroundColor: "#1F2937",
+                                border: "1px solid #06B6D4",
+                                borderRadius: "8px",
+                                color: "#FFFFFF",
+                                boxShadow: "0 10px 25px rgba(0,0,0,0.5)",
+                              }}
+                              formatter={(value, name) => [
+                                <span
+                                  key={`${name}-value`}
+                                  style={{
+                                    color: name === "Protein" ? "#0ea5e9" : name === "Carbs" ? "#06b6d4" : "#0891b2",
+                                    fontWeight: "bold",
+                                  }}
+                                >
+                                  {value}%
+                                </span>,
+                                <span key={`${name}-name`} style={{ color: "#FFFFFF", fontWeight: "600" }}>
+                                  {name}
+                                </span>,
+                              ]}
+                            />
+                          </PieChart>
+                        </ResponsiveContainer>
                       </div>
                       <div className="mt-4 space-y-2">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between hover:bg-gray-700/30 p-2 rounded-lg transition-colors cursor-pointer">
                           <div className="flex items-center gap-2">
                             <div className="w-3 h-3 rounded-full bg-[#0ea5e9]"></div>
-                            <span className="text-white text-sm font-medium">Protein</span>
+                            <span className="text-white text-sm font-medium hover:text-cyan-300 transition-colors">
+                              Protein
+                            </span>
                           </div>
                           <span className="text-cyan-400 text-sm font-bold">40%</span>
                         </div>
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between hover:bg-gray-700/30 p-2 rounded-lg transition-colors cursor-pointer">
                           <div className="flex items-center gap-2">
                             <div className="w-3 h-3 rounded-full bg-[#06b6d4]"></div>
-                            <span className="text-white text-sm font-medium">Carbs</span>
+                            <span className="text-white text-sm font-medium hover:text-cyan-300 transition-colors">
+                              Carbs
+                            </span>
                           </div>
                           <span className="text-cyan-400 text-sm font-bold">35%</span>
                         </div>
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between hover:bg-gray-700/30 p-2 rounded-lg transition-colors cursor-pointer">
                           <div className="flex items-center gap-2">
                             <div className="w-3 h-3 rounded-full bg-[#0891b2]"></div>
-                            <span className="text-white text-sm font-medium">Fats</span>
+                            <span className="text-white text-sm font-medium hover:text-cyan-300 transition-colors">
+                              Fats
+                            </span>
                           </div>
                           <span className="text-cyan-400 text-sm font-bold">25%</span>
                         </div>
@@ -1026,6 +1019,9 @@ function MealPlanSection() {
                         <Clock className="w-5 h-5" />
                         Daily Schedule
                       </h3>
+                      <div className="text-xs text-gray-400 mb-2 italic">
+                        This is example data - we will generate yours based on your given data
+                      </div>
                       <div className="space-y-3">
                         {[
                           {
@@ -1077,6 +1073,9 @@ function MealPlanSection() {
                         <Target className="w-5 h-5" />
                         Nutrition Insights
                       </h3>
+                      <div className="text-xs text-gray-400 mb-2 italic">
+                        This is example data - we will generate yours based on your given data
+                      </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                         {[
                           {
@@ -1309,4 +1308,3 @@ export default function Home() {
     </div>
   )
 }
-
