@@ -710,7 +710,7 @@ function HowItWorksSection() {
           <div className="space-y-12 lg:space-y-20">
             {steps.map((step, index) => (
               <FadeIn key={index} delay={200 + index * 100}>
-                <div className={`${window.innerWidth < 1024 ? (activeStep === index ? "block" : "hidden") : "block"}`}>
+                <div className={`block lg:block ${activeStep === index ? "block" : "hidden lg:block"}`}>
                   <div
                     className={`flex flex-col lg:flex-row ${
                       index % 2 === 0 ? "" : "lg:flex-row-reverse"
