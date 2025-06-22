@@ -300,10 +300,6 @@ export default function RootLayout({
             gtag('config', 'GTM-KMV59MWT');
           `}
         </Script>
-        
-        {/* Usercentrics Scripts */}
-        <Script src="https://web.cmp.usercentrics.eu/modules/autoblocker.js" />
-        <Script id="usercentrics-cmp" src="https://web.cmp.usercentrics.eu/ui/loader.js" data-settings-id="7O8Yhf17mWo19u" async />
       </head>
       <body className={`${inter.className} min-h-screen bg-gray-950 text-gray-50`}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
