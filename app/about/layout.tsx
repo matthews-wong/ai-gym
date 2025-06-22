@@ -1,13 +1,5 @@
 import type React from "react"
 import type { Metadata, Viewport } from "next"
-import { Inter } from "next/font/google"
-import ClientLayout from "./ClientLayout"
-
-const inter = Inter({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-inter",
-})
 
 const jsonLd = {
   "@context": "https://schema.org",
@@ -40,12 +32,6 @@ const jsonLd = {
     mission:
       "To democratize personalized fitness and nutrition through the power of artificial intelligence, making world-class coaching accessible to everyone.",
     values: ["Personalization First", "Innovation Driven", "Community Focused", "Results Oriented"],
-    sameAs: [
-      "https://twitter.com/aigymbro",
-      "https://instagram.com/aigymbro",
-      "https://linkedin.com/company/aigymbro",
-      "https://github.com/aigymbro",
-    ],
   },
   breadcrumb: {
     "@type": "BreadcrumbList",
@@ -88,12 +74,6 @@ const organizationJsonLd = {
     email: "support@aigymbro.web.id",
     availableLanguage: ["English"],
   },
-  sameAs: [
-    "https://twitter.com/aigymbro",
-    "https://instagram.com/aigymbro",
-    "https://linkedin.com/company/aigymbro",
-    "https://github.com/aigymbro",
-  ],
   knowsAbout: [
     "Artificial Intelligence",
     "Machine Learning",
@@ -129,16 +109,6 @@ const personJsonLd = {
   },
 }
 
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 5,
-  userScalable: true,
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#10b981" },
-    { media: "(prefers-color-scheme: dark)", color: "#059669" },
-  ],
-}
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://aigymbro.web.id"),
@@ -243,5 +213,5 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
-  return <ClientLayout>{children}</ClientLayout>
+  return {children}
 }
