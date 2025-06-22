@@ -299,6 +299,7 @@ export default function RootLayout({
             gtag('js', new Date());
             gtag('config', 'GTM-KMV59MWT');
           `}
+          
         </Script>
       </head>
       <body className={`${inter.className} min-h-screen bg-gray-950 text-gray-50`}>
