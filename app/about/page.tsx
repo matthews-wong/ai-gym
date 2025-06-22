@@ -873,9 +873,9 @@ export default function AboutPage() {
     <div className="min-h-screen relative">
       <EnhancedBackground />
       <HeroSection />
+      <HowItWorksSection />
       <StorySection />
       <ValuesSection />
-      <HowItWorksSection />
       <Footer />
 
       <style jsx global>{`
