@@ -1,5 +1,4 @@
-import type React from "react"
-import type { Metadata, Viewport } from "next"
+import type { Metadata } from "next"
 
 const jsonLd = {
   "@context": "https://schema.org",
@@ -109,7 +108,6 @@ const personJsonLd = {
   },
 }
 
-
 export const metadata: Metadata = {
   metadataBase: new URL("https://aigymbro.web.id"),
   title: "About AI GymBRO - Learn Our Story | AI-Powered Fitness Coach",
@@ -208,10 +206,26 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
 }
 
-export default function RootLayout({
+export default function Layout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  return {children}
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(personJsonLd) }}
+      />
+      {children}
+    </>
+  )
 }
