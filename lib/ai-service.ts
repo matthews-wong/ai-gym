@@ -820,7 +820,7 @@ export async function generateWorkoutPlan(formData: WorkoutFormData): Promise<Wo
         },
         { role: "user", content: prompt },
       ],
-      model: "meta-llama/llama-guard-4-12b",
+      model: "llama-3.3-70b-versatile",
       response_format: { type: "json_object" },
     })
 
@@ -1017,7 +1017,7 @@ ${snackSuggestions.map((dish) => `- ${dish.name} (${dish.components}): ${dish.pr
         },
         { role: "user", content: prompt },
       ],
-      model: "meta-llama/llama-guard-4-12b",
+      model: "llama-3.3-70b-versatile",
       response_format: { type: "json_object" },
       temperature: 0.2,
     })
