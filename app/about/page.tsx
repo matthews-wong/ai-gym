@@ -230,51 +230,6 @@ function StorySection() {
               </div>
             </FadeIn>
           </div>
-
-          <FadeIn delay={400}>
-            <div className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 backdrop-blur-md rounded-3xl border border-emerald-500/30 overflow-hidden shadow-2xl">
-              <div className="flex flex-col lg:flex-row">
-                {/* Image section - appears first on mobile, second on desktop */}
-                <div className="lg:w-1/3 p-8 lg:p-0 flex justify-center items-center order-1 lg:order-2">
-                  <div className="relative">
-                    <div className="w-48 h-48 rounded-2xl overflow-hidden border-4 border-emerald-500/30 shadow-2xl">
-                      <Image
-                        src="/images/matthews-wong.jpeg"
-                        alt="Matthews Wong - Founder"
-                        width={200}
-                        height={200}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="absolute -bottom-2 -right-2 w-12 h-12 bg-gradient-to-br from-emerald-500 to-cyan-500 rounded-full flex items-center justify-center border-4 border-gray-900">
-                      <Trophy className="w-6 h-6 text-white" />
-                    </div>
-                  </div>
-                </div>
-                {/* Text section - appears second on mobile, first on desktop */}
-                <div className="lg:w-2/3 p-8 lg:p-12 order-2 lg:order-1">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="p-2 rounded-lg bg-emerald-500/20 border border-emerald-500/30">
-                      <Heart className="w-6 h-6 text-emerald-400" />
-                    </div>
-                    <h3 className="text-2xl lg:text-3xl font-bold text-emerald-400">From the Founder</h3>
-                  </div>
-                  <blockquote className="text-lg text-gray-300 leading-relaxed mb-6 italic">
-                    "I am a software engineer while I have a hobby about fitness and workout. Most research shows that a
-                    proper meal and workout is the key to achieving your health goals. So combining my 2 main interests,
-                    I built this app 'AI GymBRO' for you to create your meal plan and workout plan with the power of
-                    artificial intelligence."
-                  </blockquote>
-                  <div className="flex items-center gap-4">
-                    <div className="text-white">
-                      <div className="font-bold text-lg">Matthews Wong</div>
-                      <div className="text-emerald-400 text-sm">Founder & Developer</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </FadeIn>
         </div>
       </div>
     </section>
