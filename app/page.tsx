@@ -1,12 +1,474 @@
 "use client"
 
-import React from "react"
+import React, { useState, useEffect } from "react"
 import Image from "next/image"
-import { useState, useEffect } from "react"
 import Link from "next/link"
-import { ArrowRight, Dumbbell, Utensils, Zap, Trophy, Heart, BarChart3, Target, Clock, TrendingUp } from "lucide-react"
+import { 
+  ArrowRight, 
+  Dumbbell, 
+  Utensils, 
+  Zap, 
+  Trophy, 
+  Heart, 
+  BarChart3, 
+  Target, 
+  Clock, 
+  TrendingUp,
+  MessageSquare, // Added
+  X,             // Added
+  Send,          // Added
+  Star,          // Added
+  ChevronRight,  // Added
+  CheckCircle2,   // Added
+  Globe
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
+
+const TEXT_CONTENT = {
+  id: {
+    titles: ["Info Dasar", "Tingkat Ketertarikan", "Frekuensi Olahraga", "Tujuan Fitness", "Tantangan Utama", "Budget Bulanan"],
+    questions: [
+      "Kota tempat tinggal kamu?",
+      "Seberapa tertarik kamu mencoba aplikasi fitness berbasis AI?",
+      "Berapa kali kamu olahraga dalam seminggu?",
+      "Apa tujuan utama kamu dalam fitness?",
+      "Apa kendala utama kamu saat menjalani fitness?",
+      "Budget bulanan untuk fitness?"
+    ],
+    options: {
+      cities: [
+        { value: 'Jakarta', label: 'Jakarta' },
+        { value: 'Surabaya', label: 'Surabaya' },
+        { value: 'Bandung', label: 'Bandung' },
+        { value: 'Medan', label: 'Medan' },
+        { value: 'Bali', label: 'Bali' },
+        { value: 'Cirebon', label: 'Cirebon' },
+        { value: 'other', label: 'Lainnya' } // Value 'other' is consistent across langs
+      ],
+      frequencies: [
+        '1–2x/minggu', '3–4x/minggu', '5–6x/minggu', 'Setiap hari'
+      ],
+      goals: [
+        'Turun berat badan', 'Bentuk otot', 'Meningkatkan stamina', 'Kesehatan / general wellness'
+      ],
+      challenges: [
+        'Kurang motivasi', 'Tidak tahu program latihan', 'Kurang waktu', 'Tidak punya panduan nutrisi', 'Biaya pelatih mahal'
+      ],
+      budgets: [
+        '< Rp 500.000', 'Rp 500.000 – 1.000.000', 'Rp 1 – 2 juta', '> Rp 2 juta'
+      ]
+    },
+    ui: {
+      selectCity: "Pilih Kota",
+      typeCity: "Ketik nama kotamu...",
+      typeOther: "Lainnya...",
+      notInterested: "Tidak tertarik",
+      veryInterested: "Sangat tertarik",
+      back: "Kembali",
+      next: "Lanjut",
+      submit: "Kirim",
+      sending: "Mengirim...",
+      step: "Langkah",
+      thankYouTitle: "Terima Kasih!",
+      thankYouDesc: "Masukan kamu sangat berarti untuk pengembangan AI GymBRO.",
+      close: "Tutup Form"
+    }
+  },
+  en: {
+    titles: ["Basic Info", "Interest Level", "Workout Frequency", "Fitness Goals", "Main Challenges", "Monthly Budget"],
+    questions: [
+      "Which city do you live in?",
+      "How interested are you in trying an AI-based fitness app?",
+      "How many times do you workout per week?",
+      "What is your main fitness goal?",
+      "What is your main challenge in fitness?",
+      "Monthly budget for fitness?"
+    ],
+    options: {
+      cities: [
+        { value: 'Jakarta', label: 'Jakarta' },
+        { value: 'Surabaya', label: 'Surabaya' },
+        { value: 'Bandung', label: 'Bandung' },
+        { value: 'Medan', label: 'Medan' },
+        { value: 'Bali', label: 'Bali' },
+        { value: 'other', label: 'Other' }
+      ],
+      frequencies: [
+        '1–2x/week', '3–4x/week', '5–6x/week', 'Every day'
+      ],
+      goals: [
+        'Weight loss', 'Build muscle', 'Increase stamina', 'Health / general wellness'
+      ],
+      challenges: [
+        'Lack of motivation', 'Don\'t know the right program', 'Lack of time', 'No nutrition guide', 'Expensive coach fees'
+      ],
+      budgets: [
+        '< IDR 500k', 'IDR 500k – 1m', 'IDR 1m – 2m', '> IDR 2m'
+      ]
+    },
+    ui: {
+      selectCity: "Select City",
+      typeCity: "Type your city name...",
+      typeOther: "Other...",
+      notInterested: "Not interested",
+      veryInterested: "Very interested",
+      back: "Back",
+      next: "Next",
+      submit: "Submit",
+      sending: "Sending...",
+      step: "Step",
+      thankYouTitle: "Thank You!",
+      thankYouDesc: "Your feedback means a lot for the development of AI GymBRO.",
+      close: "Close Form"
+    }
+  }
+};
+
+const FeedbackModal = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [step, setStep] = useState(1);
+  const [lang, setLang] = useState('id'); // Language State: 'id' or 'en'
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCompleted, setIsCompleted] = useState(false);
+
+  // Helper to get current text
+  const t = TEXT_CONTENT[lang];
+
+  // Form State
+  const [formData, setFormData] = useState({
+    city: '',
+    cityOther: '', // New state for custom city input
+    interest: 0,
+    frequency: '',
+    goals: [],
+    challenges: '',
+    challengesOther: '',
+    budget: ''
+  });
+
+  const handleInputChange = (key, value) => {
+    setFormData(prev => ({ ...prev, [key]: value }));
+  };
+
+  const toggleGoal = (goal) => {
+    setFormData(prev => {
+      const goals = prev.goals.includes(goal)
+        ? prev.goals.filter(g => g !== goal)
+        : [...prev.goals, goal];
+      return { ...prev, goals };
+    });
+  };
+
+  const nextStep = () => {
+    if (step < 6) setStep(step + 1);
+    else submitForm();
+  };
+
+  const prevStep = () => {
+    if (step > 1) setStep(step - 1);
+  };
+
+  const submitForm = () => {
+    setIsSubmitting(true);
+    
+    // Clean up data before sending (use cityOther if city is 'other')
+    const finalPayload = {
+      ...formData,
+      city: formData.city === 'other' ? formData.cityOther : formData.city,
+      challenges: formData.challenges === 'Lainnya' ? formData.challengesOther : formData.challenges,
+      language: lang
+    };
+
+    console.log("Submitting:", finalPayload);
+
+    setTimeout(() => {
+      setIsSubmitting(false);
+      setIsCompleted(true);
+    }, 1500);
+  };
+
+  // Content for each step
+  const renderStep = () => {
+    switch(step) {
+      case 1: // CITY
+        return (
+          <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+            <h3 className="text-lg font-semibold text-white">{t.titles[0]}</h3>
+            <div className="space-y-3">
+              <label className="text-sm text-gray-400">{t.questions[0]}</label>
+              
+              {/* Dropdown */}
+              <select 
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2.5 text-white focus:border-emerald-500 focus:outline-none transition-colors"
+                value={formData.city}
+                onChange={(e) => handleInputChange('city', e.target.value)}
+              >
+                <option value="" disabled>{t.ui.selectCity}</option>
+                {t.options.cities.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+
+              {/* Conditional Input for "Other" */}
+              {formData.city === 'other' && (
+                <input 
+                  type="text" 
+                  autoFocus
+                  placeholder={t.ui.typeCity}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2.5 text-white focus:border-emerald-500 focus:outline-none animate-in fade-in slide-in-from-top-2 duration-200"
+                  value={formData.cityOther}
+                  onChange={(e) => handleInputChange('cityOther', e.target.value)}
+                />
+              )}
+            </div>
+          </div>
+        );
+      case 2: // INTEREST
+        return (
+          <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+            <h3 className="text-lg font-semibold text-white">{t.titles[1]}</h3>
+            <div className="space-y-3">
+              <label className="text-sm text-gray-400">{t.questions[1]}</label>
+              <div className="flex justify-between items-center px-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    onClick={() => handleInputChange('interest', star)}
+                    className={`transition-all hover:scale-110 ${formData.interest >= star ? 'text-yellow-400' : 'text-gray-600'}`}
+                  >
+                    <Star size={32} fill={formData.interest >= star ? "currentColor" : "none"} />
+                  </button>
+                ))}
+              </div>
+              <div className="flex justify-between text-xs text-gray-500 px-2">
+                <span>{t.ui.notInterested}</span>
+                <span>{t.ui.veryInterested}</span>
+              </div>
+            </div>
+          </div>
+        );
+      case 3: // FREQUENCY
+        return (
+          <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+            <h3 className="text-lg font-semibold text-white">{t.titles[2]}</h3>
+            <div className="space-y-2">
+              <label className="text-sm text-gray-400">{t.questions[2]}</label>
+              {t.options.frequencies.map((opt) => (
+                <label key={opt} className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${formData.frequency === opt ? 'border-emerald-500 bg-emerald-500/10' : 'border-gray-700 hover:bg-gray-800'}`}>
+                  <input 
+                    type="radio" 
+                    name="freq" 
+                    value={opt} 
+                    checked={formData.frequency === opt}
+                    onChange={(e) => handleInputChange('frequency', e.target.value)}
+                    className="w-4 h-4 text-emerald-500 focus:ring-emerald-500 bg-gray-700 border-gray-600"
+                  />
+                  <span className="text-sm text-gray-200">{opt}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        );
+      case 4: // GOALS
+        return (
+          <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+            <h3 className="text-lg font-semibold text-white">{t.titles[3]}</h3>
+            <div className="space-y-2">
+              <label className="text-sm text-gray-400">{t.questions[3]}</label>
+              {t.options.goals.map((goal) => (
+                <label key={goal} className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${formData.goals.includes(goal) ? 'border-emerald-500 bg-emerald-500/10' : 'border-gray-700 hover:bg-gray-800'}`}>
+                  <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${formData.goals.includes(goal) ? 'bg-emerald-500 border-emerald-500' : 'border-gray-500'}`}>
+                    {formData.goals.includes(goal) && <CheckCircle2 size={12} className="text-white" />}
+                  </div>
+                  <input 
+                    type="checkbox" 
+                    className="hidden"
+                    checked={formData.goals.includes(goal)}
+                    onChange={() => toggleGoal(goal)}
+                  />
+                  <span className="text-sm text-gray-200">{goal}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        );
+      case 5: // CHALLENGES
+        return (
+          <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+            <h3 className="text-lg font-semibold text-white">{t.titles[4]}</h3>
+            <div className="space-y-2">
+              <label className="text-sm text-gray-400">{t.questions[4]}</label>
+              {t.options.challenges.map((opt) => (
+                <label key={opt} className={`flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition-all ${formData.challenges === opt ? 'border-emerald-500 bg-emerald-500/10' : 'border-gray-700 hover:bg-gray-800'}`}>
+                  <input 
+                    type="radio" 
+                    name="challenge" 
+                    value={opt} 
+                    checked={formData.challenges === opt}
+                    onChange={(e) => handleInputChange('challenges', e.target.value)}
+                    className="w-4 h-4 text-emerald-500 focus:ring-emerald-500 bg-gray-700 border-gray-600"
+                  />
+                  <span className="text-sm text-gray-200">{opt}</span>
+                </label>
+              ))}
+              <div className={`flex items-center gap-3 p-2.5 rounded-lg border transition-all ${formData.challenges === 'Lainnya' ? 'border-emerald-500 bg-emerald-500/10' : 'border-gray-700'}`}>
+                 <input 
+                    type="radio" 
+                    name="challenge" 
+                    value="Lainnya" 
+                    checked={formData.challenges === 'Lainnya'}
+                    onChange={(e) => handleInputChange('challenges', e.target.value)}
+                    className="w-4 h-4 text-emerald-500 focus:ring-emerald-500 bg-gray-700 border-gray-600 shrink-0"
+                  />
+                 <input 
+                    type="text" 
+                    placeholder={t.ui.typeOther}
+                    className="bg-transparent border-b border-gray-600 focus:border-emerald-500 outline-none text-sm text-white w-full py-1"
+                    value={formData.challengesOther}
+                    onChange={(e) => {
+                      handleInputChange('challengesOther', e.target.value);
+                      handleInputChange('challenges', 'Lainnya');
+                    }}
+                 />
+              </div>
+            </div>
+          </div>
+        );
+      case 6: // BUDGET
+        return (
+          <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+            <h3 className="text-lg font-semibold text-white">{t.titles[5]}</h3>
+            <div className="space-y-2">
+              <label className="text-sm text-gray-400">{t.questions[5]}</label>
+              {t.options.budgets.map((opt) => (
+                <label key={opt} className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${formData.budget === opt ? 'border-emerald-500 bg-emerald-500/10' : 'border-gray-700 hover:bg-gray-800'}`}>
+                  <input 
+                    type="radio" 
+                    name="budget" 
+                    value={opt} 
+                    checked={formData.budget === opt}
+                    onChange={(e) => handleInputChange('budget', e.target.value)}
+                    className="w-4 h-4 text-emerald-500 focus:ring-emerald-500 bg-gray-700 border-gray-600"
+                  />
+                  <span className="text-sm text-gray-200">{opt}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
+  // Validation Logic for Next Button
+  const isNextDisabled = () => {
+    if (step === 1) {
+        // Disabled if no city selected, OR if 'other' is selected but input is empty
+        if (!formData.city) return true;
+        if (formData.city === 'other' && !formData.cityOther.trim()) return true;
+        return false;
+    }
+    if (step === 2 && formData.interest === 0) return true;
+    if (step === 3 && !formData.frequency) return true;
+    if (step === 4 && formData.goals.length === 0) return true;
+    if (step === 5 && !formData.challenges) return true;
+    if (step === 6 && !formData.budget) return true;
+    return false;
+  };
+
+  if (!isOpen) {
+    return (
+      <button 
+        onClick={() => setIsOpen(true)}
+        className="fixed bottom-6 right-6 bg-emerald-500 text-white p-4 rounded-full shadow-lg shadow-emerald-500/30 hover:scale-110 transition-all z-50 animate-bounce"
+      >
+        <MessageSquare size={24} />
+      </button>
+    );
+  }
+
+  return (
+    <div className="fixed bottom-4 right-4 md:bottom-8 md:right-8 w-[90vw] md:w-[380px] bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl z-50 flex flex-col max-h-[80vh] overflow-hidden animate-in zoom-in-95 duration-200">
+      
+      {/* Modal Header */}
+      <div className="bg-gray-800 px-5 py-4 flex items-center justify-between border-b border-gray-700">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+          <span className="font-semibold text-white">Feedback</span>
+        </div>
+        <div className="flex items-center gap-3">
+          {/* Language Toggle */}
+          <button 
+            onClick={() => setLang(lang === 'id' ? 'en' : 'id')}
+            className="flex items-center gap-1 text-xs font-medium text-gray-400 hover:text-emerald-400 transition-colors border border-gray-600 rounded px-2 py-1"
+          >
+            <Globe size={12} />
+            {lang.toUpperCase()}
+          </button>
+          
+          <button onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-white transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+      </div>
+
+      {/* Modal Body */}
+      <div className="p-5 overflow-y-auto flex-1 custom-scrollbar">
+        {isCompleted ? (
+          <div className="text-center py-8 space-y-4 animate-in zoom-in duration-300">
+            <div className="w-16 h-16 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto">
+              <CheckCircle2 size={32} />
+            </div>
+            <h3 className="text-xl font-bold text-white">{t.ui.thankYouTitle}</h3>
+            <p className="text-gray-400 text-sm">{t.ui.thankYouDesc}</p>
+            <button onClick={() => setIsOpen(false)} className="text-emerald-400 text-sm font-medium hover:underline mt-4">
+              {t.ui.close}
+            </button>
+          </div>
+        ) : (
+          renderStep()
+        )}
+      </div>
+
+      {/* Modal Footer / Progress */}
+      {!isCompleted && (
+        <div className="bg-gray-800/50 p-4 border-t border-gray-700">
+          <div className="flex items-center justify-between mb-3">
+             <span className="text-xs text-gray-500">{t.ui.step} {step} / 6</span>
+             <div className="flex gap-1">
+                {[1,2,3,4,5,6].map(s => (
+                   <div key={s} className={`h-1 w-4 rounded-full transition-all ${s <= step ? 'bg-emerald-500' : 'bg-gray-700'}`}></div>
+                ))}
+             </div>
+          </div>
+          <div className="flex gap-3">
+            {step > 1 && (
+              <button 
+                onClick={prevStep}
+                className="px-4 py-2 border border-gray-600 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium"
+              >
+                {t.ui.back}
+              </button>
+            )}
+            <button 
+              onClick={nextStep}
+              disabled={isNextDisabled()}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-white text-sm font-medium transition-all ${
+                isSubmitting ? 'bg-emerald-600 opacity-80 cursor-wait' : 'bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/20'
+              } disabled:opacity-50 disabled:cursor-not-allowed`}
+            >
+              {isSubmitting ? t.ui.sending : step === 6 ? t.ui.submit : t.ui.next}
+              {!isSubmitting && step !== 6 && <ChevronRight size={16} />}
+              {!isSubmitting && step === 6 && <Send size={16} />}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 // Lightweight animation hook
 const useInView = (threshold = 0.1) => {
@@ -30,21 +492,17 @@ const useInView = (threshold = 0.1) => {
     return () => observer.disconnect()
   }, [element, threshold])
 
-  return [setElement, isInView] as const
+  return [setElement, isInView]
 }
 
 const FadeIn = ({
   children,
   delay = 0,
   className = "",
-}: {
-  children: React.ReactNode
-  delay?: number
-  className?: string
 }) => {
   const [isInView, setIsInView] = React.useState(false)
   const [hasAnimated, setHasAnimated] = React.useState(false)
-  const ref = React.useRef<HTMLDivElement>(null)
+  const ref = React.useRef(null)
 
   React.useEffect(() => {
     const observer = new IntersectionObserver(
@@ -96,13 +554,6 @@ const EnhancedButton = ({
   className = "",
   size = "default",
   onClick,
-}: {
-  children: React.ReactNode
-  primary?: boolean
-  href: string
-  className?: string
-  size?: "default" | "lg" | "xl"
-  onClick?: (e: React.MouseEvent) => void
 }) => {
   const sizeClasses = {
     default: "px-4 py-2 text-sm sm:px-6 sm:py-3",
@@ -185,16 +636,16 @@ const EnhancedBackground = () => {
   )
 }
 
-const LottiePlayer = ({ src, className = "" }: { src: string; className?: string }) => {
+const LottiePlayer = ({ src, className = "" }) => {
   const [mounted, setMounted] = React.useState(false)
   const [key, setKey] = React.useState(0)
   const [showSpinner, setShowSpinner] = React.useState(false)
   const [isLoaded, setIsLoaded] = React.useState(false)
   const [hasError, setHasError] = React.useState(false)
   const [isInView, setIsInView] = React.useState(false)
-  const containerRef = React.useRef<HTMLDivElement>(null)
-  const resizeTimeoutRef = React.useRef<NodeJS.Timeout>()
-  const loadTimeoutRef = React.useRef<NodeJS.Timeout>()
+  const containerRef = React.useRef(null)
+  const resizeTimeoutRef = React.useRef()
+  const loadTimeoutRef = React.useRef()
 
   // Intersection Observer for lazy loading
   React.useEffect(() => {
@@ -355,7 +806,7 @@ const LottiePlayer = ({ src, className = "" }: { src: string; className?: string
   )
 }
 
-const ProductHuntBadge = ({ className = "" }: { className?: string }) => (
+const ProductHuntBadge = ({ className = "" }) => (
   <a
     href="https://www.producthunt.com/products/ai-gymbro?embed=true&utm_source=badge-featured&utm_medium=badge&utm_source=badge-ai&#0045;gymbro"
     target="_blank"
@@ -1488,6 +1939,8 @@ export default function Home() {
       <MealPlanSection />
       <BenefitsSection />
       <Footer />
+      {/* Inserted Modal here */}
+      <FeedbackModal />
     </div>
   )
 }
