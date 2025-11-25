@@ -4,9 +4,10 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { ArrowLeft, Download, ChevronRight, Target, Calendar, Clock, Dumbbell } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { ArrowLeft, Download, ChevronRight, Target, Calendar, Clock, Dumbbell, Info } from "lucide-react"
 import { generatePDF } from "@/lib/pdf-service"
+import { cn } from "@/lib/utils" // Assuming you have a cn utility, otherwise remove this and use template literals
 
 interface WorkoutPlanDisplayProps {
   plan: any
@@ -20,201 +21,168 @@ export default function WorkoutPlanDisplay({ plan, onBack }: WorkoutPlanDisplayP
     generatePDF(plan, "workout")
   }
 
-  const formatFocusAreas = (areas: string[]) => {
-    if (!areas || areas.length === 0) return "Not specified"
-    return areas.join(", ")
-  }
-
-  const dayCount = Object.keys(plan.workouts).length
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-emerald-950/20">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 sm:mb-8">
-          <Button 
-            variant="ghost" 
-            onClick={onBack} 
-            className="text-gray-400 hover:text-white hover:bg-gray-800/50 -ml-2 sm:ml-0"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
-          </Button>
+    <div className="min-h-screen bg-gray-950 pb-10">
+      {/* Mobile Sticky Header */}
+      <div className="sticky top-0 z-20 bg-gray-950/80 backdrop-blur-md border-b border-gray-800 px-4 py-3 flex items-center justify-between">
+        <Button 
+          variant="ghost" 
+          size="sm"
+          onClick={onBack} 
+          className="text-gray-400 hover:text-white -ml-2"
+        >
+          <ArrowLeft className="mr-1 h-4 w-4" />
+          Back
+        </Button>
+        <p className="text-sm font-semibold text-white">Your Plan</p>
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={handleDownloadPDF}
+          className="text-emerald-500 hover:text-emerald-400 hover:bg-emerald-950/30"
+        >
+          <Download className="h-5 w-5" />
+        </Button>
+      </div>
 
-          <Button
-            onClick={handleDownloadPDF}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white w-full sm:w-auto shadow-lg shadow-emerald-900/30"
-          >
-            <Download className="mr-2 h-4 w-4" />
-            Download PDF
-          </Button>
+      <div className="max-w-4xl mx-auto px-4 py-6">
+        {/* Hero Summary */}
+        <div className="mb-8 text-center sm:text-left">
+          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+            {plan.summary.goal} Protocol
+          </h1>
+          <p className="text-gray-400 text-sm leading-relaxed max-w-2xl mx-auto sm:mx-0">
+            {plan.overview}
+          </p>
+          
+          {/* Quick Stats Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">
+            <SummaryItem icon={Target} label="Goal" value={plan.summary.goal} color="emerald" />
+            <SummaryItem icon={Calendar} label="Freq" value={`${plan.summary.daysPerWeek}x/week`} color="blue" />
+            <SummaryItem icon={Clock} label="Time" value={`${plan.summary.sessionLength} min`} color="purple" />
+            <SummaryItem icon={Dumbbell} label="Level" value={plan.summary.level} color="orange" />
+          </div>
         </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
-          <Card className="bg-gradient-to-br from-emerald-900/30 to-emerald-950/20 border-emerald-800/50 backdrop-blur-sm">
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-xs sm:text-sm text-emerald-400/70 mb-1">Goal</p>
-                  <p className="text-sm sm:text-base font-semibold text-white capitalize">{plan.summary.goal}</p>
-                </div>
-                <Target className="h-5 w-5 sm:h-6 sm:w-6 text-emerald-400/50" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-blue-900/30 to-blue-950/20 border-blue-800/50 backdrop-blur-sm">
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-xs sm:text-sm text-blue-400/70 mb-1">Frequency</p>
-                  <p className="text-sm sm:text-base font-semibold text-white">{plan.summary.daysPerWeek} days/week</p>
-                </div>
-                <Calendar className="h-5 w-5 sm:h-6 sm:w-6 text-blue-400/50" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-purple-900/30 to-purple-950/20 border-purple-800/50 backdrop-blur-sm">
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-xs sm:text-sm text-purple-400/70 mb-1">Duration</p>
-                  <p className="text-sm sm:text-base font-semibold text-white">{plan.summary.sessionLength} min</p>
-                </div>
-                <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-purple-400/50" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-orange-900/30 to-orange-950/20 border-orange-800/50 backdrop-blur-sm">
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-xs sm:text-sm text-orange-400/70 mb-1">Level</p>
-                  <p className="text-sm sm:text-base font-semibold text-white capitalize">{plan.summary.level}</p>
-                </div>
-                <Dumbbell className="h-5 w-5 sm:h-6 sm:w-6 text-orange-400/50" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Main Content Card */}
-        <Card className="bg-gray-900/70 backdrop-blur-xl border-gray-800/50 shadow-2xl">
-          <CardHeader className="border-b border-gray-800/50 pb-6">
-            <CardTitle className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-emerald-400 to-emerald-600 bg-clip-text text-transparent">
-              Your Personalized Workout Plan
-            </CardTitle>
-            <CardDescription className="text-gray-400 mt-2 leading-relaxed">
-              {plan.overview}
-            </CardDescription>
-            {plan.summary.focusAreas && plan.summary.focusAreas.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-4">
-                {plan.summary.focusAreas.map((area: string, i: number) => (
-                  <span 
-                    key={i}
-                    className="px-3 py-1 text-xs sm:text-sm bg-emerald-900/30 text-emerald-300 rounded-full border border-emerald-800/50"
-                  >
-                    {area}
-                  </span>
-                ))}
-              </div>
-            )}
-          </CardHeader>
-
-          <CardContent className="p-4 sm:p-6">
-            <Tabs defaultValue="day1" value={activeDay} onValueChange={setActiveDay}>
-              {/* Mobile: Horizontal Scroll Tabs */}
-              <div className="mb-6 -mx-4 px-4 overflow-x-auto scrollbar-hide">
-                <TabsList className="inline-flex w-auto min-w-full bg-gray-800/50 p-1 rounded-lg">
-                  {Object.keys(plan.workouts).map((day, index) => (
-                    <TabsTrigger
-                      key={day}
-                      value={day}
-                      className="px-4 sm:px-6 py-2.5 rounded-md text-sm sm:text-base whitespace-nowrap data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all"
-                    >
-                      <span className="hidden sm:inline">Day {index + 1}</span>
-                      <span className="sm:hidden">{index + 1}</span>
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-              </div>
-
-              {Object.entries(plan.workouts).map(([day, workout]: [string, any]) => (
-                <TabsContent key={day} value={day} className="space-y-6 mt-0">
-                  {/* Workout Header */}
-                  <div className="bg-gradient-to-r from-emerald-900/20 to-transparent border-l-4 border-emerald-500 p-4 sm:p-6 rounded-r-lg">
-                    <h3 className="text-xl sm:text-2xl font-bold text-emerald-400 mb-2">{workout.focus}</h3>
-                    <p className="text-gray-400 text-sm sm:text-base leading-relaxed">{workout.description}</p>
-                  </div>
-
-                  {/* Exercises - Mobile Optimized */}
-                  <div className="space-y-3">
-                    {workout.exercises.map((exercise: any, index: number) => (
-                      <Card key={index} className="bg-gray-800/50 border-gray-700/50 hover:border-emerald-700/50 transition-colors">
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between mb-3">
-                            <div className="flex-1">
-                              <h4 className="font-semibold text-white text-base sm:text-lg mb-1">{exercise.name}</h4>
-                              <div className="flex items-center gap-4 text-sm text-gray-400">
-                                <span className="flex items-center gap-1">
-                                  <span className="text-emerald-400 font-medium">{exercise.sets}</span> sets
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <span className="text-emerald-400 font-medium">{exercise.reps}</span> reps
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <span className="text-emerald-400 font-medium">{exercise.rest}</span> rest
-                                </span>
-                              </div>
-                            </div>
-                            <div className="ml-2 h-8 w-8 rounded-full bg-emerald-900/30 flex items-center justify-center text-emerald-400 font-semibold text-sm flex-shrink-0">
-                              {index + 1}
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-
-                  {/* Notes */}
-                  {workout.notes && workout.notes.length > 0 && (
-                    <Card className="bg-blue-900/10 border-blue-800/30">
-                      <CardContent className="p-4 sm:p-6">
-                        <h4 className="font-semibold text-blue-300 mb-3 flex items-center gap-2">
-                          <ChevronRight className="h-4 w-4" />
-                          Important Notes
-                        </h4>
-                        <ul className="space-y-2">
-                          {workout.notes.map((note: string, index: number) => (
-                            <li key={index} className="text-gray-300 text-sm sm:text-base flex items-start gap-2">
-                              <span className="text-blue-400 mt-1 flex-shrink-0">•</span>
-                              <span>{note}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </CardContent>
-                    </Card>
-                  )}
-                </TabsContent>
+        {/* Main Content */}
+        <Tabs defaultValue="day1" value={activeDay} onValueChange={setActiveDay} className="w-full">
+          {/* Sticky Tabs Navigation */}
+          <div className="sticky top-[60px] z-10 -mx-4 px-4 bg-gray-950/95 pb-4 pt-2 mb-4 border-b border-gray-800/50 overflow-x-auto no-scrollbar">
+            <TabsList className="bg-gray-900/50 p-1 h-auto inline-flex w-full sm:w-auto">
+              {Object.keys(plan.workouts).map((day, index) => (
+                <TabsTrigger
+                  key={day}
+                  value={day}
+                  className="flex-1 sm:flex-none py-2 px-4 text-xs sm:text-sm data-[state=active]:bg-emerald-600 data-[state=active]:text-white rounded-md transition-all"
+                >
+                  Day {index + 1}
+                </TabsTrigger>
               ))}
-            </Tabs>
-          </CardContent>
+            </TabsList>
+          </div>
 
-          <CardFooter className="border-t border-gray-800/50 bg-gray-900/50 p-4 sm:p-6">
-            <div className="flex items-start gap-3 text-gray-400 text-xs sm:text-sm">
-              <div className="h-8 w-8 rounded-full bg-emerald-900/30 flex items-center justify-center flex-shrink-0">
-                <span className="text-emerald-400">💡</span>
+          {Object.entries(plan.workouts).map(([day, workout]: [string, any]) => (
+            <TabsContent key={day} value={day} className="mt-0 space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              
+              {/* Focus Header */}
+              <div className="bg-gradient-to-br from-emerald-900/20 to-gray-900 border border-emerald-900/30 rounded-xl p-5">
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge variant="outline" className="border-emerald-500/50 text-emerald-400 uppercase text-[10px] tracking-wider">
+                    Focus
+                  </Badge>
+                </div>
+                <h3 className="text-xl font-bold text-white mb-1">{workout.focus}</h3>
+                <p className="text-gray-400 text-sm">{workout.description}</p>
               </div>
-              <p className="leading-relaxed">
-                This plan is personalized for your goals and fitness level. Listen to your body, maintain proper form, and adjust weights as needed. Stay consistent for best results!
-              </p>
-            </div>
-          </CardFooter>
-        </Card>
+
+              {/* Exercise List - CLEAN UI (No Nested Cards) */}
+              <div className="bg-gray-900/40 border border-gray-800 rounded-xl overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-800 bg-gray-900/60 flex justify-between items-center">
+                  <h4 className="text-sm font-semibold text-gray-300">Routine</h4>
+                  <span className="text-xs text-gray-500">{workout.exercises.length} Exercises</span>
+                </div>
+                
+                <div className="divide-y divide-gray-800/50">
+                  {workout.exercises.map((exercise: any, index: number) => (
+                    <div key={index} className="p-4 hover:bg-gray-800/30 transition-colors relative group">
+                      <div className="flex items-start gap-4">
+                        {/* Number Badge */}
+                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-sm font-bold text-gray-400 group-hover:bg-emerald-900/50 group-hover:text-emerald-400 transition-colors">
+                          {index + 1}
+                        </div>
+                        
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-start mb-2">
+                            <h5 className="text-base font-medium text-white truncate pr-2">{exercise.name}</h5>
+                          </div>
+                          
+                          {/* Metrics Row */}
+                          <div className="flex flex-wrap gap-2">
+                            <MetricPill label="Sets" value={exercise.sets} color="emerald" />
+                            <MetricPill label="Reps" value={exercise.reps} color="blue" />
+                            <MetricPill label="Rest" value={exercise.rest} color="gray" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Notes Section */}
+              {workout.notes && workout.notes.length > 0 && (
+                <div className="bg-blue-950/10 border border-blue-900/20 rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-3 text-blue-400">
+                    <Info className="h-4 w-4" />
+                    <h4 className="text-sm font-semibold">Trainer Notes</h4>
+                  </div>
+                  <ul className="space-y-2">
+                    {workout.notes.map((note: string, index: number) => (
+                      <li key={index} className="text-gray-400 text-sm flex items-start gap-2 pl-1">
+                        <span className="w-1 h-1 rounded-full bg-blue-500 mt-2 flex-shrink-0" />
+                        <span className="leading-relaxed">{note}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </TabsContent>
+          ))}
+        </Tabs>
       </div>
     </div>
+  )
+}
+
+// Sub-components for cleaner code
+function SummaryItem({ icon: Icon, label, value, color }: any) {
+  const colors: any = {
+    emerald: "text-emerald-400 bg-emerald-950/30 border-emerald-900/50",
+    blue: "text-blue-400 bg-blue-950/30 border-blue-900/50",
+    purple: "text-purple-400 bg-purple-950/30 border-purple-900/50",
+    orange: "text-orange-400 bg-orange-950/30 border-orange-900/50",
+  }
+  
+  return (
+    <div className={`flex flex-col items-center justify-center p-3 rounded-xl border ${colors[color]}`}>
+      <Icon className="h-5 w-5 mb-2 opacity-80" />
+      <p className="text-[10px] uppercase tracking-wider opacity-70">{label}</p>
+      <p className="text-sm font-semibold text-white capitalize truncate w-full text-center">{value}</p>
+    </div>
+  )
+}
+
+function MetricPill({ label, value, color }: any) {
+  const colors: any = {
+    emerald: "bg-emerald-950/50 text-emerald-300 border-emerald-900/50",
+    blue: "bg-blue-950/50 text-blue-300 border-blue-900/50",
+    gray: "bg-gray-800/50 text-gray-300 border-gray-700/50",
+  }
+
+  return (
+    <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium border ${colors[color]}`}>
+      <span className="opacity-50 mr-1.5 text-[10px] uppercase">{label}</span>
+      {value}
+    </span>
   )
 }

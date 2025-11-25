@@ -100,7 +100,8 @@ export default function WorkoutPlanForm() {
   }
 
   return (
-    <div className="w-full max-w-4xl mx-auto">
+    // Added px-4 for mobile spacing and py-6 to ensure it's not flush with the top/bottom
+    <div className="w-full max-w-4xl mx-auto px-4 py-6">
       {apiError && (
         <Alert variant="destructive" className="mb-6 animate-in fade-in slide-in-from-top-2">
           <AlertTriangle className="h-4 w-4" />
@@ -119,7 +120,8 @@ export default function WorkoutPlanForm() {
         </Alert>
       )}
 
-      <div className="bg-gray-950/50 border border-gray-800 backdrop-blur-sm rounded-xl p-6 md:p-8 shadow-2xl">
+      {/* Adjusted padding: p-5 on mobile, p-8 on desktop */}
+      <div className="bg-gray-950/50 border border-gray-800 backdrop-blur-sm rounded-xl p-5 md:p-8 shadow-2xl">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             
@@ -174,7 +176,7 @@ export default function WorkoutPlanForm() {
             </div>
 
             {/* Section: Time Constraints */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-6 bg-gray-900/30 rounded-xl border border-gray-800/50">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-5 bg-gray-900/30 rounded-xl border border-gray-800/50">
               <FormField
                 control={form.control}
                 name="daysPerWeek"
@@ -228,7 +230,7 @@ export default function WorkoutPlanForm() {
               />
             </div>
 
-            {/* Section: Focus Areas - REFACTORED TO SINGLE FORM FIELD */}
+            {/* Section: Focus Areas */}
             <FormField
               control={form.control}
               name="focusAreas"
