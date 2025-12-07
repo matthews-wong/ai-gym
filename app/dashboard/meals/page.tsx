@@ -66,8 +66,12 @@ export default function MealsPage() {
   const [expandedMeal, setExpandedMeal] = useState<number | null>(0);
 
   useEffect(() => {
-    if (user) fetchMealPlan();
-  }, [user]);
+    if (user) {
+      fetchMealPlan();
+    } else if (!authLoading) {
+      setLoading(false);
+    }
+  }, [user, authLoading]);
 
   const fetchMealPlan = async () => {
     if (!user) return;

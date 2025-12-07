@@ -26,8 +26,13 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user) fetchPlans();
-  }, [user]);
+    // Start fetching as soon as we have a user, don't wait for authLoading
+    if (user) {
+      fetchPlans();
+    } else if (!authLoading) {
+      setLoading(false);
+    }
+  }, [user, authLoading]);
 
   const fetchPlans = async () => {
     if (!user) return;

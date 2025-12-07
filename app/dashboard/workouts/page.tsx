@@ -52,8 +52,12 @@ export default function WorkoutsPage() {
   const [expandedDay, setExpandedDay] = useState<string | null>("day1");
 
   useEffect(() => {
-    if (user) fetchWorkoutPlan();
-  }, [user]);
+    if (user) {
+      fetchWorkoutPlan();
+    } else if (!authLoading) {
+      setLoading(false);
+    }
+  }, [user, authLoading]);
 
   const fetchWorkoutPlan = async () => {
     if (!user) return;

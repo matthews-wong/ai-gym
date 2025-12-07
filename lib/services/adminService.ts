@@ -43,15 +43,26 @@ export interface ForumThreadAdmin {
   is_locked: boolean
 }
 
+// Cache admin status to avoid repeated DB calls
+const adminCache = new Map<string, { isAdmin: boolean; timestamp: number }>()
+const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+
 export async function checkIsSuperAdmin(userId: string): Promise<boolean> {
-  const { data, error } = await supabase
+  // Check cache first
+  const cached = adminCache.get(userId)
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.isAdmin
+  }
+
+  const { data } = await supabase
     .from("super_admins")
     .select("id")
     .eq("user_id", userId)
-    .single()
+    .maybeSingle()
 
-  if (error || !data) return false
-  return true
+  const isAdmin = !!data
+  adminCache.set(userId, { isAdmin, timestamp: Date.now() })
+  return isAdmin
 }
 
 export async function getAdminStats(): Promise<AdminStats | null> {

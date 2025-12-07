@@ -14,28 +14,23 @@ export function Navbar() {
   const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => {
-    const getUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
+    // Use auth state listener as primary - faster than getSession
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
       
+      // Check admin status in background (non-blocking)
       if (session?.user) {
-        const adminStatus = await checkIsSuperAdmin(session.user.id)
-        setIsAdmin(adminStatus)
+        checkIsSuperAdmin(session.user.id).then(setIsAdmin).catch(() => setIsAdmin(false))
       } else {
         setIsAdmin(false)
       }
-    }
+    })
 
-    getUser()
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    // Initial session check (non-blocking)
+    supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
-      
       if (session?.user) {
-        const adminStatus = await checkIsSuperAdmin(session.user.id)
-        setIsAdmin(adminStatus)
-      } else {
-        setIsAdmin(false)
+        checkIsSuperAdmin(session.user.id).then(setIsAdmin).catch(() => setIsAdmin(false))
       }
     })
 

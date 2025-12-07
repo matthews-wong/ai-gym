@@ -30,30 +30,9 @@ export function useAuth(): AuthState & AuthActions {
   });
 
   useEffect(() => {
-    const getSession = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) throw error;
-        
-        setState((prev) => ({
-          ...prev,
-          session,
-          user: session?.user ?? null,
-          loading: false,
-        }));
-      } catch (error) {
-        setState((prev) => ({
-          ...prev,
-          error: error instanceof Error ? error.message : "Failed to get session",
-          loading: false,
-        }));
-      }
-    };
-
-    getSession();
-
+    // Set up auth state listener FIRST - this is faster than getSession
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      (_event, session) => {
         setState((prev) => ({
           ...prev,
           session,
@@ -62,6 +41,18 @@ export function useAuth(): AuthState & AuthActions {
         }));
       }
     );
+
+    // Then check current session (non-blocking for UI)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setState((prev) => ({
+        ...prev,
+        session,
+        user: session?.user ?? null,
+        loading: false,
+      }));
+    }).catch(() => {
+      setState((prev) => ({ ...prev, loading: false }));
+    });
 
     return () => {
       subscription.unsubscribe();
