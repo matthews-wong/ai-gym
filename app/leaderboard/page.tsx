@@ -41,6 +41,47 @@ function formatDate(dateString: string): string {
   })
 }
 
+// Compress image to max 1MB
+async function compressImage(file: File, maxSizeMB = 1): Promise<File> {
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.onload = () => {
+      const canvas = document.createElement("canvas")
+      let { width, height } = img
+      
+      // Max dimension 1200px
+      const maxDim = 1200
+      if (width > maxDim || height > maxDim) {
+        if (width > height) {
+          height = (height / width) * maxDim
+          width = maxDim
+        } else {
+          width = (width / height) * maxDim
+          height = maxDim
+        }
+      }
+      
+      canvas.width = width
+      canvas.height = height
+      const ctx = canvas.getContext("2d")!
+      ctx.drawImage(img, 0, 0, width, height)
+      
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            resolve(new File([blob], file.name, { type: "image/jpeg" }))
+          } else {
+            resolve(file)
+          }
+        },
+        "image/jpeg",
+        0.8
+      )
+    }
+    img.src = URL.createObjectURL(file)
+  })
+}
+
 export default function LeaderboardPage() {
   const { user } = useAuth()
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
@@ -142,9 +183,15 @@ export default function LeaderboardPage() {
 
     setUploadingTransform(true)
     
+    // Compress images before upload
+    const [compressedBefore, compressedAfter] = await Promise.all([
+      compressImage(beforeFile),
+      compressImage(afterFile),
+    ])
+    
     const [beforeUrl, afterUrl] = await Promise.all([
-      uploadTransformationPhoto(user.id, beforeFile, "before"),
-      uploadTransformationPhoto(user.id, afterFile, "after"),
+      uploadTransformationPhoto(user.id, compressedBefore, "before"),
+      uploadTransformationPhoto(user.id, compressedAfter, "after"),
     ])
     
     if (beforeUrl && afterUrl) {
