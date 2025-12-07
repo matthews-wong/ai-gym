@@ -718,4 +718,92 @@ CREATE INDEX IF NOT EXISTS idx_profiles_username
   ON profiles(username) WHERE username IS NOT NULL;
 ```
 
+---
+
+## Leaderboard System
+
+### 1. Meal Plan Completions Table
+
+```sql
+CREATE TABLE meal_completions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  plan_id UUID REFERENCES saved_plans(id) ON DELETE SET NULL,
+  photo_url TEXT NOT NULL,
+  description TEXT,
+  completed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Enable RLS
+ALTER TABLE meal_completions ENABLE ROW LEVEL SECURITY;
+
+-- Policy: Anyone can view completions (for leaderboard)
+CREATE POLICY "Completions are viewable by everyone"
+  ON meal_completions FOR SELECT
+  USING (true);
+
+-- Policy: Users can insert their own completions
+CREATE POLICY "Users can insert own completions"
+  ON meal_completions FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+-- Policy: Users can delete their own completions
+CREATE POLICY "Users can delete own completions"
+  ON meal_completions FOR DELETE
+  USING (auth.uid() = user_id);
+
+-- Index for leaderboard queries
+CREATE INDEX idx_meal_completions_user ON meal_completions(user_id);
+CREATE INDEX idx_meal_completions_date ON meal_completions(completed_at DESC);
+```
+
+### 2. Leaderboard View
+
+```sql
+CREATE OR REPLACE VIEW leaderboard AS
+SELECT 
+  p.id as user_id,
+  COALESCE(p.username, SPLIT_PART(p.email, '@', 1)) as username,
+  p.avatar_url,
+  COUNT(mc.id) as completion_count,
+  MAX(mc.completed_at) as last_completion
+FROM profiles p
+LEFT JOIN meal_completions mc ON p.id = mc.user_id
+GROUP BY p.id, p.username, p.email, p.avatar_url
+HAVING COUNT(mc.id) > 0
+ORDER BY completion_count DESC, last_completion DESC;
+```
+
+### 3. Storage Bucket for Meal Photos
+
+In Supabase Dashboard:
+1. Go to Storage
+2. Create a new bucket called `meal-photos`
+3. Set it to Public (so photos can be displayed)
+4. Add these policies:
+
+```sql
+-- Allow authenticated users to upload to meal-photos bucket
+CREATE POLICY "Users can upload meal photos"
+  ON storage.objects FOR INSERT
+  WITH CHECK (
+    bucket_id = 'meal-photos' 
+    AND auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+-- Allow public read access to meal photos
+CREATE POLICY "Public read access for meal photos"
+  ON storage.objects FOR SELECT
+  USING (bucket_id = 'meal-photos');
+
+-- Allow users to delete their own photos
+CREATE POLICY "Users can delete own meal photos"
+  ON storage.objects FOR DELETE
+  USING (
+    bucket_id = 'meal-photos' 
+    AND auth.uid()::text = (storage.foldername(name))[1]
+  );
+```
+
 

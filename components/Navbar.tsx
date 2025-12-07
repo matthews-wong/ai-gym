@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
-import { Menu, X, Dumbbell, LogOut, ChevronRight, Shield } from "lucide-react"
+import { Menu, X, Dumbbell, LogOut, ChevronRight, Shield, Trophy } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { checkIsSuperAdmin } from "@/lib/services/adminService"
 import type { User } from "@supabase/supabase-js"
@@ -96,6 +96,13 @@ export function Navbar() {
               className="px-4 py-1.5 text-sm text-stone-300 hover:text-white hover:bg-stone-800/70 rounded-full transition-all"
             >
               Forum
+            </Link>
+            <Link 
+              href="/leaderboard" 
+              className="px-4 py-1.5 text-sm text-amber-400 hover:text-amber-300 hover:bg-amber-500/20 rounded-full transition-all flex items-center gap-1.5"
+            >
+              <Trophy className="w-3.5 h-3.5" />
+              Leaderboard
             </Link>
             {user && (
               <Link 
@@ -206,6 +213,17 @@ export function Navbar() {
             >
               <span className="font-semibold text-lg">Forum</span>
               <ChevronRight className="w-5 h-5 text-stone-500" />
+            </Link>
+            <Link 
+              href="/leaderboard" 
+              onClick={() => setIsMenuOpen(false)}
+              className="flex items-center justify-between px-5 py-4 text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-xl hover:bg-amber-500/20 transition-colors"
+            >
+              <span className="font-semibold text-lg flex items-center gap-2">
+                <Trophy className="w-5 h-5" />
+                Leaderboard
+              </span>
+              <ChevronRight className="w-4 h-4 text-amber-500" />
             </Link>
             {user && (
               <Link 

@@ -14,7 +14,7 @@ interface AuthState {
 
 interface AuthActions {
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
-  signUp: (email: string, password: string) => Promise<{ error: string | null; needsConfirmation: boolean }>;
+  signUp: (email: string, password: string, username?: string) => Promise<{ error: string | null; needsConfirmation: boolean }>;
   signInWithGoogle: () => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   clearError: () => void;
@@ -82,7 +82,7 @@ export function useAuth(): AuthState & AuthActions {
     }
   }, []);
 
-  const signUp = useCallback(async (email: string, password: string) => {
+  const signUp = useCallback(async (email: string, password: string, username?: string) => {
     setState((prev) => ({ ...prev, loading: true, error: null }));
 
     try {
@@ -94,6 +94,14 @@ export function useAuth(): AuthState & AuthActions {
       if (error) {
         setState((prev) => ({ ...prev, loading: false, error: error.message }));
         return { error: error.message, needsConfirmation: false };
+      }
+
+      // Update username in profile if provided
+      if (data.user && username) {
+        await supabase
+          .from("profiles")
+          .update({ username: username.trim() })
+          .eq("id", data.user.id);
       }
 
       setState((prev) => ({ ...prev, loading: false }));

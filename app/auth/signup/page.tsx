@@ -21,6 +21,7 @@ export default function SignupPage() {
   const router = useRouter();
   const { signUp, signInWithGoogle, user, loading: authLoading, error: authError, clearError } = useAuth();
   const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -65,7 +66,7 @@ export default function SignupPage() {
     }
 
     setIsSubmitting(true);
-    const { error, needsConfirmation } = await signUp(email, password);
+    const { error, needsConfirmation } = await signUp(email, password, username || email.split("@")[0]);
 
     if (error) {
       setLocalError(error);
@@ -187,6 +188,22 @@ export default function SignupPage() {
                 disabled={isSubmitting || isGoogleLoading}
                 className="w-full px-4 py-3 bg-stone-800/50 border border-stone-700/50 rounded-xl text-white placeholder:text-stone-600 focus:outline-none focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/20 transition-all"
               />
+            </div>
+
+            <div>
+              <label htmlFor="username" className="block text-sm font-medium text-stone-300 mb-2">
+                Username <span className="text-stone-500">(optional)</span>
+              </label>
+              <input
+                id="username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
+                placeholder="your_username"
+                disabled={isSubmitting || isGoogleLoading}
+                className="w-full px-4 py-3 bg-stone-800/50 border border-stone-700/50 rounded-xl text-white placeholder:text-stone-600 focus:outline-none focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/20 transition-all"
+              />
+              <p className="text-xs text-stone-500 mt-1">Letters, numbers, and underscores only</p>
             </div>
 
             <div>
