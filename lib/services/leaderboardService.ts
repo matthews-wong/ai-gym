@@ -145,8 +145,8 @@ export async function deleteMealCompletion(completionId: string): Promise<boolea
 // Transformation functions
 export async function getTransformations(limit = 20): Promise<WorkoutTransformation[]> {
   const { data, error } = await supabase
-    .from("workout_transformations_with_author")
-    .select("id, user_id, before_photo_url, after_photo_url, description, duration, is_approved, created_at, author_username")
+    .from("workout_transformations")
+    .select("id, user_id, before_photo_url, after_photo_url, description, duration, is_approved, created_at")
     .eq("is_approved", true)
     .order("created_at", { ascending: false })
     .limit(limit)
@@ -156,9 +156,22 @@ export async function getTransformations(limit = 20): Promise<WorkoutTransformat
     return []
   }
 
-  return (data || []).map(t => ({
+  if (!data || data.length === 0) return []
+
+  // Fetch usernames for all transformations
+  const userIds = [...new Set(data.map(t => t.user_id))]
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, username, email")
+    .in("id", userIds)
+
+  const profileMap = new Map(
+    (profiles || []).map(p => [p.id, p.username || p.email?.split("@")[0] || "User"])
+  )
+
+  return data.map(t => ({
     ...t,
-    username: t.author_username || "User"
+    username: profileMap.get(t.user_id) || "User"
   }))
 }
 
