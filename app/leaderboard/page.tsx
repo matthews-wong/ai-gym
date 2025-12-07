@@ -282,7 +282,7 @@ export default function LeaderboardPage() {
             <div className="bg-stone-900/80 border border-stone-800/50 rounded-2xl p-6">
               <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
                 <Flame className="w-5 h-5 text-amber-400" />
-                Top Completers
+                Top Contributors
               </h2>
               
               {leaderboard.length === 0 ? (
@@ -321,7 +321,7 @@ export default function LeaderboardPage() {
                       </div>
                       <div className="text-right">
                         <p className="text-xl font-bold text-amber-400">{entry.completion_count}</p>
-                        <p className="text-xs text-stone-500">meals</p>
+                        <p className="text-xs text-stone-500">proofs</p>
                       </div>
                     </div>
                   ))}

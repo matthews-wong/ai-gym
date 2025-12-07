@@ -768,20 +768,32 @@ CREATE POLICY "Super admins can delete any completion"
   USING (auth.uid() IN (SELECT user_id FROM super_admins));
 ```
 
-### 2. Leaderboard View (only counts approved completions)
+### 2. Leaderboard View (counts both meals and transformations)
 
 ```sql
 CREATE OR REPLACE VIEW leaderboard AS
+WITH all_completions AS (
+  -- Meal completions
+  SELECT user_id, completed_at as completion_date
+  FROM meal_completions
+  WHERE is_approved = true
+  
+  UNION ALL
+  
+  -- Workout transformations
+  SELECT user_id, created_at as completion_date
+  FROM workout_transformations
+  WHERE is_approved = true
+)
 SELECT 
   p.id as user_id,
   COALESCE(p.username, SPLIT_PART(p.email, '@', 1)) as username,
   p.avatar_url,
-  COUNT(mc.id) as completion_count,
-  MAX(mc.completed_at) as last_completion
+  COUNT(ac.completion_date) as completion_count,
+  MAX(ac.completion_date) as last_completion
 FROM profiles p
-LEFT JOIN meal_completions mc ON p.id = mc.user_id AND mc.is_approved = true
+INNER JOIN all_completions ac ON p.id = ac.user_id
 GROUP BY p.id, p.username, p.email, p.avatar_url
-HAVING COUNT(mc.id) > 0
 ORDER BY completion_count DESC, last_completion DESC;
 ```
 
