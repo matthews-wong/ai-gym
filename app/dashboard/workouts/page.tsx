@@ -61,12 +61,12 @@ export default function WorkoutsPage() {
     try {
       const { data } = await supabase
         .from("saved_plans")
-        .select("*")
+        .select("id, plan_data, created_at")
         .eq("user_id", user.id)
         .eq("plan_type", "workout")
         .order("created_at", { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (data) setPlan(data as WorkoutPlan);
     } catch (error) {

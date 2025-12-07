@@ -41,13 +41,18 @@ export default function ThreadPage() {
 
   useEffect(() => {
     async function loadData() {
+      // First get the thread
       const threadData = await getThread(categorySlug, threadSlug)
+      if (!threadData) {
+        setLoading(false)
+        return
+      }
+      
+      // Set thread immediately so UI can start rendering
       setThread(threadData)
       
-      if (threadData) {
-        const replyData = await getReplies(threadData.id)
-        setReplies(replyData)
-      }
+      // Load replies in background
+      getReplies(threadData.id).then(setReplies)
       
       setLoading(false)
     }

@@ -33,27 +33,28 @@ export default function DashboardPage() {
     if (!user) return;
 
     try {
-      const { data: workout } = await supabase
-        .from("saved_plans")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("plan_type", "workout")
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .single();
+      // Run both queries in parallel for faster loading
+      const [workoutResult, mealResult] = await Promise.all([
+        supabase
+          .from("saved_plans")
+          .select("id, plan_type, created_at")
+          .eq("user_id", user.id)
+          .eq("plan_type", "workout")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        supabase
+          .from("saved_plans")
+          .select("id, plan_type, created_at")
+          .eq("user_id", user.id)
+          .eq("plan_type", "meal")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle()
+      ]);
 
-      if (workout) setWorkoutPlan(workout);
-
-      const { data: meal } = await supabase
-        .from("saved_plans")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("plan_type", "meal")
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .single();
-
-      if (meal) setMealPlan(meal);
+      if (workoutResult.data) setWorkoutPlan(workoutResult.data as SavedPlan);
+      if (mealResult.data) setMealPlan(mealResult.data as SavedPlan);
 
     } catch (error) {
       console.log("No plans found or tables not created yet");

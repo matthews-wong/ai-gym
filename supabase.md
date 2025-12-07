@@ -675,4 +675,28 @@ CREATE POLICY "Super admins can delete any reply"
   USING (is_super_admin(auth.uid()));
 ```
 
+---
+
+## Performance Indexes
+
+Add these indexes to improve query performance:
+
+```sql
+-- Index for faster saved_plans queries (dashboard loading)
+CREATE INDEX IF NOT EXISTS idx_saved_plans_user_type 
+  ON saved_plans(user_id, plan_type, created_at DESC);
+
+-- Index for forum threads listing
+CREATE INDEX IF NOT EXISTS idx_forum_threads_category 
+  ON forum_threads(category_id, is_pinned DESC, created_at DESC);
+
+-- Index for forum replies
+CREATE INDEX IF NOT EXISTS idx_forum_replies_thread 
+  ON forum_replies(thread_id, created_at ASC);
+
+-- Index for profile lookups
+CREATE INDEX IF NOT EXISTS idx_profiles_username 
+  ON profiles(username) WHERE username IS NOT NULL;
+```
+
 

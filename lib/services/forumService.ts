@@ -58,7 +58,7 @@ export function generateSlug(title: string): string {
 export async function getCategories(): Promise<ForumCategory[]> {
   const { data, error } = await supabase
     .from("forum_categories")
-    .select("*")
+    .select("id, name, slug, description, icon, color, sort_order, is_admin_only")
     .order("sort_order")
 
   if (error) {
@@ -72,7 +72,7 @@ export async function getCategories(): Promise<ForumCategory[]> {
 export async function getThreads(categorySlug?: string, limit = 20): Promise<ForumThread[]> {
   let query = supabase
     .from("forum_threads_with_author")
-    .select("*")
+    .select("id, title, slug, content, views, is_pinned, is_locked, created_at, author_username, category_name, category_slug, category_color, reply_count")
     .order("is_pinned", { ascending: false })
     .order("created_at", { ascending: false })
     .limit(limit)
@@ -94,19 +94,19 @@ export async function getThreads(categorySlug?: string, limit = 20): Promise<For
 export async function getThread(categorySlug: string, threadSlug: string): Promise<ForumThread | null> {
   const { data, error } = await supabase
     .from("forum_threads_with_author")
-    .select("*")
+    .select("id, category_id, user_id, title, slug, content, views, is_pinned, is_locked, created_at, author_username, author_avatar, category_name, category_slug, category_color, reply_count")
     .eq("category_slug", categorySlug)
     .eq("slug", threadSlug)
-    .single()
+    .maybeSingle()
 
   if (error) {
     console.error("Error fetching thread:", error)
     return null
   }
 
-  // Increment views
+  // Increment views in background (non-blocking)
   if (data) {
-    await supabase.rpc("increment_thread_views", { thread_id: data.id })
+    supabase.rpc("increment_thread_views", { thread_id: data.id }).catch(() => {})
   }
 
   return data
@@ -115,7 +115,7 @@ export async function getThread(categorySlug: string, threadSlug: string): Promi
 export async function getReplies(threadId: string): Promise<ForumReply[]> {
   const { data, error } = await supabase
     .from("forum_replies_with_author")
-    .select("*")
+    .select("id, thread_id, user_id, content, is_solution, created_at, author_username, author_avatar")
     .eq("thread_id", threadId)
     .order("created_at")
 
@@ -181,9 +181,9 @@ export async function createReply(
 export async function getCategoryBySlug(slug: string): Promise<ForumCategory | null> {
   const { data, error } = await supabase
     .from("forum_categories")
-    .select("*")
+    .select("id, name, slug, description, icon, color, sort_order, is_admin_only")
     .eq("slug", slug)
-    .single()
+    .maybeSingle()
 
   if (error) {
     console.error("Error fetching category:", error)
