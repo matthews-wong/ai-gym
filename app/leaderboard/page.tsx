@@ -12,7 +12,8 @@ import {
   Loader2,
   Crown,
   Flame,
-  ImageIcon
+  ImageIcon,
+  Clock
 } from "lucide-react"
 import { useAuth } from "@/lib/hooks/useAuth"
 import {
@@ -44,6 +45,7 @@ export default function LeaderboardPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [description, setDescription] = useState("")
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -76,19 +78,12 @@ export default function LeaderboardPage() {
     if (photoUrl) {
       const completion = await createMealCompletion(user.id, photoUrl, description)
       if (completion) {
-        // Refresh data
-        const [lb, completions] = await Promise.all([
-          getLeaderboard(50),
-          getRecentCompletions(20),
-        ])
-        setLeaderboard(lb)
-        setRecentCompletions(completions)
-        
-        // Reset form
+        // Reset form and show success modal
         setShowUploadModal(false)
         setSelectedFile(null)
         setPreviewUrl(null)
         setDescription("")
+        setShowSuccessModal(true)
       }
     }
     setUploading(false)
@@ -336,6 +331,27 @@ export default function LeaderboardPage() {
                   )}
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Success Modal */}
+        {showSuccessModal && (
+          <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-stone-900 border border-stone-800 rounded-2xl p-6 max-w-sm w-full text-center">
+              <div className="w-16 h-16 rounded-full bg-amber-500/20 flex items-center justify-center mx-auto mb-4">
+                <Clock className="w-8 h-8 text-amber-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-2">Upload Successful!</h3>
+              <p className="text-stone-400 mb-6">
+                Your meal proof has been submitted. Please wait for admin approval before it appears on the leaderboard.
+              </p>
+              <button
+                onClick={() => setShowSuccessModal(false)}
+                className="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-medium rounded-xl transition-all"
+              >
+                Got it!
+              </button>
             </div>
           </div>
         )}

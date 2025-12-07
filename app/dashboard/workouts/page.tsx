@@ -7,8 +7,6 @@ import { supabase } from "@/lib/supabase";
 import { 
   ArrowLeft, 
   Dumbbell, 
-  ChevronDown,
-  ChevronUp,
   Plus,
   Loader2,
   Calendar,
@@ -159,90 +157,87 @@ export default function WorkoutsPage() {
               </div>
             </div>
 
-            {/* Workout Days */}
-            <div className="space-y-4">
+            {/* Workout Days - Horizontal Tabs */}
+            <div className="flex gap-2 overflow-x-auto pb-2 mb-4 scrollbar-thin scrollbar-thumb-stone-700 scrollbar-track-transparent">
               {Object.entries(plan.plan_data.workouts || {}).map(([dayKey, workout]) => {
                 const dayNumber = dayKey.replace("day", "");
-                const isExpanded = expandedDay === dayKey;
-                
+                const isSelected = expandedDay === dayKey;
+
                 return (
-                  <div 
+                  <button
                     key={dayKey}
-                    className="bg-gradient-to-br from-stone-900 to-stone-900/50 border border-stone-800/50 rounded-xl overflow-hidden"
+                    onClick={() => setExpandedDay(dayKey)}
+                    className={`flex-shrink-0 flex flex-col items-center gap-1 px-4 py-3 rounded-xl border transition-all ${
+                      isSelected
+                        ? "bg-teal-500/20 border-teal-500/50 text-teal-400"
+                        : "bg-stone-900/80 border-stone-800/50 text-stone-400 hover:bg-stone-800/50 hover:text-white"
+                    }`}
                   >
-                    <button
-                      onClick={() => setExpandedDay(isExpanded ? null : dayKey)}
-                      className="w-full flex items-center justify-between p-5 hover:bg-stone-800/30 transition-colors"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500/20 to-emerald-500/10 flex items-center justify-center">
-                          <span className="text-sm font-bold text-teal-400">{dayNumber}</span>
-                        </div>
-                        <div className="text-left">
-                          <h3 className="font-semibold text-white">{workout.focus}</h3>
-                          <p className="text-sm text-stone-500">
-                            {workout.exercises?.length || 0} exercises
-                          </p>
-                        </div>
-                      </div>
-                      {isExpanded ? (
-                        <ChevronUp className="w-5 h-5 text-stone-500" />
-                      ) : (
-                        <ChevronDown className="w-5 h-5 text-stone-500" />
-                      )}
-                    </button>
-
-                    {isExpanded && (
-                      <div className="px-5 pb-5 border-t border-stone-800/50">
-                        <p className="text-stone-400 py-4">{workout.description}</p>
-                        
-                        <div className="space-y-3">
-                          {workout.exercises?.map((exercise, idx) => (
-                            <div 
-                              key={idx}
-                              className="p-4 bg-stone-800/30 rounded-xl"
-                            >
-                              <div className="flex items-center justify-between">
-                                <p className="font-medium text-white">{exercise.name}</p>
-                                <div className="text-right">
-                                  <p className="text-teal-400 font-medium">
-                                    {exercise.sets} × {exercise.reps}
-                                  </p>
-                                  <p className="text-xs text-stone-600">
-                                    Rest: {exercise.rest}
-                                  </p>
-                                </div>
-                              </div>
-                              {/* YouTube Link */}
-                              <a
-                                href={`https://www.youtube.com/results?search_query=how+to+${encodeURIComponent(exercise.name)}+exercise+form`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1.5 mt-3 text-xs text-red-400 hover:text-red-300 transition-colors"
-                              >
-                                <Youtube className="w-4 h-4" />
-                                Watch tutorial
-                              </a>
-                            </div>
-                          ))}
-                        </div>
-
-                        {workout.notes && workout.notes.length > 0 && (
-                          <div className="mt-5 p-4 bg-stone-800/20 rounded-xl">
-                            <p className="text-xs text-stone-500 uppercase tracking-wider mb-2 font-medium">Notes</p>
-                            <ul className="space-y-1.5">
-                              {workout.notes.map((note, idx) => (
-                                <li key={idx} className="text-sm text-stone-400">• {note}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                    <span className="text-xs opacity-70">Day</span>
+                    <span className="text-lg font-bold">{dayNumber}</span>
+                    <span className="text-xs truncate max-w-[80px]">{workout.focus?.split(" ")[0] || "Workout"}</span>
+                  </button>
                 );
               })}
             </div>
+
+            {/* Selected Day Content */}
+            {expandedDay && plan.plan_data.workouts[expandedDay] && (
+              <div className="bg-gradient-to-br from-stone-900 to-stone-900/50 border border-stone-800/50 rounded-2xl overflow-hidden">
+                <div className="p-5 border-b border-stone-800/50">
+                  <h3 className="text-xl font-bold text-white mb-1">
+                    {plan.plan_data.workouts[expandedDay].focus || "Workout"}
+                  </h3>
+                  {plan.plan_data.workouts[expandedDay].description && (
+                    <p className="text-stone-400 text-sm">{plan.plan_data.workouts[expandedDay].description}</p>
+                  )}
+                  <p className="text-xs text-stone-500 mt-2">
+                    {plan.plan_data.workouts[expandedDay].exercises?.length || 0} exercises
+                  </p>
+                </div>
+
+                <div className="p-5 space-y-3">
+                  {plan.plan_data.workouts[expandedDay].exercises?.map((exercise, idx) => (
+                    <div
+                      key={idx}
+                      className="p-4 bg-stone-800/30 rounded-xl"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="font-medium text-white">{exercise.name}</p>
+                        <div className="text-right">
+                          <p className="text-teal-400 font-semibold">
+                            {exercise.sets} × {exercise.reps}
+                          </p>
+                          <p className="text-xs text-stone-500">Rest: {exercise.rest}</p>
+                        </div>
+                      </div>
+                      <a
+                        href={`https://www.youtube.com/results?search_query=how+to+${encodeURIComponent(exercise.name)}+exercise+form`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 transition-colors"
+                      >
+                        <Youtube className="w-4 h-4" />
+                        Watch tutorial
+                      </a>
+                    </div>
+                  ))}
+                </div>
+
+                {plan.plan_data.workouts[expandedDay].notes && plan.plan_data.workouts[expandedDay].notes.length > 0 && (
+                  <div className="px-5 pb-5">
+                    <div className="p-4 bg-stone-800/20 rounded-xl">
+                      <p className="text-xs text-stone-500 uppercase tracking-wider mb-2 font-medium">Notes</p>
+                      <ul className="space-y-1.5">
+                        {plan.plan_data.workouts[expandedDay].notes.map((note, idx) => (
+                          <li key={idx} className="text-sm text-stone-400">• {note}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* New Plan Link */}
             <div className="mt-10 pt-8 border-t border-stone-800/50 text-center">

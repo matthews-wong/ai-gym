@@ -110,96 +110,96 @@ export default function WorkoutPlanDisplay({ plan, onBack }: WorkoutPlanDisplayP
           </div>
         </div>
 
-        {/* Workout Days */}
-        <div className="space-y-3">
-          {workoutDays.length === 0 ? (
-            <div className="bg-stone-900/80 border border-stone-800/50 rounded-xl p-8 text-center">
-              <p className="text-stone-400">No workouts found</p>
-            </div>
-          ) : (
-            workoutDays.map(([dayKey, workout]) => {
-              const dayNumber = dayKey.replace("day", "")
-              const isExpanded = expandedDay === dayKey
+        {/* Workout Days - Horizontal Tabs */}
+        {workoutDays.length === 0 ? (
+          <div className="bg-stone-900/80 border border-stone-800/50 rounded-xl p-8 text-center">
+            <p className="text-stone-400">No workouts found</p>
+          </div>
+        ) : (
+          <>
+            {/* Day Tabs */}
+            <div className="flex gap-2 overflow-x-auto pb-2 mb-4 scrollbar-thin scrollbar-thumb-stone-700 scrollbar-track-transparent">
+              {workoutDays.map(([dayKey, workout]) => {
+                const dayNumber = dayKey.replace("day", "")
+                const isSelected = expandedDay === dayKey
 
-              return (
-                <div
-                  key={dayKey}
-                  className="bg-stone-900/80 border border-stone-800/50 rounded-xl overflow-hidden"
-                >
+                return (
                   <button
-                    onClick={() => setExpandedDay(isExpanded ? null : dayKey)}
-                    className="w-full flex items-center justify-between p-4 hover:bg-stone-800/30 transition-colors text-left"
+                    key={dayKey}
+                    onClick={() => setExpandedDay(dayKey)}
+                    className={`flex-shrink-0 flex flex-col items-center gap-1 px-4 py-3 rounded-xl border transition-all ${
+                      isSelected
+                        ? "bg-teal-500/20 border-teal-500/50 text-teal-400"
+                        : "bg-stone-900/80 border-stone-800/50 text-stone-400 hover:bg-stone-800/50 hover:text-white"
+                    }`}
                   >
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-xl bg-teal-500/20 flex items-center justify-center flex-col">
-                        <span className="text-xs text-teal-400/70 leading-none">Day</span>
-                        <span className="text-sm font-bold text-teal-400 leading-none">{dayNumber}</span>
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-white">{workout.focus || `Workout`}</h3>
-                        <p className="text-sm text-stone-500">
-                          {workout.exercises?.length || 0} exercises
-                        </p>
-                      </div>
-                    </div>
-                    {isExpanded ? (
-                      <ChevronUp className="w-5 h-5 text-stone-500" />
-                    ) : (
-                      <ChevronDown className="w-5 h-5 text-stone-500" />
-                    )}
+                    <span className="text-xs opacity-70">Day</span>
+                    <span className="text-lg font-bold">{dayNumber}</span>
+                    <span className="text-xs truncate max-w-[80px]">{workout.focus?.split(" ")[0] || "Workout"}</span>
                   </button>
+                )
+              })}
+            </div>
 
-                  {isExpanded && (
-                    <div className="px-4 pb-4 border-t border-stone-800/50">
-                      {workout.description && (
-                        <p className="text-stone-400 text-sm py-4">{workout.description}</p>
-                      )}
-
-                      <div className="space-y-2">
-                        {workout.exercises?.map((exercise, idx) => (
-                          <div
-                            key={idx}
-                            className="p-3 bg-stone-800/30 rounded-lg"
-                          >
-                            <div className="flex items-center justify-between">
-                              <p className="font-medium text-white">{exercise.name}</p>
-                              <div className="text-right">
-                                <p className="text-teal-400 font-medium">
-                                  {exercise.sets} × {exercise.reps}
-                                </p>
-                                <p className="text-xs text-stone-600">Rest: {exercise.rest}</p>
-                              </div>
-                            </div>
-                            <a
-                              href={`https://youtube.com/results?search_query=How+to+${encodeURIComponent(exercise.name)}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1.5 mt-2 text-xs text-red-400 hover:text-red-300 transition-colors"
-                            >
-                              <Youtube className="w-3.5 h-3.5" />
-                              Watch on YouTube
-                            </a>
-                          </div>
-                        ))}
-                      </div>
-
-                      {workout.notes && workout.notes.length > 0 && (
-                        <div className="mt-4 p-3 bg-stone-800/20 rounded-lg">
-                          <p className="text-xs text-stone-500 uppercase tracking-wider mb-2">Notes</p>
-                          <ul className="space-y-1">
-                            {workout.notes.map((note, idx) => (
-                              <li key={idx} className="text-sm text-stone-400">• {note}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
+            {/* Selected Day Content */}
+            {expandedDay && plan.workouts[expandedDay] && (
+              <div className="bg-stone-900/80 border border-stone-800/50 rounded-2xl overflow-hidden">
+                <div className="p-5 border-b border-stone-800/50">
+                  <h3 className="text-xl font-bold text-white mb-1">
+                    {plan.workouts[expandedDay].focus || "Workout"}
+                  </h3>
+                  {plan.workouts[expandedDay].description && (
+                    <p className="text-stone-400 text-sm">{plan.workouts[expandedDay].description}</p>
                   )}
+                  <p className="text-xs text-stone-500 mt-2">
+                    {plan.workouts[expandedDay].exercises?.length || 0} exercises
+                  </p>
                 </div>
-              )
-            })
-          )}
-        </div>
+
+                <div className="p-5 space-y-3">
+                  {plan.workouts[expandedDay].exercises?.map((exercise, idx) => (
+                    <div
+                      key={idx}
+                      className="p-4 bg-stone-800/30 rounded-xl"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="font-medium text-white">{exercise.name}</p>
+                        <div className="text-right">
+                          <p className="text-teal-400 font-semibold">
+                            {exercise.sets} × {exercise.reps}
+                          </p>
+                          <p className="text-xs text-stone-500">Rest: {exercise.rest}</p>
+                        </div>
+                      </div>
+                      <a
+                        href={`https://youtube.com/results?search_query=How+to+${encodeURIComponent(exercise.name)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 transition-colors"
+                      >
+                        <Youtube className="w-3.5 h-3.5" />
+                        Watch on YouTube
+                      </a>
+                    </div>
+                  ))}
+                </div>
+
+                {plan.workouts[expandedDay].notes && plan.workouts[expandedDay].notes!.length > 0 && (
+                  <div className="px-5 pb-5">
+                    <div className="p-4 bg-stone-800/20 rounded-xl">
+                      <p className="text-xs text-stone-500 uppercase tracking-wider mb-2">Notes</p>
+                      <ul className="space-y-1">
+                        {plan.workouts[expandedDay].notes!.map((note, idx) => (
+                          <li key={idx} className="text-sm text-stone-400">• {note}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   )
