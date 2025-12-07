@@ -797,7 +797,66 @@ FROM meal_completions mc
 LEFT JOIN profiles p ON mc.user_id = p.id;
 ```
 
-### 4. Storage Bucket for Meal Photos
+### 4. Workout Transformations Table
+
+```sql
+CREATE TABLE workout_transformations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  before_photo_url TEXT NOT NULL,
+  after_photo_url TEXT NOT NULL,
+  description TEXT,
+  duration TEXT,
+  is_approved BOOLEAN DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Enable RLS
+ALTER TABLE workout_transformations ENABLE ROW LEVEL SECURITY;
+
+-- Policy: Anyone can view approved transformations
+CREATE POLICY "Approved transformations are viewable by everyone"
+  ON workout_transformations FOR SELECT
+  USING (is_approved = true OR auth.uid() = user_id);
+
+-- Policy: Users can insert their own transformations
+CREATE POLICY "Users can insert own transformations"
+  ON workout_transformations FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+-- Policy: Users can delete their own transformations
+CREATE POLICY "Users can delete own transformations"
+  ON workout_transformations FOR DELETE
+  USING (auth.uid() = user_id);
+
+-- Policy: Super admins can update transformations (approve)
+CREATE POLICY "Super admins can update transformations"
+  ON workout_transformations FOR UPDATE
+  USING (auth.uid() IN (SELECT user_id FROM super_admins));
+
+-- Policy: Super admins can delete any transformation
+CREATE POLICY "Super admins can delete any transformation"
+  ON workout_transformations FOR DELETE
+  USING (auth.uid() IN (SELECT user_id FROM super_admins));
+
+-- Index
+CREATE INDEX idx_workout_transformations_user ON workout_transformations(user_id);
+CREATE INDEX idx_workout_transformations_approved ON workout_transformations(is_approved, created_at DESC);
+```
+
+### 5. View for Transformations with Author Info
+
+```sql
+CREATE OR REPLACE VIEW workout_transformations_with_author AS
+SELECT 
+  wt.*,
+  COALESCE(p.username, SPLIT_PART(p.email, '@', 1), 'User') as author_username,
+  p.avatar_url as author_avatar
+FROM workout_transformations wt
+LEFT JOIN profiles p ON wt.user_id = p.id;
+```
+
+### 6. Storage Bucket for Meal Photos
 
 In Supabase Dashboard:
 1. Go to Storage
@@ -824,6 +883,37 @@ CREATE POLICY "Users can delete own meal photos"
   ON storage.objects FOR DELETE
   USING (
     bucket_id = 'meal-photos' 
+    AND auth.uid()::text = (storage.foldername(name))[1]
+  );
+```
+
+### 7. Storage Bucket for Transformation Photos
+
+In Supabase Dashboard:
+1. Go to Storage
+2. Create a new bucket called `transformation-photos`
+3. Set it to Public (so photos can be displayed)
+4. Add these policies:
+
+```sql
+-- Allow authenticated users to upload to transformation-photos bucket
+CREATE POLICY "Users can upload transformation photos"
+  ON storage.objects FOR INSERT
+  WITH CHECK (
+    bucket_id = 'transformation-photos' 
+    AND auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+-- Allow public read access to transformation photos
+CREATE POLICY "Public read access for transformation photos"
+  ON storage.objects FOR SELECT
+  USING (bucket_id = 'transformation-photos');
+
+-- Allow users to delete their own transformation photos
+CREATE POLICY "Users can delete own transformation photos"
+  ON storage.objects FOR DELETE
+  USING (
+    bucket_id = 'transformation-photos' 
     AND auth.uid()::text = (storage.foldername(name))[1]
   );
 ```
