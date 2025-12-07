@@ -341,3 +341,98 @@ export async function rejectCompletion(completionId: string): Promise<boolean> {
 
   return true
 }
+
+// Transformation admin functions
+export interface TransformationAdmin {
+  id: string
+  user_id: string
+  before_photo_url: string
+  after_photo_url: string
+  description: string | null
+  duration: string | null
+  is_approved: boolean
+  created_at: string
+  username?: string
+  email?: string
+}
+
+export async function getPendingTransformations(): Promise<TransformationAdmin[]> {
+  const { data, error } = await supabase
+    .from("workout_transformations")
+    .select("*")
+    .eq("is_approved", false)
+    .order("created_at", { ascending: false })
+
+  if (error) {
+    console.error("Error fetching pending transformations:", error)
+    return []
+  }
+
+  const userIds = [...new Set((data || []).map(t => t.user_id))]
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, username, email")
+    .in("id", userIds)
+
+  const profileMap = new Map((profiles || []).map(p => [p.id, p]))
+
+  return (data || []).map(t => ({
+    ...t,
+    username: profileMap.get(t.user_id)?.username || profileMap.get(t.user_id)?.email?.split("@")[0] || "User",
+    email: profileMap.get(t.user_id)?.email
+  }))
+}
+
+export async function getAllTransformations(): Promise<TransformationAdmin[]> {
+  const { data, error } = await supabase
+    .from("workout_transformations")
+    .select("*")
+    .order("created_at", { ascending: false })
+
+  if (error) {
+    console.error("Error fetching transformations:", error)
+    return []
+  }
+
+  const userIds = [...new Set((data || []).map(t => t.user_id))]
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, username, email")
+    .in("id", userIds)
+
+  const profileMap = new Map((profiles || []).map(p => [p.id, p]))
+
+  return (data || []).map(t => ({
+    ...t,
+    username: profileMap.get(t.user_id)?.username || profileMap.get(t.user_id)?.email?.split("@")[0] || "User",
+    email: profileMap.get(t.user_id)?.email
+  }))
+}
+
+export async function approveTransformation(transformationId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from("workout_transformations")
+    .update({ is_approved: true })
+    .eq("id", transformationId)
+
+  if (error) {
+    console.error("Error approving transformation:", error)
+    return false
+  }
+
+  return true
+}
+
+export async function rejectTransformation(transformationId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from("workout_transformations")
+    .delete()
+    .eq("id", transformationId)
+
+  if (error) {
+    console.error("Error rejecting transformation:", error)
+    return false
+  }
+
+  return true
+}
