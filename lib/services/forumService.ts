@@ -72,7 +72,7 @@ export async function getCategories(): Promise<ForumCategory[]> {
 export async function getThreads(categorySlug?: string, limit = 20): Promise<ForumThread[]> {
   let query = supabase
     .from("forum_threads_with_author")
-    .select("id, title, slug, content, views, is_pinned, is_locked, created_at, author_username, category_name, category_slug, category_color, reply_count")
+    .select("id, title, slug, content, views, is_pinned, is_locked, created_at, author_username, category_name, category_slug, reply_count")
     .order("is_pinned", { ascending: false })
     .order("created_at", { ascending: false })
     .limit(limit)
@@ -94,7 +94,7 @@ export async function getThreads(categorySlug?: string, limit = 20): Promise<For
 export async function getThread(categorySlug: string, threadSlug: string): Promise<ForumThread | null> {
   const { data, error } = await supabase
     .from("forum_threads_with_author")
-    .select("id, category_id, user_id, title, slug, content, views, is_pinned, is_locked, created_at, author_username, author_avatar, category_name, category_slug, category_color, reply_count")
+    .select("id, category_id, user_id, title, slug, content, views, is_pinned, is_locked, created_at, author_username, author_avatar, category_name, category_slug, reply_count")
     .eq("category_slug", categorySlug)
     .eq("slug", threadSlug)
     .maybeSingle()
