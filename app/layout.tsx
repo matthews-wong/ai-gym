@@ -1,14 +1,23 @@
 import type React from "react"
 import { ThemeProvider } from "@/components/theme-provider"
-import { Inter } from "next/font/google"
+import { Plus_Jakarta_Sans } from "next/font/google"
 import "./globals.css"
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import { Navbar } from "../components/Navbar"
 import Script from "next/script"
 
-const inter = Inter({ subsets: ["latin"] })
+const jakarta = Plus_Jakarta_Sans({ 
+  subsets: ["latin"],
+  variable: "--font-jakarta",
+})
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+}
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://aigymbro.web.id"),
   title: "AI GymBRO - Personalized AI Workout & Meal Plans | Fitness Training",
   description: "Transform your fitness with AI GymBRO's personalized workout plans, custom meal plans, and expert fitness training powered by artificial intelligence. Founded and Developed by Matthews Wong from Indonesia.",
   keywords: "AI workout plans, fitness AI, personalized meal plans, gym training app, custom workout generator, fitness meal planning, strength training AI, muscle building app, weight loss program, AI fitness coach",
@@ -16,7 +25,6 @@ export const metadata: Metadata = {
   creator: "Matthews Wong",
   publisher: "AI GymBRO",
   robots: "index, follow",
-  viewport: "width=device-width, initial-scale=1",
   icons: {
     icon: [
       { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
@@ -257,7 +265,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className="dark" suppressHydrationWarning>
       <head>
         {/* Favicon and App Icons */}
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
@@ -301,7 +309,7 @@ export default function RootLayout({
           `}
         </Script>
       </head>
-      <body className={`${inter.className} min-h-screen bg-gray-950 text-gray-50`}>
+      <body className={`${jakarta.className} ${jakarta.variable} min-h-screen bg-stone-950 text-stone-50 antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
           <Navbar />
           <main>{children}</main>

@@ -1,245 +1,274 @@
 "use client"
 
-import Link from "next/link"
 import { useState, useEffect, useCallback } from "react"
-import { Dumbbell, Menu, X, Home, Salad, Info, Sparkles, Zap } from "lucide-react"
+import Link from "next/link"
+import { Menu, X, Dumbbell, LogOut, ChevronRight, Shield } from "lucide-react"
+import { supabase } from "@/lib/supabase"
+import { checkIsSuperAdmin } from "@/lib/services/adminService"
+import type { User } from "@supabase/supabase-js"
 
 export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
-  const [isMounted, setIsMounted] = useState(false)
+  const [user, setUser] = useState<User | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
 
-  // Handle mounting to prevent hydration issues
   useEffect(() => {
-    setIsMounted(true)
+    const getUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      setUser(session?.user ?? null)
+      
+      if (session?.user) {
+        const adminStatus = await checkIsSuperAdmin(session.user.id)
+        setIsAdmin(adminStatus)
+      } else {
+        setIsAdmin(false)
+      }
+    }
+
+    getUser()
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      setUser(session?.user ?? null)
+      
+      if (session?.user) {
+        const adminStatus = await checkIsSuperAdmin(session.user.id)
+        setIsAdmin(adminStatus)
+      } else {
+        setIsAdmin(false)
+      }
+    })
+
+    return () => subscription.unsubscribe()
   }, [])
 
   useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 20)
-    }
-
+    const handleScroll = () => setScrolled(window.scrollY > 10)
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
-  // Close menu when clicking outside or on escape
   useEffect(() => {
-    if (!isMounted) return
-
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setIsMenuOpen(false)
-    }
-
-    const handleResize = () => {
-      if (window.innerWidth >= 768) setIsMenuOpen(false)
-    }
-
     if (isMenuOpen) {
-      document.addEventListener("keydown", handleEscape)
-      window.addEventListener("resize", handleResize)
       document.body.style.overflow = "hidden"
     } else {
       document.body.style.overflow = ""
     }
+    return () => { document.body.style.overflow = "" }
+  }, [isMenuOpen])
 
-    return () => {
-      document.removeEventListener("keydown", handleEscape)
-      window.removeEventListener("resize", handleResize)
-      document.body.style.overflow = ""
-    }
-  }, [isMenuOpen, isMounted])
-
-  const closeMenu = useCallback(() => setIsMenuOpen(false), [])
-  const toggleMenu = useCallback(() => setIsMenuOpen((prev) => !prev), [])
+  const handleSignOut = useCallback(async () => {
+    await supabase.auth.signOut()
+    setUser(null)
+    setIsMenuOpen(false)
+  }, [])
 
   return (
-    <header
-      className={`${
-        scrolled ? "bg-slate-950/95 border-b border-slate-800/50 shadow-xl shadow-emerald-500/5" : "bg-slate-950/90"
-      } sticky top-0 z-50 transition-all duration-500 ease-out`}
-    >
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-        {/* Modern Logo */}
-        <Link href="/" className="flex items-center gap-3 group relative">
-          <div className="relative">
-            <div className="absolute -inset-2 bg-gradient-to-r from-emerald-500/20 to-emerald-400/20 rounded-2xl opacity-0 group-hover:opacity-100 transition-all duration-300"></div>
-            <div className="relative p-2.5 rounded-2xl bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border border-emerald-500/20 group-hover:border-emerald-400/30 transition-all duration-300">
-              <Dumbbell className="h-6 w-6 text-emerald-400 group-hover:text-emerald-300 transition-all duration-300 transform group-hover:scale-110" />
+    <header className="fixed top-0 left-0 right-0 z-50 bg-stone-950 border-b border-stone-800 shadow-lg shadow-black/10">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6">
+        <div className="flex items-center justify-between h-16">
+          
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-2.5 group">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-teal-500/20 group-hover:shadow-teal-500/30 transition-all">
+              <Dumbbell className="w-4 h-4 text-white" />
             </div>
+            <span className="font-bold text-lg text-white tracking-tight">GymBRO</span>
+          </Link>
+
+          {/* Desktop Nav */}
+          <nav className="hidden md:flex items-center gap-1 bg-stone-900/50 border border-stone-800/50 rounded-full px-1.5 py-1.5">
+            <Link 
+              href="/" 
+              className="px-4 py-1.5 text-sm text-stone-300 hover:text-white hover:bg-stone-800/70 rounded-full transition-all"
+            >
+              Home
+            </Link>
+            <Link 
+              href="/workout-plan" 
+              className="px-4 py-1.5 text-sm text-stone-300 hover:text-white hover:bg-stone-800/70 rounded-full transition-all"
+            >
+              Workout
+            </Link>
+            <Link 
+              href="/meal-plan" 
+              className="px-4 py-1.5 text-sm text-stone-300 hover:text-white hover:bg-stone-800/70 rounded-full transition-all"
+            >
+              Meal Plan
+            </Link>
+            <Link 
+              href="/forum" 
+              className="px-4 py-1.5 text-sm text-stone-300 hover:text-white hover:bg-stone-800/70 rounded-full transition-all"
+            >
+              Forum
+            </Link>
+            {user && (
+              <Link 
+                href="/dashboard" 
+                className="px-4 py-1.5 text-sm text-stone-300 hover:text-white hover:bg-stone-800/70 rounded-full transition-all"
+              >
+                Dashboard
+              </Link>
+            )}
+            {isAdmin && (
+              <Link 
+                href="/admin" 
+                className="px-4 py-1.5 text-sm text-violet-400 hover:text-violet-300 hover:bg-violet-500/20 rounded-full transition-all flex items-center gap-1.5"
+              >
+                <Shield className="w-3.5 h-3.5" />
+                Admin
+              </Link>
+            )}
+          </nav>
+
+          {/* Desktop Auth */}
+          <div className="hidden md:flex items-center gap-3">
+            {user ? (
+              <button
+                onClick={handleSignOut}
+                className="flex items-center gap-2 px-4 py-2 text-sm text-stone-400 hover:text-white transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+                Sign out
+              </button>
+            ) : (
+              <>
+                <Link
+                  href="/auth/login"
+                  className="px-4 py-2 text-sm text-stone-300 hover:text-white transition-colors"
+                >
+                  Log in
+                </Link>
+                <Link
+                  href="/auth/signup"
+                  className="px-5 py-2 text-sm font-medium text-white bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 rounded-full shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40 transition-all duration-300"
+                >
+                  Get Started
+                </Link>
+              </>
+            )}
           </div>
-          <div className="flex flex-col">
-            <span className="font-bold text-xl bg-gradient-to-r from-emerald-400 to-emerald-300 bg-clip-text text-transparent group-hover:from-emerald-300 group-hover:to-emerald-200 transition-all duration-300">
-              AI GymBRO
-            </span>
-            <div className="h-0.5 w-0 bg-gradient-to-r from-emerald-400 to-emerald-300 group-hover:w-full transition-all duration-500 rounded-full"></div>
-          </div>
-        </Link>
 
-        {/* Desktop Navigation - Always rendered, hidden with CSS */}
-        <nav className="hidden md:flex items-center gap-8">
-          <Link
-            href="/"
-            className="relative text-slate-300 hover:text-white transition-all duration-300 group py-2 px-4 rounded-xl hover:bg-slate-800/50"
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className="md:hidden w-10 h-10 flex items-center justify-center text-stone-300 hover:text-white bg-stone-900/50 border border-stone-800/50 rounded-xl transition-colors"
+            aria-label="Toggle menu"
           >
-            <span className="relative z-10 font-medium">Home</span>
-            <span className="absolute bottom-0 left-1/2 w-0 h-0.5 bg-emerald-400 group-hover:w-full group-hover:left-0 transition-all duration-300 rounded-full"></span>
-          </Link>
-
-          <Link
-            href="/about"
-            className="relative text-slate-300 hover:text-white transition-all duration-300 group py-2 px-4 rounded-xl hover:bg-slate-800/50"
-          >
-            <span className="relative z-10 font-medium">About</span>
-            <span className="absolute bottom-0 left-1/2 w-0 h-0.5 bg-emerald-400 group-hover:w-full group-hover:left-0 transition-all duration-300 rounded-full"></span>
-          </Link>
-
-          <div className="h-6 w-px bg-slate-700"></div>
-        </nav>
-
-        {/* Desktop Buttons - Always rendered, hidden with CSS */}
-        <div className="hidden md:flex items-center gap-4">
-          <Link
-            href="/workout-plan"
-            className="relative group px-6 py-2.5 font-semibold text-white text-sm overflow-hidden rounded-xl transition-all duration-300 hover:scale-105 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 shadow-lg shadow-emerald-600/25 hover:shadow-emerald-500/40"
-          >
-            <span className="relative flex items-center gap-2 z-10">
-              <Zap className="h-4 w-4 group-hover:rotate-12 transition-transform duration-300" />
-              <span className="hidden lg:inline">Create Workout Plan</span>
-              <span className="lg:hidden">Workout</span>
-            </span>
-            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-          </Link>
-
-          <Link
-            href="/meal-plan"
-            className="relative group px-6 py-2.5 font-semibold text-emerald-300 text-sm border border-emerald-500/30 hover:border-emerald-400/50 rounded-xl hover:bg-emerald-500/10 transition-all duration-300 hover:scale-105 overflow-hidden"
-          >
-            <span className="relative flex items-center gap-2 z-10 group-hover:text-emerald-200 transition-colors duration-300">
-              <Salad className="h-4 w-4 group-hover:scale-110 transition-transform duration-300" />
-              <span className="hidden lg:inline">Create Meal Plan</span>
-              <span className="lg:hidden">Meal</span>
-            </span>
-            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-emerald-500/5 to-emerald-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-          </Link>
+            {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
         </div>
-
-        {/* Mobile Menu Button - Always rendered, hidden with CSS */}
-        <button
-          className="md:hidden relative group p-2.5 text-slate-300 hover:text-white transition-all duration-300 rounded-xl hover:bg-slate-800/50 border border-slate-700/50 hover:border-slate-600"
-          onClick={toggleMenu}
-          aria-label="Toggle menu"
-          aria-expanded={isMenuOpen}
-        >
-          <Menu className="h-5 w-5 group-hover:scale-110 transition-transform duration-300" />
-        </button>
       </div>
 
-      {/* Mobile Menu - Only render after mounting */}
-      {isMounted && (
-        <div
-          className={`fixed inset-0 z-50 md:hidden transition-all duration-300 ease-out ${
-            isMenuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-          }`}
-        >
-          {/* Backdrop */}
-          <div
-            className={`absolute inset-0 bg-slate-950/98 transition-opacity duration-300 ${
-              isMenuOpen ? "opacity-100" : "opacity-0"
-            }`}
-            onClick={closeMenu}
-          />
-
-          {/* Menu Content */}
-          <div
-            className={`relative h-full flex flex-col bg-slate-950 transform transition-all duration-300 ease-out ${
-              isMenuOpen ? "translate-x-0" : "-translate-x-full"
-            }`}
-          >
-            {/* Header */}
-            <div className="p-6 flex justify-between items-center border-b border-slate-800">
-              <Link href="/" className="flex items-center gap-3 group" onClick={closeMenu}>
-                <div className="relative p-2.5 rounded-2xl bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border border-emerald-500/20">
-                  <Dumbbell className="h-6 w-6 text-emerald-300" />
-                </div>
-                <span className="font-bold text-xl bg-gradient-to-r from-emerald-400 to-emerald-300 bg-clip-text text-transparent">
-                  AI GymBRO
-                </span>
-              </Link>
-
-              <button
-                className="group p-2.5 text-slate-300 hover:text-white transition-all duration-300 rounded-xl hover:bg-slate-800/50"
-                onClick={closeMenu}
-                aria-label="Close menu"
-              >
-                <X className="h-5 w-5 group-hover:rotate-90 transition-transform duration-300" />
-              </button>
-            </div>
-
-            {/* Navigation */}
-            <div className="flex-1 flex flex-col p-6">
-              <nav className="space-y-4 mb-8">
-                <Link
-                  href="/"
-                  className="flex items-center gap-4 text-lg text-slate-100 hover:text-white py-4 px-5 rounded-2xl bg-slate-900/50 hover:bg-slate-800/50 border border-slate-800/50 hover:border-slate-700 transition-all duration-300 group"
-                  onClick={closeMenu}
-                >
-                  <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 group-hover:border-emerald-400/30 transition-all duration-300">
-                    <Home className="h-5 w-5 text-emerald-400 group-hover:text-emerald-300 transition-all duration-300" />
-                  </div>
-                  <div className="flex-1">
-                    <span className="font-semibold block">Home</span>
-                    <span className="text-sm text-slate-400">Main dashboard</span>
-                  </div>
-                </Link>
-  
-                <Link
-                  href="/about"
-                  className="flex items-center gap-4 text-lg text-slate-100 hover:text-white py-4 px-5 rounded-2xl bg-slate-900/50 hover:bg-slate-800/50 border border-slate-800/50 hover:border-slate-700 transition-all duration-300 group"
-                  onClick={closeMenu}
-                >
-                  <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 group-hover:border-emerald-400/30 transition-all duration-300">
-                    <Info className="h-5 w-5 text-emerald-400 group-hover:text-emerald-300 transition-all duration-300" />
-                  </div>
-                  <div className="flex-1">
-                    <span className="font-semibold block">About</span>
-                    <span className="text-sm text-slate-400">Learn more</span>
-                  </div>
-                </Link>
-              </nav>
-
-              {/* Divider */}
-              <div className="my-8 h-px bg-gradient-to-r from-transparent via-slate-700 to-transparent"></div>
-
-              {/* Action Buttons */}
-              <div className="mt-auto space-y-4">
-                <Link
-                  href="/workout-plan"
-                  className="block w-full text-center py-4 px-6 font-bold text-white bg-gradient-to-r from-emerald-600 to-emerald-500 rounded-2xl hover:from-emerald-500 hover:to-emerald-400 transition-all duration-300 shadow-lg shadow-emerald-600/25 hover:shadow-emerald-500/40 group overflow-hidden"
-                  onClick={closeMenu}
-                >
-                  <span className="relative flex items-center justify-center gap-3 z-10">
-                    <Zap className="h-5 w-5 group-hover:rotate-12 transition-transform duration-300" />
-                    <span className="text-lg">Create Workout Plan</span>
-                    <Sparkles className="h-4 w-4 opacity-75" />
-                  </span>
-                  <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-                </Link>
-
-                <Link
-                  href="/meal-plan"
-                  className="block w-full text-center py-4 px-6 font-bold text-emerald-200 border-2 border-emerald-500/50 hover:border-emerald-400/70 rounded-2xl hover:bg-emerald-500/10 transition-all duration-300 group overflow-hidden"
-                  onClick={closeMenu}
-                >
-                  <span className="relative flex items-center justify-center gap-3 z-10 group-hover:text-emerald-100 transition-colors duration-300">
-                    <Salad className="h-5 w-5 group-hover:scale-110 transition-transform duration-300" />
-                    <span className="text-lg">Create Meal Plan</span>
-                  </span>
-                  <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-emerald-500/5 to-emerald-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-                </Link>
+      {/* Mobile Menu - Full Screen Solid */}
+      {isMenuOpen && (
+        <div className="md:hidden fixed inset-0 top-0 bg-stone-950 z-50">
+          {/* Mobile Header */}
+          <div className="flex items-center justify-between h-16 px-4 border-b border-stone-800">
+            <Link href="/" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center">
+                <Dumbbell className="w-4 h-4 text-white" />
               </div>
-            </div>
+              <span className="font-bold text-lg text-white">GymBRO</span>
+            </Link>
+            <button
+              onClick={() => setIsMenuOpen(false)}
+              className="w-10 h-10 flex items-center justify-center text-stone-300 hover:text-white bg-stone-900 border border-stone-800 rounded-xl"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
+          
+          <nav className="flex flex-col p-5 space-y-3 overflow-y-auto" style={{ height: 'calc(100vh - 64px)' }}>
+            <Link 
+              href="/" 
+              onClick={() => setIsMenuOpen(false)}
+              className="flex items-center justify-between px-5 py-4 text-stone-100 bg-stone-900 border border-stone-800 rounded-xl hover:bg-stone-800 transition-colors"
+            >
+              <span className="font-semibold text-lg">Home</span>
+              <ChevronRight className="w-5 h-5 text-stone-500" />
+            </Link>
+            <Link 
+              href="/workout-plan" 
+              onClick={() => setIsMenuOpen(false)}
+              className="flex items-center justify-between px-5 py-4 text-stone-100 bg-stone-900 border border-stone-800 rounded-xl hover:bg-stone-800 transition-colors"
+            >
+              <span className="font-semibold text-lg">Workout Plan</span>
+              <ChevronRight className="w-5 h-5 text-stone-500" />
+            </Link>
+            <Link 
+              href="/meal-plan" 
+              onClick={() => setIsMenuOpen(false)}
+              className="flex items-center justify-between px-5 py-4 text-stone-100 bg-stone-900 border border-stone-800 rounded-xl hover:bg-stone-800 transition-colors"
+            >
+              <span className="font-semibold text-lg">Meal Plan</span>
+              <ChevronRight className="w-5 h-5 text-stone-500" />
+            </Link>
+            <Link 
+              href="/forum" 
+              onClick={() => setIsMenuOpen(false)}
+              className="flex items-center justify-between px-5 py-4 text-stone-100 bg-stone-900 border border-stone-800 rounded-xl hover:bg-stone-800 transition-colors"
+            >
+              <span className="font-semibold text-lg">Forum</span>
+              <ChevronRight className="w-5 h-5 text-stone-500" />
+            </Link>
+            {user && (
+              <Link 
+                href="/dashboard" 
+                onClick={() => setIsMenuOpen(false)}
+                className="flex items-center justify-between px-5 py-4 text-stone-100 bg-stone-900 border border-stone-800 rounded-xl hover:bg-stone-800 transition-colors"
+              >
+                <span className="font-semibold text-lg">Dashboard</span>
+                <ChevronRight className="w-5 h-5 text-stone-500" />
+              </Link>
+            )}
+            {isAdmin && (
+              <Link 
+                href="/admin" 
+                onClick={() => setIsMenuOpen(false)}
+                className="flex items-center justify-between px-5 py-4 text-violet-400 bg-violet-500/10 border border-violet-500/30 rounded-xl hover:bg-violet-500/20 transition-colors"
+              >
+                <span className="font-semibold text-lg flex items-center gap-2">
+                  <Shield className="w-5 h-5" />
+                  Admin Panel
+                </span>
+                <ChevronRight className="w-4 h-4 text-violet-500" />
+              </Link>
+            )}
+            
+            {/* Divider */}
+            <div className="my-4 border-t border-stone-800" />
+            
+            {/* Auth Section */}
+            <div className="space-y-3">
+              {user ? (
+                <button
+                  onClick={handleSignOut}
+                  className="w-full flex items-center justify-center gap-3 px-5 py-4 text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl hover:bg-red-500/20 transition-colors font-semibold text-lg"
+                >
+                  <LogOut className="w-5 h-5" />
+                  Sign Out
+                </button>
+              ) : (
+                <>
+                  <Link
+                    href="/auth/login"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="block px-5 py-4 text-center text-stone-100 bg-stone-900 border border-stone-800 rounded-xl hover:bg-stone-800 transition-colors font-semibold text-lg"
+                  >
+                    Log In
+                  </Link>
+                  <Link
+                    href="/auth/signup"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="block px-5 py-4 text-center text-white bg-gradient-to-r from-teal-500 to-emerald-600 rounded-xl shadow-lg shadow-teal-500/25 font-bold text-lg"
+                  >
+                    Get Started Free
+                  </Link>
+                </>
+              )}
+            </div>
+          </nav>
         </div>
       )}
     </header>

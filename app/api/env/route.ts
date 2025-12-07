@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server"
 
 export async function GET() {
-  // Log the environment variable status (without exposing the actual key)
-  const hasGroqKey = !!process.env.NEXT_PUBLIC_GROQ_API_KEY 
-  console.log("Ollama connected")
+  // Check both server-side and public env vars
+  const hasGroqKey = !!(process.env.GROQ_API_KEY || process.env.NEXT_PUBLIC_GROQ_API_KEY)
 
   return NextResponse.json(
     {

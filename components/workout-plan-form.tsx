@@ -1,45 +1,14 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import * as z from "zod"
-import { Button } from "@/components/ui/button"
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Slider } from "@/components/ui/slider"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Loader2, AlertTriangle, CheckCircle2, Dumbbell, Timer, CalendarDays } from "lucide-react"
+import { Loader2, AlertTriangle, ArrowRight, ArrowLeft, Check } from "lucide-react"
 import { generateWorkoutPlan } from "@/lib/ai-service"
 import WorkoutPlanDisplay from "./workout-plan-display"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { cn } from "@/lib/utils"
+import LoadingModal from "./loading-modal"
 
-interface WorkoutPlan {
-  days: Array<{
-    day: string;
-    exercises: Array<{
-      name: string;
-      sets: number;
-      reps: string;
-      rest: string;
-    }>;
-  }>;
-  notes?: string;
-}
+type Step = 1 | 2 | 3
 
-const formSchema = z.object({
-  fitnessGoal: z.string().min(1, { message: "Please select a fitness goal" }),
-  experienceLevel: z.string().min(1, { message: "Please select your experience level" }),
-  daysPerWeek: z.number().min(1).max(7),
-  sessionLength: z.number().min(15).max(120),
-  focusAreas: z.array(z.string()).min(1, { message: "Please select at least one focus area" }),
-  equipment: z.string().min(1, { message: "Please select available equipment" }),
-})
-
-type FormValues = z.infer<typeof formSchema>;
-
-const focusAreaOptions = [
+const focusOptions = [
   { id: "fullBody", label: "Full Body" },
   { id: "upperBody", label: "Upper Body" },
   { id: "lowerBody", label: "Lower Body" },
@@ -47,277 +16,299 @@ const focusAreaOptions = [
   { id: "arms", label: "Arms" },
   { id: "back", label: "Back" },
   { id: "chest", label: "Chest" },
-  { id: "shoulders", label: "Shoulders" },
   { id: "legs", label: "Legs" },
 ]
 
 export default function WorkoutPlanForm() {
+  const [step, setStep] = useState<Step>(1)
   const [isLoading, setIsLoading] = useState(false)
-  const [workoutPlan, setWorkoutPlan] = useState<WorkoutPlan | null>(null)
+  const [workoutPlan, setWorkoutPlan] = useState<unknown | null>(null)
   const [hasGroqKey, setHasGroqKey] = useState<boolean | null>(null)
   const [apiError, setApiError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (typeof window !== "undefined" && window.process?.env?.HAS_GROQ_KEY !== undefined) {
-      setHasGroqKey(!!window.process.env.NEXT_PUBLIC_GROQ_API_KEY)
-    } else {
-      fetch("/api/env")
-        .then((res) => res.json())
-        .then((data) => setHasGroqKey(data.hasGroqKey))
-        .catch((err) => setHasGroqKey(false))
-    }
-  }, [])
-
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      fitnessGoal: "",
-      experienceLevel: "",
-      daysPerWeek: 3,
-      sessionLength: 60,
-      focusAreas: ["fullBody"],
-      equipment: "",
-    },
+  const [formData, setFormData] = useState({
+    fitnessGoal: "",
+    experienceLevel: "",
+    daysPerWeek: 3,
+    sessionLength: 60,
+    focusAreas: ["fullBody"] as string[],
+    equipment: "",
   })
 
-  async function onSubmit(values: FormValues) {
+  useEffect(() => {
+    fetch("/api/env")
+      .then((res) => res.json())
+      .then((data) => setHasGroqKey(data.hasGroqKey))
+      .catch(() => setHasGroqKey(false))
+  }, [])
+
+  const updateField = (field: string, value: string | number | string[]) => {
+    setFormData((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const toggleFocus = (id: string) => {
+    const current = formData.focusAreas
+    if (current.includes(id)) {
+      if (current.length > 1) {
+        updateField("focusAreas", current.filter((f) => f !== id))
+      }
+    } else {
+      updateField("focusAreas", [...current, id])
+    }
+  }
+
+  const canProceed = () => {
+    if (step === 1) return formData.fitnessGoal && formData.experienceLevel
+    if (step === 2) return formData.focusAreas.length > 0
+    return formData.equipment
+  }
+
+  const handleSubmit = async () => {
     setIsLoading(true)
     setApiError(null)
+
     try {
-      window.scrollTo({ top: 0, behavior: "smooth" })
-      const plan = await generateWorkoutPlan(values)
+      const plan = await generateWorkoutPlan(formData)
       setWorkoutPlan(plan)
-    } catch (error: any) {
-      console.error("Error generating workout plan:", error)
-      setApiError(error.message || "Failed to generate workout plan. Please try again.")
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to generate workout plan"
+      setApiError(errorMessage)
     } finally {
       setIsLoading(false)
     }
   }
 
   if (workoutPlan) {
-    return <WorkoutPlanDisplay plan={workoutPlan} onBack={() => setWorkoutPlan(null)} />
+    return <WorkoutPlanDisplay plan={workoutPlan as Parameters<typeof WorkoutPlanDisplay>[0]["plan"]} onBack={() => setWorkoutPlan(null)} />
   }
 
   return (
-    // Added px-4 for mobile spacing and py-6 to ensure it's not flush with the top/bottom
-    <div className="w-full max-w-4xl mx-auto px-4 py-6">
+    <>
+      <LoadingModal isOpen={isLoading} type="workout" />
+
       {apiError && (
-        <Alert variant="destructive" className="mb-6 animate-in fade-in slide-in-from-top-2">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{apiError}</AlertDescription>
-        </Alert>
+        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0" />
+          <p className="text-sm text-red-300">{apiError}</p>
+        </div>
       )}
 
       {hasGroqKey === false && (
-        <Alert className="mb-6 border-amber-500/50 bg-amber-500/10 text-amber-200">
-          <AlertTriangle className="h-4 w-4 text-amber-500" />
-          <AlertTitle className="text-amber-500">API Key Missing</AlertTitle>
-          <AlertDescription>
-            The GROQ API key is missing. Some features may not work correctly.
-          </AlertDescription>
-        </Alert>
+        <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0" />
+          <p className="text-sm text-amber-300">API key missing. Some features may not work.</p>
+        </div>
       )}
 
-      {/* Adjusted padding: p-5 on mobile, p-8 on desktop */}
-      <div className="bg-gray-950/50 border border-gray-800 backdrop-blur-sm rounded-xl p-5 md:p-8 shadow-2xl">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            
-            {/* Section: Basics */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <FormField
-                control={form.control}
-                name="fitnessGoal"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-emerald-400 font-medium">Fitness Goal</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="h-12 bg-gray-900/50 border-gray-700 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all">
-                          <SelectValue placeholder="What's your main goal?" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent className="bg-gray-900 border-gray-800">
-                        <SelectItem value="muscleGain">Muscle Gain</SelectItem>
-                        <SelectItem value="fatLoss">Fat Loss</SelectItem>
-                        <SelectItem value="strength">Strength</SelectItem>
-                        <SelectItem value="endurance">Endurance</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage className="text-red-400" />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="experienceLevel"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-emerald-400 font-medium">Experience Level</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="h-12 bg-gray-900/50 border-gray-700 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all">
-                          <SelectValue placeholder="How experienced are you?" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent className="bg-gray-900 border-gray-800">
-                        <SelectItem value="beginner">Beginner</SelectItem>
-                        <SelectItem value="intermediate">Intermediate</SelectItem>
-                        <SelectItem value="advanced">Advanced</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage className="text-red-400" />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* Section: Time Constraints */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-5 bg-gray-900/30 rounded-xl border border-gray-800/50">
-              <FormField
-                control={form.control}
-                name="daysPerWeek"
-                render={({ field }) => (
-                  <FormItem>
-                    <div className="flex justify-between items-center mb-2">
-                      <FormLabel className="text-emerald-400 font-medium flex items-center gap-2">
-                        <CalendarDays className="w-4 h-4" /> Days Per Week
-                      </FormLabel>
-                      <span className="text-2xl font-bold text-white">{field.value}</span>
-                    </div>
-                    <FormControl>
-                      <Slider
-                        min={1}
-                        max={7}
-                        step={1}
-                        defaultValue={[field.value]}
-                        onValueChange={(value) => field.onChange(value[0])}
-                        className="py-4"
-                      />
-                    </FormControl>
-                    <FormDescription className="text-gray-500 text-xs">Weekly commitment frequency</FormDescription>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="sessionLength"
-                render={({ field }) => (
-                  <FormItem>
-                    <div className="flex justify-between items-center mb-2">
-                      <FormLabel className="text-emerald-400 font-medium flex items-center gap-2">
-                        <Timer className="w-4 h-4" /> Duration
-                      </FormLabel>
-                      <span className="text-2xl font-bold text-white">{field.value} <span className="text-sm text-gray-400 font-normal">min</span></span>
-                    </div>
-                    <FormControl>
-                      <Slider
-                        min={15}
-                        max={120}
-                        step={5}
-                        defaultValue={[field.value]}
-                        onValueChange={(value) => field.onChange(value[0])}
-                        className="py-4"
-                      />
-                    </FormControl>
-                    <FormDescription className="text-gray-500 text-xs">Length of each workout session</FormDescription>
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* Section: Focus Areas */}
-            <FormField
-              control={form.control}
-              name="focusAreas"
-              render={({ field }) => (
-                <FormItem>
-                  <div className="mb-4">
-                    <FormLabel className="text-emerald-400 font-medium flex items-center gap-2">
-                      <Dumbbell className="w-4 h-4" /> Target Muscles
-                    </FormLabel>
-                    <FormDescription className="text-gray-400">
-                      Select the areas you want to prioritize.
-                    </FormDescription>
-                  </div>
-                  <FormControl>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                      {focusAreaOptions.map((option) => {
-                        const isChecked = field.value?.includes(option.id);
-                        return (
-                          <div 
-                            key={option.id}
-                            className={cn(
-                              "relative flex items-center justify-center px-2 py-3 rounded-lg border-2 cursor-pointer transition-all duration-200 group",
-                              isChecked 
-                                ? "border-emerald-500 bg-emerald-500/10 text-emerald-400 shadow-[0_0_10px_-4px_rgba(16,185,129,0.5)]" 
-                                : "border-gray-800 bg-gray-900/50 text-gray-400 hover:border-gray-600 hover:bg-gray-800"
-                            )}
-                            onClick={() => {
-                              if (isChecked) {
-                                field.onChange(field.value?.filter((value) => value !== option.id));
-                              } else {
-                                field.onChange([...field.value, option.id]);
-                              }
-                            }}
-                          >
-                            {isChecked && <CheckCircle2 className="w-3 h-3 mr-2 animate-in zoom-in" />}
-                            <span className="text-sm font-medium text-center select-none">{option.label}</span>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </FormControl>
-                  <FormMessage className="text-red-400 mt-2" />
-                </FormItem>
-              )}
-            />
-
-            {/* Section: Equipment */}
-            <FormField
-              control={form.control}
-              name="equipment"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-emerald-400 font-medium">Available Equipment</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger className="h-12 bg-gray-900/50 border-gray-700 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all">
-                        <SelectValue placeholder="What equipment do you have access to?" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent className="bg-gray-900 border-gray-800">
-                      <SelectItem value="fullGym">Full Gym (Commercial Gym)</SelectItem>
-                      <SelectItem value="homeBasic">Home Gym (Dumbbells, Bands, Bench)</SelectItem>
-                      <SelectItem value="bodyweight">No Equipment (Bodyweight Only)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage className="text-red-400" />
-                </FormItem>
-              )}
-            />
-
-            <Button 
-              type="submit" 
-              className="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white mt-6 py-6 text-lg font-bold shadow-lg shadow-emerald-900/20 transition-all duration-200 hover:scale-[1.01]" 
-              disabled={isLoading}
+      {/* Progress */}
+      <div className="flex items-center justify-between mb-8">
+        {[1, 2, 3].map((s) => (
+          <div key={s} className="flex items-center">
+            <div
+              className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
+                s <= step ? "bg-teal-500 text-white" : "bg-stone-800 text-stone-500"
+              }`}
             >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Designing Your Program...
-                </>
-              ) : (
-                "Generate My Plan"
-              )}
-            </Button>
-          </form>
-        </Form>
+              {s}
+            </div>
+            {s < 3 && (
+              <div className={`w-16 sm:w-24 h-1 mx-2 rounded ${s < step ? "bg-teal-500" : "bg-stone-800"}`} />
+            )}
+          </div>
+        ))}
       </div>
-    </div>
+
+      {/* Step 1: Goal & Level */}
+      {step === 1 && (
+        <div className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-stone-300 mb-3">What&apos;s your goal?</label>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { id: "muscleGain", label: "Build Muscle" },
+                { id: "fatLoss", label: "Lose Fat" },
+                { id: "strength", label: "Get Stronger" },
+                { id: "endurance", label: "Improve Endurance" },
+              ].map((goal) => (
+                <button
+                  key={goal.id}
+                  type="button"
+                  onClick={() => updateField("fitnessGoal", goal.id)}
+                  className={`p-4 rounded-xl text-left transition-all ${
+                    formData.fitnessGoal === goal.id
+                      ? "bg-teal-500/20 border-teal-500/50 border-2"
+                      : "bg-stone-800/50 border-stone-700/50 border hover:border-stone-600"
+                  }`}
+                >
+                  <span className={`font-medium ${formData.fitnessGoal === goal.id ? "text-teal-300" : "text-stone-300"}`}>
+                    {goal.label}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-stone-300 mb-3">Experience level</label>
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { id: "beginner", label: "Beginner" },
+                { id: "intermediate", label: "Intermediate" },
+                { id: "advanced", label: "Advanced" },
+              ].map((level) => (
+                <button
+                  key={level.id}
+                  type="button"
+                  onClick={() => updateField("experienceLevel", level.id)}
+                  className={`p-3 rounded-xl text-center transition-all ${
+                    formData.experienceLevel === level.id
+                      ? "bg-teal-500/20 border-teal-500/50 border-2"
+                      : "bg-stone-800/50 border-stone-700/50 border hover:border-stone-600"
+                  }`}
+                >
+                  <span className={`text-sm font-medium ${formData.experienceLevel === level.id ? "text-teal-300" : "text-stone-300"}`}>
+                    {level.label}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Step 2: Focus & Schedule */}
+      {step === 2 && (
+        <div className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-stone-300 mb-3">Target muscles</label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {focusOptions.map((focus) => {
+                const isSelected = formData.focusAreas.includes(focus.id)
+                return (
+                  <button
+                    key={focus.id}
+                    type="button"
+                    onClick={() => toggleFocus(focus.id)}
+                    className={`px-3 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-1.5 ${
+                      isSelected
+                        ? "bg-teal-500/20 border-teal-500/50 text-teal-300 border"
+                        : "bg-stone-800/50 border-stone-700/50 text-stone-400 border hover:border-stone-600"
+                    }`}
+                  >
+                    {isSelected && <Check className="w-3.5 h-3.5" />}
+                    {focus.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <label className="text-sm font-medium text-stone-300">Days per week</label>
+              <span className="text-lg font-bold text-white">{formData.daysPerWeek}</span>
+            </div>
+            <input
+              type="range"
+              min={1}
+              max={7}
+              value={formData.daysPerWeek}
+              onChange={(e) => updateField("daysPerWeek", Number(e.target.value))}
+              className="w-full h-2 bg-stone-800 rounded-full appearance-none cursor-pointer accent-teal-500"
+            />
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <label className="text-sm font-medium text-stone-300">Session length</label>
+              <span className="text-lg font-bold text-white">{formData.sessionLength} <span className="text-sm font-normal text-stone-500">min</span></span>
+            </div>
+            <input
+              type="range"
+              min={15}
+              max={120}
+              step={5}
+              value={formData.sessionLength}
+              onChange={(e) => updateField("sessionLength", Number(e.target.value))}
+              className="w-full h-2 bg-stone-800 rounded-full appearance-none cursor-pointer accent-teal-500"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Step 3: Equipment */}
+      {step === 3 && (
+        <div className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-stone-300 mb-3">Available equipment</label>
+            <div className="space-y-3">
+              {[
+                { id: "fullGym", label: "Full Gym", desc: "Commercial gym with all equipment" },
+                { id: "homeBasic", label: "Home Gym", desc: "Dumbbells, bands, bench" },
+                { id: "bodyweight", label: "No Equipment", desc: "Bodyweight exercises only" },
+              ].map((eq) => (
+                <button
+                  key={eq.id}
+                  type="button"
+                  onClick={() => updateField("equipment", eq.id)}
+                  className={`w-full p-4 rounded-xl text-left transition-all ${
+                    formData.equipment === eq.id
+                      ? "bg-teal-500/20 border-teal-500/50 border-2"
+                      : "bg-stone-800/50 border-stone-700/50 border hover:border-stone-600"
+                  }`}
+                >
+                  <span className={`font-medium block ${formData.equipment === eq.id ? "text-teal-300" : "text-stone-300"}`}>
+                    {eq.label}
+                  </span>
+                  <span className="text-sm text-stone-500">{eq.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Navigation */}
+      <div className="flex gap-3 mt-8">
+        {step > 1 && (
+          <button
+            type="button"
+            onClick={() => setStep((step - 1) as Step)}
+            className="flex-1 py-3.5 text-sm font-medium text-stone-300 bg-stone-800 hover:bg-stone-700 rounded-xl transition-colors flex items-center justify-center gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back
+          </button>
+        )}
+        
+        {step < 3 ? (
+          <button
+            type="button"
+            onClick={() => setStep((step + 1) as Step)}
+            disabled={!canProceed()}
+            className="flex-1 py-3.5 text-sm font-semibold text-white bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 disabled:from-stone-700 disabled:to-stone-700 disabled:text-stone-500 rounded-xl transition-all flex items-center justify-center gap-2"
+          >
+            Continue
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={isLoading || !canProceed()}
+            className="flex-1 py-3.5 text-sm font-semibold text-white bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 disabled:from-stone-700 disabled:to-stone-700 disabled:text-stone-500 rounded-xl shadow-lg shadow-teal-500/25 disabled:shadow-none transition-all flex items-center justify-center gap-2"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              "Generate Workout Plan"
+            )}
+          </button>
+        )}
+      </div>
+    </>
   )
 }

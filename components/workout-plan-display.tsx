@@ -1,188 +1,206 @@
 "use client"
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Download, ChevronRight, Target, Calendar, Clock, Dumbbell, Info } from "lucide-react"
+import { useState, useEffect } from "react"
+import { ArrowLeft, Download, ChevronDown, ChevronUp, Calendar, Clock, Target, Loader2, Youtube } from "lucide-react"
 import { generatePDF } from "@/lib/pdf-service"
-import { cn } from "@/lib/utils" // Assuming you have a cn utility, otherwise remove this and use template literals
+import { savePlanToDatabase } from "@/lib/services/planService"
+
+interface Exercise {
+  name: string
+  sets: number
+  reps: string
+  rest: string
+}
+
+interface DayWorkout {
+  focus: string
+  description?: string
+  exercises: Exercise[]
+  notes?: string[]
+}
 
 interface WorkoutPlanDisplayProps {
-  plan: any
+  plan: {
+    summary: {
+      goal: string
+      level: string
+      daysPerWeek: number
+      sessionLength: number
+    }
+    overview: string
+    workouts: Record<string, DayWorkout>
+  }
   onBack: () => void
 }
 
 export default function WorkoutPlanDisplay({ plan, onBack }: WorkoutPlanDisplayProps) {
-  const [activeDay, setActiveDay] = useState("day1")
+  const [expandedDay, setExpandedDay] = useState<string | null>("day1")
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
 
-  const handleDownloadPDF = () => {
-    generatePDF(plan, "workout")
+  useEffect(() => {
+    const saveToDb = async () => {
+      await savePlanToDatabase({
+        planType: "workout",
+        planData: plan as unknown as Record<string, unknown>,
+      })
+    }
+    saveToDb()
+  }, [plan])
+
+  const handleDownloadPDF = async () => {
+    setIsGeneratingPDF(true)
+    try {
+      await generatePDF(plan, "workout")
+    } catch (error) {
+      console.error("Error generating PDF:", error)
+    } finally {
+      setIsGeneratingPDF(false)
+    }
   }
 
-  return (
-    <div className="min-h-screen bg-gray-950 pb-10">
-      {/* Mobile Sticky Header */}
-      <div className="sticky top-0 z-20 bg-gray-950/80 backdrop-blur-md border-b border-gray-800 px-4 py-3 flex items-center justify-between">
-        <Button 
-          variant="ghost" 
-          size="sm"
-          onClick={onBack} 
-          className="text-gray-400 hover:text-white -ml-2"
-        >
-          <ArrowLeft className="mr-1 h-4 w-4" />
-          Back
-        </Button>
-        <p className="text-sm font-semibold text-white">Your Plan</p>
-        <Button
-          size="icon"
-          variant="ghost"
-          onClick={handleDownloadPDF}
-          className="text-emerald-500 hover:text-emerald-400 hover:bg-emerald-950/30"
-        >
-          <Download className="h-5 w-5" />
-        </Button>
-      </div>
+  const workoutDays = Object.entries(plan.workouts || {})
 
-      <div className="max-w-4xl mx-auto px-4 py-6">
-        {/* Hero Summary */}
-        <div className="mb-8 text-center sm:text-left">
-          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
-            {plan.summary.goal} Protocol
-          </h1>
-          <p className="text-gray-400 text-sm leading-relaxed max-w-2xl mx-auto sm:mx-0">
-            {plan.overview}
-          </p>
+  return (
+    <div className="min-h-screen bg-stone-950 pt-20">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <button
+            onClick={onBack}
+            className="flex items-center gap-2 text-stone-400 hover:text-white transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span className="text-sm">Back</span>
+          </button>
           
-          {/* Quick Stats Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">
-            <SummaryItem icon={Target} label="Goal" value={plan.summary.goal} color="emerald" />
-            <SummaryItem icon={Calendar} label="Freq" value={`${plan.summary.daysPerWeek}x/week`} color="blue" />
-            <SummaryItem icon={Clock} label="Time" value={`${plan.summary.sessionLength} min`} color="purple" />
-            <SummaryItem icon={Dumbbell} label="Level" value={plan.summary.level} color="orange" />
+          <button
+            onClick={handleDownloadPDF}
+            disabled={isGeneratingPDF}
+            className="flex items-center gap-2 px-4 py-2 bg-stone-800 hover:bg-stone-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+          >
+            {isGeneratingPDF ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4" />
+            )}
+            Download PDF
+          </button>
+        </div>
+
+        {/* Plan Header */}
+        <div className="bg-stone-900/80 border border-stone-800/50 rounded-2xl p-6 mb-6">
+          <h1 className="text-2xl font-bold text-white mb-2">
+            {plan.summary?.goal || "Your"} Workout Plan
+          </h1>
+          <p className="text-stone-400 text-sm mb-4">{plan.overview || "Personalized workout routine"}</p>
+          
+          <div className="flex flex-wrap gap-4">
+            <div className="flex items-center gap-2 text-sm">
+              <Target className="w-4 h-4 text-teal-400" />
+              <span className="text-stone-300">{plan.summary?.level || "Intermediate"}</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <Calendar className="w-4 h-4 text-teal-400" />
+              <span className="text-stone-300">{plan.summary?.daysPerWeek || 3} days/week</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <Clock className="w-4 h-4 text-teal-400" />
+              <span className="text-stone-300">{plan.summary?.sessionLength || 60} min/session</span>
+            </div>
           </div>
         </div>
 
-        {/* Main Content */}
-        <Tabs defaultValue="day1" value={activeDay} onValueChange={setActiveDay} className="w-full">
-          {/* Sticky Tabs Navigation */}
-          <div className="sticky top-[60px] z-10 -mx-4 px-4 bg-gray-950/95 pb-4 pt-2 mb-4 border-b border-gray-800/50 overflow-x-auto no-scrollbar">
-            <TabsList className="bg-gray-900/50 p-1 h-auto inline-flex w-full sm:w-auto">
-              {Object.keys(plan.workouts).map((day, index) => (
-                <TabsTrigger
-                  key={day}
-                  value={day}
-                  className="flex-1 sm:flex-none py-2 px-4 text-xs sm:text-sm data-[state=active]:bg-emerald-600 data-[state=active]:text-white rounded-md transition-all"
+        {/* Workout Days */}
+        <div className="space-y-3">
+          {workoutDays.length === 0 ? (
+            <div className="bg-stone-900/80 border border-stone-800/50 rounded-xl p-8 text-center">
+              <p className="text-stone-400">No workouts found</p>
+            </div>
+          ) : (
+            workoutDays.map(([dayKey, workout]) => {
+              const dayNumber = dayKey.replace("day", "")
+              const isExpanded = expandedDay === dayKey
+
+              return (
+                <div
+                  key={dayKey}
+                  className="bg-stone-900/80 border border-stone-800/50 rounded-xl overflow-hidden"
                 >
-                  Day {index + 1}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </div>
-
-          {Object.entries(plan.workouts).map(([day, workout]: [string, any]) => (
-            <TabsContent key={day} value={day} className="mt-0 space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              
-              {/* Focus Header */}
-              <div className="bg-gradient-to-br from-emerald-900/20 to-gray-900 border border-emerald-900/30 rounded-xl p-5">
-                <div className="flex items-center gap-2 mb-2">
-                  <Badge variant="outline" className="border-emerald-500/50 text-emerald-400 uppercase text-[10px] tracking-wider">
-                    Focus
-                  </Badge>
-                </div>
-                <h3 className="text-xl font-bold text-white mb-1">{workout.focus}</h3>
-                <p className="text-gray-400 text-sm">{workout.description}</p>
-              </div>
-
-              {/* Exercise List - CLEAN UI (No Nested Cards) */}
-              <div className="bg-gray-900/40 border border-gray-800 rounded-xl overflow-hidden">
-                <div className="px-4 py-3 border-b border-gray-800 bg-gray-900/60 flex justify-between items-center">
-                  <h4 className="text-sm font-semibold text-gray-300">Routine</h4>
-                  <span className="text-xs text-gray-500">{workout.exercises.length} Exercises</span>
-                </div>
-                
-                <div className="divide-y divide-gray-800/50">
-                  {workout.exercises.map((exercise: any, index: number) => (
-                    <div key={index} className="p-4 hover:bg-gray-800/30 transition-colors relative group">
-                      <div className="flex items-start gap-4">
-                        {/* Number Badge */}
-                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-sm font-bold text-gray-400 group-hover:bg-emerald-900/50 group-hover:text-emerald-400 transition-colors">
-                          {index + 1}
-                        </div>
-                        
-                        <div className="flex-1 min-w-0">
-                          <div className="flex justify-between items-start mb-2">
-                            <h5 className="text-base font-medium text-white truncate pr-2">{exercise.name}</h5>
-                          </div>
-                          
-                          {/* Metrics Row */}
-                          <div className="flex flex-wrap gap-2">
-                            <MetricPill label="Sets" value={exercise.sets} color="emerald" />
-                            <MetricPill label="Reps" value={exercise.reps} color="blue" />
-                            <MetricPill label="Rest" value={exercise.rest} color="gray" />
-                          </div>
-                        </div>
+                  <button
+                    onClick={() => setExpandedDay(isExpanded ? null : dayKey)}
+                    className="w-full flex items-center justify-between p-4 hover:bg-stone-800/30 transition-colors text-left"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-xl bg-teal-500/20 flex items-center justify-center flex-col">
+                        <span className="text-xs text-teal-400/70 leading-none">Day</span>
+                        <span className="text-sm font-bold text-teal-400 leading-none">{dayNumber}</span>
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-white">{workout.focus || `Workout`}</h3>
+                        <p className="text-sm text-stone-500">
+                          {workout.exercises?.length || 0} exercises
+                        </p>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
+                    {isExpanded ? (
+                      <ChevronUp className="w-5 h-5 text-stone-500" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5 text-stone-500" />
+                    )}
+                  </button>
 
-              {/* Notes Section */}
-              {workout.notes && workout.notes.length > 0 && (
-                <div className="bg-blue-950/10 border border-blue-900/20 rounded-xl p-4">
-                  <div className="flex items-center gap-2 mb-3 text-blue-400">
-                    <Info className="h-4 w-4" />
-                    <h4 className="text-sm font-semibold">Trainer Notes</h4>
-                  </div>
-                  <ul className="space-y-2">
-                    {workout.notes.map((note: string, index: number) => (
-                      <li key={index} className="text-gray-400 text-sm flex items-start gap-2 pl-1">
-                        <span className="w-1 h-1 rounded-full bg-blue-500 mt-2 flex-shrink-0" />
-                        <span className="leading-relaxed">{note}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  {isExpanded && (
+                    <div className="px-4 pb-4 border-t border-stone-800/50">
+                      {workout.description && (
+                        <p className="text-stone-400 text-sm py-4">{workout.description}</p>
+                      )}
+
+                      <div className="space-y-2">
+                        {workout.exercises?.map((exercise, idx) => (
+                          <div
+                            key={idx}
+                            className="p-3 bg-stone-800/30 rounded-lg"
+                          >
+                            <div className="flex items-center justify-between">
+                              <p className="font-medium text-white">{exercise.name}</p>
+                              <div className="text-right">
+                                <p className="text-teal-400 font-medium">
+                                  {exercise.sets} × {exercise.reps}
+                                </p>
+                                <p className="text-xs text-stone-600">Rest: {exercise.rest}</p>
+                              </div>
+                            </div>
+                            <a
+                              href={`https://youtube.com/results?search_query=How+to+${encodeURIComponent(exercise.name)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 mt-2 text-xs text-red-400 hover:text-red-300 transition-colors"
+                            >
+                              <Youtube className="w-3.5 h-3.5" />
+                              Watch on YouTube
+                            </a>
+                          </div>
+                        ))}
+                      </div>
+
+                      {workout.notes && workout.notes.length > 0 && (
+                        <div className="mt-4 p-3 bg-stone-800/20 rounded-lg">
+                          <p className="text-xs text-stone-500 uppercase tracking-wider mb-2">Notes</p>
+                          <ul className="space-y-1">
+                            {workout.notes.map((note, idx) => (
+                              <li key={idx} className="text-sm text-stone-400">• {note}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-              )}
-            </TabsContent>
-          ))}
-        </Tabs>
+              )
+            })
+          )}
+        </div>
       </div>
     </div>
-  )
-}
-
-// Sub-components for cleaner code
-function SummaryItem({ icon: Icon, label, value, color }: any) {
-  const colors: any = {
-    emerald: "text-emerald-400 bg-emerald-950/30 border-emerald-900/50",
-    blue: "text-blue-400 bg-blue-950/30 border-blue-900/50",
-    purple: "text-purple-400 bg-purple-950/30 border-purple-900/50",
-    orange: "text-orange-400 bg-orange-950/30 border-orange-900/50",
-  }
-  
-  return (
-    <div className={`flex flex-col items-center justify-center p-3 rounded-xl border ${colors[color]}`}>
-      <Icon className="h-5 w-5 mb-2 opacity-80" />
-      <p className="text-[10px] uppercase tracking-wider opacity-70">{label}</p>
-      <p className="text-sm font-semibold text-white capitalize truncate w-full text-center">{value}</p>
-    </div>
-  )
-}
-
-function MetricPill({ label, value, color }: any) {
-  const colors: any = {
-    emerald: "bg-emerald-950/50 text-emerald-300 border-emerald-900/50",
-    blue: "bg-blue-950/50 text-blue-300 border-blue-900/50",
-    gray: "bg-gray-800/50 text-gray-300 border-gray-700/50",
-  }
-
-  return (
-    <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium border ${colors[color]}`}>
-      <span className="opacity-50 mr-1.5 text-[10px] uppercase">{label}</span>
-      {value}
-    </span>
   )
 }
