@@ -12,7 +12,8 @@ import {
   Plus,
   Loader2,
   Calendar,
-  Clock
+  Clock,
+  Youtube
 } from "lucide-react";
 
 interface Exercise {
@@ -195,17 +196,29 @@ export default function WorkoutsPage() {
                           {workout.exercises?.map((exercise, idx) => (
                             <div 
                               key={idx}
-                              className="flex items-center justify-between p-4 bg-stone-800/30 rounded-xl"
+                              className="p-4 bg-stone-800/30 rounded-xl"
                             >
-                              <p className="font-medium text-white">{exercise.name}</p>
-                              <div className="text-right">
-                                <p className="text-teal-400 font-medium">
-                                  {exercise.sets} × {exercise.reps}
-                                </p>
-                                <p className="text-xs text-stone-600">
-                                  Rest: {exercise.rest}
-                                </p>
+                              <div className="flex items-center justify-between">
+                                <p className="font-medium text-white">{exercise.name}</p>
+                                <div className="text-right">
+                                  <p className="text-teal-400 font-medium">
+                                    {exercise.sets} × {exercise.reps}
+                                  </p>
+                                  <p className="text-xs text-stone-600">
+                                    Rest: {exercise.rest}
+                                  </p>
+                                </div>
                               </div>
+                              {/* YouTube Link */}
+                              <a
+                                href={`https://www.youtube.com/results?search_query=how+to+${encodeURIComponent(exercise.name)}+exercise+form`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 mt-3 text-xs text-red-400 hover:text-red-300 transition-colors"
+                              >
+                                <Youtube className="w-4 h-4" />
+                                Watch tutorial
+                              </a>
                             </div>
                           ))}
                         </div>

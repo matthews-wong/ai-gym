@@ -497,6 +497,15 @@ export async function generateMealPlan(formData: MealFormData): Promise<MealPlan
   - Carbs: ${targetCarbsGrams}g (${carbsPercent}%)
   - Fat: ${targetFatGrams}g (${fatPercent}%)
   
+  CRITICAL VARIETY REQUIREMENTS (MUST FOLLOW):
+  - EACH DAY MUST HAVE COMPLETELY DIFFERENT MEALS - NO REPETITION
+  - Day 1, Day 2, Day 3, Day 4, Day 5, Day 6, Day 7 must all be unique
+  - Do NOT copy the same breakfast/lunch/dinner across multiple days
+  - Use different proteins each day (chicken, beef, fish, eggs, tofu, etc.)
+  - Use different cooking methods (grilled, baked, stir-fried, steamed, etc.)
+  - Provide variety in vegetables, grains, and sides
+  - Example: If Day 1 has chicken breast, Day 2 should have salmon, Day 3 should have beef, etc.
+  
   IMPORTANT: Calculate food calories accurately. For example:
   - 100g chicken breast = ~165 calories
   - 1 cup cooked rice = ~200 calories
@@ -573,13 +582,13 @@ export async function generateMealPlan(formData: MealFormData): Promise<MealPlan
         {
           role: "system",
           content:
-            "You are a professional nutritionist with expertise in global cuisines, especially Indonesian cuisine. Generate detailed meal plans in JSON format that strictly follow the requested structure. When Indonesian cuisine is requested, incorporate authentic Indonesian dishes with accurate nutritional information and traditional preparation methods. Do not include any explanations or comments in your response, only the JSON object.",
+            "You are a professional nutritionist with expertise in global cuisines, especially Indonesian cuisine. Generate detailed meal plans in JSON format that strictly follow the requested structure. CRITICAL: Each of the 7 days MUST have completely different meals - never repeat the same meal across different days. Create diverse, varied meals using different proteins, cooking methods, and ingredients each day. When Indonesian cuisine is requested, incorporate authentic Indonesian dishes with accurate nutritional information. Do not include any explanations or comments in your response, only the JSON object.",
         },
         { role: "user", content: prompt },
       ],
       model: "openai/gpt-oss-120b",
       response_format: { type: "json_object" },
-      temperature: 0.2,
+      temperature: 0.7,
     })
 
     // Parse and validate the response

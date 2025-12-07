@@ -12,7 +12,8 @@ import {
   Plus,
   Loader2,
   Flame,
-  Clock
+  Clock,
+  Youtube
 } from "lucide-react";
 
 interface Food {
@@ -218,7 +219,18 @@ export default function MealsPage() {
 
                   {expandedMeal === idx && (
                     <div className="px-5 pb-5 border-t border-stone-800/50">
-                      <div className="space-y-3 pt-4">
+                      {/* YouTube Link */}
+                      <a
+                        href={`https://www.youtube.com/results?search_query=how+to+cook+${encodeURIComponent(meal.name)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 mt-4 mb-4 px-4 py-3 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-xl text-red-400 transition-colors group"
+                      >
+                        <Youtube className="w-5 h-5" />
+                        <span className="text-sm font-medium">Watch how to cook {meal.name}</span>
+                      </a>
+                      
+                      <div className="space-y-3">
                         {meal.foods?.map((food, foodIdx) => (
                           <div 
                             key={foodIdx}
