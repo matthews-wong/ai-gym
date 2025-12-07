@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react"
 import Link from "next/link"
-import Image from "next/image"
+/* eslint-disable @next/next/no-img-element */
 import { 
   Trophy, 
   Medal, 
@@ -174,12 +174,10 @@ export default function LeaderboardPage() {
                       </div>
                       <div className="w-10 h-10 rounded-full bg-stone-800 flex items-center justify-center overflow-hidden">
                         {entry.avatar_url ? (
-                          <Image
+                          <img
                             src={entry.avatar_url}
                             alt={entry.username}
-                            width={40}
-                            height={40}
-                            className="object-cover"
+                            className="w-full h-full object-cover"
                           />
                         ) : (
                           <span className="text-sm font-medium text-stone-400">
@@ -207,9 +205,14 @@ export default function LeaderboardPage() {
           {/* Recent Completions */}
           <div>
             <div className="bg-stone-900/80 border border-stone-800/50 rounded-2xl p-6">
-              <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                <ImageIcon className="w-5 h-5 text-teal-400" />
-                Recent Proofs
+              <h2 className="text-lg font-semibold text-white mb-4 flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <ImageIcon className="w-5 h-5 text-teal-400" />
+                  Recent Proofs
+                </span>
+                {recentCompletions.length > 0 && (
+                  <span className="text-xs text-stone-500">{recentCompletions.length} photos</span>
+                )}
               </h2>
               
               {recentCompletions.length === 0 ? (
@@ -218,18 +221,17 @@ export default function LeaderboardPage() {
                   <p className="text-stone-500 text-sm">No proofs uploaded yet</p>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {recentCompletions.slice(0, 10).map((completion) => (
+                <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-stone-700 scrollbar-track-transparent">
+                  {recentCompletions.map((completion) => (
                     <div
                       key={completion.id}
                       className="bg-stone-800/30 rounded-xl overflow-hidden"
                     >
                       <div className="aspect-video relative">
-                        <Image
+                        <img
                           src={completion.photo_url}
                           alt="Meal proof"
-                          fill
-                          className="object-cover"
+                          className="absolute inset-0 w-full h-full object-cover"
                         />
                       </div>
                       <div className="p-3">
@@ -264,11 +266,10 @@ export default function LeaderboardPage() {
               {previewUrl ? (
                 <div className="mb-4">
                   <div className="aspect-video relative rounded-xl overflow-hidden mb-3">
-                    <Image
+                    <img
                       src={previewUrl}
                       alt="Preview"
-                      fill
-                      className="object-cover"
+                      className="absolute inset-0 w-full h-full object-cover"
                     />
                   </div>
                   <button

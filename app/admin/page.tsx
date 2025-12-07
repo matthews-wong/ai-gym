@@ -16,7 +16,8 @@ import {
   RefreshCw,
   Pencil,
   Check,
-  X
+  X,
+  Trophy
 } from "lucide-react"
 import { useAuth } from "@/lib/hooks/useAuth"
 import { supabase } from "@/lib/supabase"
@@ -176,14 +177,21 @@ export default function AdminDashboard() {
               className="flex items-center gap-2 px-4 py-2 bg-stone-800 hover:bg-stone-700 text-white rounded-xl transition-colors"
             >
               <MessageSquare className="w-4 h-4" />
-              Manage Threads
+              Threads
+            </Link>
+            <Link
+              href="/admin/leaderboard"
+              className="flex items-center gap-2 px-4 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/30 rounded-xl transition-colors"
+            >
+              <Trophy className="w-4 h-4" />
+              Leaderboard
             </Link>
             <Link
               href="/admin/announcement"
               className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-400 hover:to-purple-500 text-white rounded-xl transition-colors"
             >
               <Megaphone className="w-4 h-4" />
-              New Announcement
+              Announcement
             </Link>
           </div>
         </div>

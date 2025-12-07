@@ -16,6 +16,7 @@ export interface MealCompletion {
   description: string | null
   completed_at: string
   created_at: string
+  is_approved: boolean
   username?: string
 }
 
@@ -35,16 +36,9 @@ export async function getLeaderboard(limit = 50): Promise<LeaderboardEntry[]> {
 
 export async function getRecentCompletions(limit = 20): Promise<MealCompletion[]> {
   const { data, error } = await supabase
-    .from("meal_completions")
-    .select(`
-      id,
-      user_id,
-      plan_id,
-      photo_url,
-      description,
-      completed_at,
-      created_at
-    `)
+    .from("meal_completions_with_author")
+    .select("id, user_id, plan_id, photo_url, description, completed_at, created_at, is_approved, author_username")
+    .eq("is_approved", true)
     .order("completed_at", { ascending: false })
     .limit(limit)
 
@@ -53,18 +47,9 @@ export async function getRecentCompletions(limit = 20): Promise<MealCompletion[]
     return []
   }
 
-  // Get usernames for completions
-  const userIds = [...new Set((data || []).map(c => c.user_id))]
-  const { data: profiles } = await supabase
-    .from("profiles")
-    .select("id, username, email")
-    .in("id", userIds)
-
-  const profileMap = new Map((profiles || []).map(p => [p.id, p.username || p.email?.split("@")[0] || "User"]))
-
   return (data || []).map(c => ({
     ...c,
-    username: profileMap.get(c.user_id) || "User"
+    username: c.author_username || "User"
   }))
 }
 

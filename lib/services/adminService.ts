@@ -247,3 +247,97 @@ export async function updateUsername(userId: string, username: string): Promise<
 
   return true
 }
+
+// Leaderboard admin functions
+export interface MealCompletionAdmin {
+  id: string
+  user_id: string
+  photo_url: string
+  description: string | null
+  completed_at: string
+  is_approved: boolean
+  username?: string
+  email?: string
+}
+
+export async function getPendingCompletions(): Promise<MealCompletionAdmin[]> {
+  const { data, error } = await supabase
+    .from("meal_completions")
+    .select("id, user_id, photo_url, description, completed_at, is_approved")
+    .eq("is_approved", false)
+    .order("completed_at", { ascending: false })
+
+  if (error) {
+    console.error("Error fetching pending completions:", error)
+    return []
+  }
+
+  // Get usernames
+  const userIds = [...new Set((data || []).map(c => c.user_id))]
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, username, email")
+    .in("id", userIds)
+
+  const profileMap = new Map((profiles || []).map(p => [p.id, p]))
+
+  return (data || []).map(c => ({
+    ...c,
+    username: profileMap.get(c.user_id)?.username || profileMap.get(c.user_id)?.email?.split("@")[0] || "User",
+    email: profileMap.get(c.user_id)?.email
+  }))
+}
+
+export async function getAllCompletions(): Promise<MealCompletionAdmin[]> {
+  const { data, error } = await supabase
+    .from("meal_completions")
+    .select("id, user_id, photo_url, description, completed_at, is_approved")
+    .order("completed_at", { ascending: false })
+
+  if (error) {
+    console.error("Error fetching completions:", error)
+    return []
+  }
+
+  const userIds = [...new Set((data || []).map(c => c.user_id))]
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, username, email")
+    .in("id", userIds)
+
+  const profileMap = new Map((profiles || []).map(p => [p.id, p]))
+
+  return (data || []).map(c => ({
+    ...c,
+    username: profileMap.get(c.user_id)?.username || profileMap.get(c.user_id)?.email?.split("@")[0] || "User",
+    email: profileMap.get(c.user_id)?.email
+  }))
+}
+
+export async function approveCompletion(completionId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from("meal_completions")
+    .update({ is_approved: true })
+    .eq("id", completionId)
+
+  if (error) {
+    console.error("Error approving completion:", error)
+    return false
+  }
+
+  return true
+}
+
+export async function rejectCompletion(completionId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from("meal_completions")
+    .delete()
+    .eq("id", completionId)
+
+  if (error) {
+    console.error("Error rejecting completion:", error)
+    return false
+  }
+
+  return true
+}

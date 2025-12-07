@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
-import { Menu, X, Dumbbell, LogOut, ChevronRight, Shield, Trophy } from "lucide-react"
+import { Menu, X, Dumbbell, LogOut, ChevronRight, Shield, Trophy, ChevronDown, Utensils } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { checkIsSuperAdmin } from "@/lib/services/adminService"
 import type { User } from "@supabase/supabase-js"
@@ -79,18 +79,31 @@ export function Navbar() {
             >
               Home
             </Link>
-            <Link 
-              href="/workout-plan" 
-              className="px-4 py-1.5 text-sm text-stone-300 hover:text-white hover:bg-stone-800/70 rounded-full transition-all"
-            >
-              Workout
-            </Link>
-            <Link 
-              href="/meal-plan" 
-              className="px-4 py-1.5 text-sm text-stone-300 hover:text-white hover:bg-stone-800/70 rounded-full transition-all"
-            >
-              Meal Plan
-            </Link>
+            {/* Services Dropdown */}
+            <div className="relative group">
+              <button className="px-4 py-1.5 text-sm text-teal-400 hover:text-teal-300 hover:bg-teal-500/20 rounded-full transition-all flex items-center gap-1.5">
+                Services
+                <ChevronDown className="w-3.5 h-3.5 group-hover:rotate-180 transition-transform" />
+              </button>
+              <div className="absolute top-full left-0 pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
+                <div className="bg-stone-900 border border-stone-800 rounded-xl shadow-xl shadow-black/20 py-2 min-w-[180px]">
+                  <Link 
+                    href="/workout-plan" 
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-stone-300 hover:text-white hover:bg-stone-800/70 transition-all"
+                  >
+                    <Dumbbell className="w-4 h-4 text-emerald-400" />
+                    Workout Plan
+                  </Link>
+                  <Link 
+                    href="/meal-plan" 
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-stone-300 hover:text-white hover:bg-stone-800/70 transition-all"
+                  >
+                    <Utensils className="w-4 h-4 text-amber-400" />
+                    Meal Plan
+                  </Link>
+                </div>
+              </div>
+            </div>
             <Link 
               href="/forum" 
               className="px-4 py-1.5 text-sm text-stone-300 hover:text-white hover:bg-stone-800/70 rounded-full transition-all"
@@ -190,22 +203,36 @@ export function Navbar() {
               <span className="font-semibold text-lg">Home</span>
               <ChevronRight className="w-5 h-5 text-stone-500" />
             </Link>
-            <Link 
-              href="/workout-plan" 
-              onClick={() => setIsMenuOpen(false)}
-              className="flex items-center justify-between px-5 py-4 text-stone-100 bg-stone-900 border border-stone-800 rounded-xl hover:bg-stone-800 transition-colors"
-            >
-              <span className="font-semibold text-lg">Workout Plan</span>
-              <ChevronRight className="w-5 h-5 text-stone-500" />
-            </Link>
-            <Link 
-              href="/meal-plan" 
-              onClick={() => setIsMenuOpen(false)}
-              className="flex items-center justify-between px-5 py-4 text-stone-100 bg-stone-900 border border-stone-800 rounded-xl hover:bg-stone-800 transition-colors"
-            >
-              <span className="font-semibold text-lg">Meal Plan</span>
-              <ChevronRight className="w-5 h-5 text-stone-500" />
-            </Link>
+            
+            {/* Services Section */}
+            <div className="bg-stone-900 border border-teal-500/30 rounded-xl overflow-hidden">
+              <div className="px-5 py-3 bg-teal-500/10 border-b border-teal-500/20">
+                <span className="font-semibold text-teal-400">Services</span>
+              </div>
+              <Link 
+                href="/workout-plan" 
+                onClick={() => setIsMenuOpen(false)}
+                className="flex items-center justify-between px-5 py-4 text-stone-100 hover:bg-stone-800 transition-colors border-b border-stone-800/50"
+              >
+                <span className="font-semibold text-lg flex items-center gap-3">
+                  <Dumbbell className="w-5 h-5 text-emerald-400" />
+                  Workout Plan
+                </span>
+                <ChevronRight className="w-5 h-5 text-stone-500" />
+              </Link>
+              <Link 
+                href="/meal-plan" 
+                onClick={() => setIsMenuOpen(false)}
+                className="flex items-center justify-between px-5 py-4 text-stone-100 hover:bg-stone-800 transition-colors"
+              >
+                <span className="font-semibold text-lg flex items-center gap-3">
+                  <Utensils className="w-5 h-5 text-amber-400" />
+                  Meal Plan
+                </span>
+                <ChevronRight className="w-5 h-5 text-stone-500" />
+              </Link>
+            </div>
+
             <Link 
               href="/forum" 
               onClick={() => setIsMenuOpen(false)}

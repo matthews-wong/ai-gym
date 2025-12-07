@@ -756,9 +756,19 @@ CREATE POLICY "Users can delete own completions"
 -- Index for leaderboard queries
 CREATE INDEX idx_meal_completions_user ON meal_completions(user_id);
 CREATE INDEX idx_meal_completions_date ON meal_completions(completed_at DESC);
+
+-- Policy for admins to update completions (approve)
+CREATE POLICY "Super admins can update completions"
+  ON meal_completions FOR UPDATE
+  USING (auth.uid() IN (SELECT user_id FROM super_admins));
+
+-- Policy for admins to delete any completion
+CREATE POLICY "Super admins can delete any completion"
+  ON meal_completions FOR DELETE
+  USING (auth.uid() IN (SELECT user_id FROM super_admins));
 ```
 
-### 2. Leaderboard View
+### 2. Leaderboard View (only counts approved completions)
 
 ```sql
 CREATE OR REPLACE VIEW leaderboard AS
@@ -769,13 +779,25 @@ SELECT
   COUNT(mc.id) as completion_count,
   MAX(mc.completed_at) as last_completion
 FROM profiles p
-LEFT JOIN meal_completions mc ON p.id = mc.user_id
+LEFT JOIN meal_completions mc ON p.id = mc.user_id AND mc.is_approved = true
 GROUP BY p.id, p.username, p.email, p.avatar_url
 HAVING COUNT(mc.id) > 0
 ORDER BY completion_count DESC, last_completion DESC;
 ```
 
-### 3. Storage Bucket for Meal Photos
+### 3. View for Completions with Author Info
+
+```sql
+CREATE OR REPLACE VIEW meal_completions_with_author AS
+SELECT 
+  mc.*,
+  COALESCE(p.username, SPLIT_PART(p.email, '@', 1), 'User') as author_username,
+  p.avatar_url as author_avatar
+FROM meal_completions mc
+LEFT JOIN profiles p ON mc.user_id = p.id;
+```
+
+### 4. Storage Bucket for Meal Photos
 
 In Supabase Dashboard:
 1. Go to Storage
