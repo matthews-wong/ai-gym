@@ -329,6 +329,23 @@ export async function approveCompletion(completionId: string): Promise<boolean> 
 }
 
 export async function rejectCompletion(completionId: string): Promise<boolean> {
+  // First get the completion to get the photo URL
+  const { data: completion } = await supabase
+    .from("meal_completions")
+    .select("photo_url")
+    .eq("id", completionId)
+    .single()
+
+  if (completion?.photo_url) {
+    // Extract file path from URL (format: .../meal-photos/userId/filename.ext)
+    const urlParts = completion.photo_url.split("/meal-photos/")
+    if (urlParts[1]) {
+      const filePath = urlParts[1]
+      await supabase.storage.from("meal-photos").remove([filePath])
+    }
+  }
+
+  // Delete the database record
   const { error } = await supabase
     .from("meal_completions")
     .delete()
@@ -424,6 +441,32 @@ export async function approveTransformation(transformationId: string): Promise<b
 }
 
 export async function rejectTransformation(transformationId: string): Promise<boolean> {
+  // First get the transformation to get photo URLs
+  const { data: transform } = await supabase
+    .from("workout_transformations")
+    .select("before_photo_url, after_photo_url")
+    .eq("id", transformationId)
+    .single()
+
+  if (transform) {
+    const filesToDelete: string[] = []
+    
+    // Extract file paths from URLs
+    if (transform.before_photo_url) {
+      const urlParts = transform.before_photo_url.split("/transformation-photos/")
+      if (urlParts[1]) filesToDelete.push(urlParts[1])
+    }
+    if (transform.after_photo_url) {
+      const urlParts = transform.after_photo_url.split("/transformation-photos/")
+      if (urlParts[1]) filesToDelete.push(urlParts[1])
+    }
+    
+    if (filesToDelete.length > 0) {
+      await supabase.storage.from("transformation-photos").remove(filesToDelete)
+    }
+  }
+
+  // Delete the database record
   const { error } = await supabase
     .from("workout_transformations")
     .delete()

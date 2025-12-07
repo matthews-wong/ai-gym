@@ -110,6 +110,12 @@ export default function LeaderboardPage() {
   const [uploadingTransform, setUploadingTransform] = useState(false)
   const beforeInputRef = useRef<HTMLInputElement>(null)
   const afterInputRef = useRef<HTMLInputElement>(null)
+  
+  // View transformation modal
+  const [viewTransform, setViewTransform] = useState<WorkoutTransformation | null>(null)
+  
+  // View meal modal
+  const [viewMeal, setViewMeal] = useState<MealCompletion | null>(null)
 
   useEffect(() => {
     async function loadData() {
@@ -380,7 +386,8 @@ export default function LeaderboardPage() {
                     {recentCompletions.map((completion) => (
                       <div
                         key={completion.id}
-                        className="bg-stone-800/30 rounded-lg overflow-hidden group"
+                        onClick={() => setViewMeal(completion)}
+                        className="bg-stone-800/30 rounded-lg overflow-hidden group cursor-pointer"
                       >
                         <div className="aspect-square relative">
                           <img
@@ -415,7 +422,8 @@ export default function LeaderboardPage() {
                     {transformations.map((transform) => (
                       <div
                         key={transform.id}
-                        className="bg-stone-800/30 rounded-lg overflow-hidden"
+                        onClick={() => setViewTransform(transform)}
+                        className="bg-stone-800/30 rounded-lg overflow-hidden cursor-pointer hover:bg-stone-800/50 transition-colors"
                       >
                         <div className="relative">
                           <div className="absolute top-1.5 left-1.5 z-10">
@@ -713,6 +721,124 @@ export default function LeaderboardPage() {
               >
                 Got it!
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* View Transformation Modal */}
+        {viewTransform && (
+          <div 
+            className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => setViewTransform(null)}
+          >
+            <div 
+              className="bg-stone-900 border border-stone-800 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between p-4 border-b border-stone-800">
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-1 bg-teal-500/20 text-teal-400 text-xs font-medium rounded flex items-center gap-1">
+                    <Dumbbell className="w-3 h-3" />
+                    Transformation
+                  </span>
+                  {viewTransform.duration && (
+                    <span className="text-sm text-teal-400">{viewTransform.duration}</span>
+                  )}
+                </div>
+                <button
+                  onClick={() => setViewTransform(null)}
+                  className="p-2 text-stone-400 hover:text-white rounded-lg hover:bg-stone-800"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-2 p-4">
+                <div className="relative">
+                  <img
+                    src={viewTransform.before_photo_url}
+                    alt="Before"
+                    className="w-full rounded-lg"
+                  />
+                  <span className="absolute bottom-2 left-2 px-2 py-1 bg-black/70 text-white text-sm rounded">Before</span>
+                </div>
+                <div className="relative">
+                  <img
+                    src={viewTransform.after_photo_url}
+                    alt="After"
+                    className="w-full rounded-lg"
+                  />
+                  <span className="absolute bottom-2 right-2 px-2 py-1 bg-teal-500/90 text-white text-sm rounded">After</span>
+                </div>
+              </div>
+              
+              <div className="p-4 border-t border-stone-800">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-full bg-stone-800 flex items-center justify-center">
+                    <span className="text-sm font-medium text-stone-400">
+                      {viewTransform.username?.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="font-medium text-white">{viewTransform.username}</p>
+                    <p className="text-xs text-stone-500">{formatDate(viewTransform.created_at)}</p>
+                  </div>
+                </div>
+                {viewTransform.description && (
+                  <p className="text-stone-300">{viewTransform.description}</p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* View Meal Modal */}
+        {viewMeal && (
+          <div 
+            className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => setViewMeal(null)}
+          >
+            <div 
+              className="bg-stone-900 border border-stone-800 rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between p-4 border-b border-stone-800">
+                <span className="px-2 py-1 bg-amber-500/20 text-amber-400 text-xs font-medium rounded flex items-center gap-1">
+                  <Camera className="w-3 h-3" />
+                  Meal Proof
+                </span>
+                <button
+                  onClick={() => setViewMeal(null)}
+                  className="p-2 text-stone-400 hover:text-white rounded-lg hover:bg-stone-800"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              <div className="p-4">
+                <img
+                  src={viewMeal.photo_url}
+                  alt="Meal proof"
+                  className="w-full rounded-lg"
+                />
+              </div>
+              
+              <div className="p-4 border-t border-stone-800">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-full bg-stone-800 flex items-center justify-center">
+                    <span className="text-sm font-medium text-stone-400">
+                      {viewMeal.username?.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="font-medium text-white">{viewMeal.username}</p>
+                    <p className="text-xs text-stone-500">{formatDate(viewMeal.completed_at)}</p>
+                  </div>
+                </div>
+                {viewMeal.description && (
+                  <p className="text-stone-300">{viewMeal.description}</p>
+                )}
+              </div>
             </div>
           </div>
         )}

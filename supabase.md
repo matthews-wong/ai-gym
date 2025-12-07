@@ -738,10 +738,15 @@ CREATE TABLE meal_completions (
 -- Enable RLS
 ALTER TABLE meal_completions ENABLE ROW LEVEL SECURITY;
 
--- Policy: Anyone can view completions (for leaderboard)
+-- Policy: Users can view approved completions or their own
 CREATE POLICY "Completions are viewable by everyone"
   ON meal_completions FOR SELECT
-  USING (true);
+  USING (is_approved = true OR auth.uid() = user_id);
+
+-- Policy: Super admins can view ALL completions (for approval)
+CREATE POLICY "Super admins can view all completions"
+  ON meal_completions FOR SELECT
+  USING (auth.uid() IN (SELECT user_id FROM super_admins));
 
 -- Policy: Users can insert their own completions
 CREATE POLICY "Users can insert own completions"
@@ -826,10 +831,15 @@ CREATE TABLE workout_transformations (
 -- Enable RLS
 ALTER TABLE workout_transformations ENABLE ROW LEVEL SECURITY;
 
--- Policy: Anyone can view approved transformations
+-- Policy: Anyone can view approved transformations or their own
 CREATE POLICY "Approved transformations are viewable by everyone"
   ON workout_transformations FOR SELECT
   USING (is_approved = true OR auth.uid() = user_id);
+
+-- Policy: Super admins can view ALL transformations (for approval)
+CREATE POLICY "Super admins can view all transformations"
+  ON workout_transformations FOR SELECT
+  USING (auth.uid() IN (SELECT user_id FROM super_admins));
 
 -- Policy: Users can insert their own transformations
 CREATE POLICY "Users can insert own transformations"
