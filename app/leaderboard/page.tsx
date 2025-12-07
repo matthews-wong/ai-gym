@@ -276,32 +276,6 @@ export default function LeaderboardPage() {
           )}
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-2 mb-6">
-          <button
-            onClick={() => setActiveTab("meals")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all ${
-              activeTab === "meals"
-                ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
-                : "bg-stone-900 text-stone-400 border border-stone-800 hover:text-white"
-            }`}
-          >
-            <Camera className="w-4 h-4" />
-            Meal Proofs
-          </button>
-          <button
-            onClick={() => setActiveTab("transformations")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all ${
-              activeTab === "transformations"
-                ? "bg-teal-500/20 text-teal-400 border border-teal-500/30"
-                : "bg-stone-900 text-stone-400 border border-stone-800 hover:text-white"
-            }`}
-          >
-            <Dumbbell className="w-4 h-4" />
-            Transformations
-          </button>
-        </div>
-
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Leaderboard */}
           <div className="lg:col-span-2">
@@ -356,111 +330,134 @@ export default function LeaderboardPage() {
             </div>
           </div>
 
-          {/* Recent Content - Conditional based on tab */}
+          {/* Recent Proofs - Combined Feed */}
           <div>
-            {activeTab === "meals" ? (
-              <div className="bg-stone-900/80 border border-stone-800/50 rounded-2xl p-6">
-                <h2 className="text-lg font-semibold text-white mb-4 flex items-center justify-between">
-                  <span className="flex items-center gap-2">
-                    <ImageIcon className="w-5 h-5 text-amber-400" />
-                    Recent Meal Proofs
-                  </span>
-                  {recentCompletions.length > 0 && (
-                    <span className="text-xs text-stone-500">{recentCompletions.length} photos</span>
-                  )}
-                </h2>
-                
-                {recentCompletions.length === 0 ? (
+            <div className="bg-stone-900/80 border border-stone-800/50 rounded-2xl p-6">
+              <h2 className="text-lg font-semibold text-white mb-4 flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <ImageIcon className="w-5 h-5 text-amber-400" />
+                  Recent Proofs
+                </span>
+                <span className="text-xs text-stone-500">
+                  {recentCompletions.length + transformations.length} total
+                </span>
+              </h2>
+
+              {/* Filter Tabs */}
+              <div className="flex gap-1 mb-4 p-1 bg-stone-800/50 rounded-lg">
+                <button
+                  onClick={() => setActiveTab("meals")}
+                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                    activeTab === "meals"
+                      ? "bg-amber-500/20 text-amber-400"
+                      : "text-stone-400 hover:text-white"
+                  }`}
+                >
+                  <Camera className="w-3.5 h-3.5" />
+                  Meals ({recentCompletions.length})
+                </button>
+                <button
+                  onClick={() => setActiveTab("transformations")}
+                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                    activeTab === "transformations"
+                      ? "bg-teal-500/20 text-teal-400"
+                      : "text-stone-400 hover:text-white"
+                  }`}
+                >
+                  <Dumbbell className="w-3.5 h-3.5" />
+                  Transforms ({transformations.length})
+                </button>
+              </div>
+              
+              {activeTab === "meals" ? (
+                recentCompletions.length === 0 ? (
                   <div className="text-center py-8">
                     <Camera className="w-10 h-10 text-stone-700 mx-auto mb-2" />
-                    <p className="text-stone-500 text-sm">No proofs uploaded yet</p>
+                    <p className="text-stone-500 text-sm">No meal proofs yet</p>
                   </div>
                 ) : (
-                  <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-stone-700 scrollbar-track-transparent">
+                  <div className="grid grid-cols-2 gap-2 max-h-[500px] overflow-y-auto pr-1">
                     {recentCompletions.map((completion) => (
                       <div
                         key={completion.id}
-                        className="bg-stone-800/30 rounded-xl overflow-hidden"
+                        className="bg-stone-800/30 rounded-lg overflow-hidden group"
                       >
-                        <div className="aspect-video relative">
+                        <div className="aspect-square relative">
                           <img
                             src={completion.photo_url}
                             alt="Meal proof"
                             className="absolute inset-0 w-full h-full object-cover"
                           />
-                        </div>
-                        <div className="p-3">
-                          <p className="text-sm font-medium text-white">{completion.username}</p>
-                          {completion.description && (
-                            <p className="text-xs text-stone-400 mt-1 line-clamp-2">{completion.description}</p>
-                          )}
-                          <p className="text-xs text-stone-600 mt-1">{formatDate(completion.completed_at)}</p>
+                          <div className="absolute top-1.5 left-1.5">
+                            <span className="px-1.5 py-0.5 bg-amber-500/90 text-white text-[10px] font-medium rounded flex items-center gap-1">
+                              <Camera className="w-2.5 h-2.5" />
+                              Meal
+                            </span>
+                          </div>
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                          <div className="absolute bottom-0 left-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <p className="text-xs font-medium text-white truncate">{completion.username}</p>
+                            <p className="text-[10px] text-stone-300">{formatDate(completion.completed_at)}</p>
+                          </div>
                         </div>
                       </div>
                     ))}
                   </div>
-                )}
-              </div>
-            ) : (
-              <div className="bg-stone-900/80 border border-stone-800/50 rounded-2xl p-6">
-                <h2 className="text-lg font-semibold text-white mb-4 flex items-center justify-between">
-                  <span className="flex items-center gap-2">
-                    <Dumbbell className="w-5 h-5 text-teal-400" />
-                    Transformations
-                  </span>
-                  {transformations.length > 0 && (
-                    <span className="text-xs text-stone-500">{transformations.length} transformations</span>
-                  )}
-                </h2>
-                
-                {transformations.length === 0 ? (
+                )
+              ) : (
+                transformations.length === 0 ? (
                   <div className="text-center py-8">
                     <Dumbbell className="w-10 h-10 text-stone-700 mx-auto mb-2" />
                     <p className="text-stone-500 text-sm">No transformations yet</p>
                   </div>
                 ) : (
-                  <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-stone-700 scrollbar-track-transparent">
+                  <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
                     {transformations.map((transform) => (
                       <div
                         key={transform.id}
-                        className="bg-stone-800/30 rounded-xl overflow-hidden"
+                        className="bg-stone-800/30 rounded-lg overflow-hidden"
                       >
-                        <div className="grid grid-cols-2 gap-1">
-                          <div className="relative">
-                            <img
-                              src={transform.before_photo_url}
-                              alt="Before"
-                              className="w-full aspect-[3/4] object-cover"
-                            />
-                            <span className="absolute bottom-2 left-2 px-2 py-0.5 bg-black/70 text-white text-xs rounded">Before</span>
+                        <div className="relative">
+                          <div className="absolute top-1.5 left-1.5 z-10">
+                            <span className="px-1.5 py-0.5 bg-teal-500/90 text-white text-[10px] font-medium rounded flex items-center gap-1">
+                              <Dumbbell className="w-2.5 h-2.5" />
+                              Transform
+                            </span>
                           </div>
-                          <div className="relative">
-                            <img
-                              src={transform.after_photo_url}
-                              alt="After"
-                              className="w-full aspect-[3/4] object-cover"
-                            />
-                            <span className="absolute bottom-2 right-2 px-2 py-0.5 bg-teal-500/90 text-white text-xs rounded">After</span>
+                          <div className="grid grid-cols-2 gap-0.5">
+                            <div className="relative">
+                              <img
+                                src={transform.before_photo_url}
+                                alt="Before"
+                                className="w-full aspect-[4/5] object-cover"
+                              />
+                              <span className="absolute bottom-1 left-1 px-1 py-0.5 bg-black/70 text-white text-[10px] rounded">Before</span>
+                            </div>
+                            <div className="relative">
+                              <img
+                                src={transform.after_photo_url}
+                                alt="After"
+                                className="w-full aspect-[4/5] object-cover"
+                              />
+                              <span className="absolute bottom-1 right-1 px-1 py-0.5 bg-teal-500/90 text-white text-[10px] rounded">After</span>
+                            </div>
                           </div>
                         </div>
-                        <div className="p-3">
-                          <div className="flex items-center justify-between mb-1">
-                            <p className="text-sm font-medium text-white">{transform.username}</p>
+                        <div className="p-2">
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs font-medium text-white">{transform.username}</p>
                             {transform.duration && (
-                              <span className="text-xs text-teal-400">{transform.duration}</span>
+                              <span className="text-[10px] text-teal-400 bg-teal-500/10 px-1.5 py-0.5 rounded">{transform.duration}</span>
                             )}
                           </div>
-                          {transform.description && (
-                            <p className="text-xs text-stone-400 line-clamp-2">{transform.description}</p>
-                          )}
-                          <p className="text-xs text-stone-600 mt-1">{formatDate(transform.created_at)}</p>
+                          <p className="text-[10px] text-stone-500 mt-0.5">{formatDate(transform.created_at)}</p>
                         </div>
                       </div>
                     ))}
                   </div>
-                )}
-              </div>
-            )}
+                )
+              )}
+            </div>
           </div>
         </div>
 
