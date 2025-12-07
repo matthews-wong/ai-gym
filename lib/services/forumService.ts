@@ -72,7 +72,7 @@ export async function getCategories(): Promise<ForumCategory[]> {
 export async function getThreads(categorySlug?: string, limit = 20): Promise<ForumThread[]> {
   let query = supabase
     .from("forum_threads_with_author")
-    .select("id, title, slug, content, views, is_pinned, is_locked, created_at, author_username, category_name, category_slug, reply_count")
+    .select("id, category_id, user_id, title, slug, content, views, is_pinned, is_locked, created_at, updated_at, author_username, category_name, category_slug, category_color, reply_count")
     .order("is_pinned", { ascending: false })
     .order("created_at", { ascending: false })
     .limit(limit)
@@ -94,7 +94,7 @@ export async function getThreads(categorySlug?: string, limit = 20): Promise<For
 export async function getThread(categorySlug: string, threadSlug: string): Promise<ForumThread | null> {
   const { data, error } = await supabase
     .from("forum_threads_with_author")
-    .select("id, category_id, user_id, title, slug, content, views, is_pinned, is_locked, created_at, author_username, author_avatar, category_name, category_slug, reply_count")
+    .select("id, category_id, user_id, title, slug, content, views, is_pinned, is_locked, created_at, updated_at, author_username, author_avatar, category_name, category_slug, category_color, reply_count")
     .eq("category_slug", categorySlug)
     .eq("slug", threadSlug)
     .maybeSingle()
@@ -106,7 +106,11 @@ export async function getThread(categorySlug: string, threadSlug: string): Promi
 
   // Increment views in background (non-blocking)
   if (data) {
-    supabase.rpc("increment_thread_views", { thread_id: data.id }).catch(() => {})
+    supabase
+      .from("forum_threads")
+      .update({ views: (data.views || 0) + 1 })
+      .eq("id", data.id)
+      .then()
   }
 
   return data
@@ -115,7 +119,7 @@ export async function getThread(categorySlug: string, threadSlug: string): Promi
 export async function getReplies(threadId: string): Promise<ForumReply[]> {
   const { data, error } = await supabase
     .from("forum_replies_with_author")
-    .select("id, thread_id, user_id, content, is_solution, created_at, author_username, author_avatar")
+    .select("id, thread_id, user_id, content, is_solution, created_at, updated_at, author_username, author_avatar")
     .eq("thread_id", threadId)
     .order("created_at")
 

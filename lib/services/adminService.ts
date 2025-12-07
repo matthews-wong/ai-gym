@@ -109,31 +109,34 @@ export async function getAdminStats(): Promise<AdminStats | null> {
 }
 
 export async function getRecentPlans(limit = 20): Promise<RecentPlan[]> {
-  const { data, error } = await supabase
+  const { data: plans, error: plansError } = await supabase
     .from("saved_plans")
-    .select(`
-      id,
-      plan_type,
-      created_at,
-      profiles (
-        email,
-        username
-      )
-    `)
+    .select("id, user_id, plan_type, created_at")
     .order("created_at", { ascending: false })
     .limit(limit)
 
-  if (error) {
-    console.error("Error fetching recent plans:", error)
+  if (plansError || !plans) {
+    console.error("Error fetching recent plans:", plansError)
     return []
   }
 
-  return (data || []).map((p: Record<string, unknown>) => ({
-    id: p.id as string,
-    plan_type: p.plan_type as string,
-    created_at: p.created_at as string,
-    user_email: (p.profiles as Record<string, string>)?.email || "Unknown",
-    username: (p.profiles as Record<string, string>)?.username || "Unknown",
+  // Get unique user IDs
+  const userIds = [...new Set(plans.map(p => p.user_id))]
+  
+  // Fetch profiles for these users
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, email, username")
+    .in("id", userIds)
+
+  const profileMap = new Map((profiles || []).map(p => [p.id, p]))
+
+  return plans.map(p => ({
+    id: p.id,
+    plan_type: p.plan_type,
+    created_at: p.created_at,
+    user_email: profileMap.get(p.user_id)?.email || "Unknown",
+    username: profileMap.get(p.user_id)?.username || "Unknown",
   }))
 }
 
@@ -229,4 +232,18 @@ export async function getAnnouncementsCategoryId(): Promise<string | null> {
 
   if (error || !data) return null
   return data.id
+}
+
+export async function updateUsername(userId: string, username: string): Promise<boolean> {
+  const { error } = await supabase
+    .from("profiles")
+    .update({ username })
+    .eq("id", userId)
+
+  if (error) {
+    console.error("Error updating username:", error)
+    return false
+  }
+
+  return true
 }

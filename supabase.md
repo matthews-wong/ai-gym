@@ -568,7 +568,7 @@ UPDATE profiles SET username = generate_username(email) WHERE username IS NULL;
 CREATE OR REPLACE VIEW forum_threads_with_author AS
 SELECT 
   t.*,
-  p.username as author_username,
+  COALESCE(p.username, 'Deleted User') as author_username,
   p.avatar_url as author_avatar,
   c.name as category_name,
   c.slug as category_slug,
@@ -576,8 +576,8 @@ SELECT
   (SELECT COUNT(*) FROM forum_replies r WHERE r.thread_id = t.id) as reply_count,
   (SELECT MAX(created_at) FROM forum_replies r WHERE r.thread_id = t.id) as last_reply_at
 FROM forum_threads t
-JOIN profiles p ON t.user_id = p.id
-JOIN forum_categories c ON t.category_id = c.id;
+LEFT JOIN profiles p ON t.user_id = p.id
+LEFT JOIN forum_categories c ON t.category_id = c.id;
 ```
 
 ### 6. View for Replies with Author Info
@@ -586,10 +586,10 @@ JOIN forum_categories c ON t.category_id = c.id;
 CREATE OR REPLACE VIEW forum_replies_with_author AS
 SELECT 
   r.*,
-  p.username as author_username,
+  COALESCE(p.username, 'Deleted User') as author_username,
   p.avatar_url as author_avatar
 FROM forum_replies r
-JOIN profiles p ON r.user_id = p.id;
+LEFT JOIN profiles p ON r.user_id = p.id;
 ```
 
 ### 7. Function to Increment Thread Views
@@ -656,7 +656,26 @@ ALTER TABLE forum_categories ADD COLUMN IF NOT EXISTS is_admin_only BOOLEAN DEFA
 UPDATE forum_categories SET is_admin_only = true WHERE slug = 'announcements';
 ```
 
-### 4. Admin Thread Policies
+### 4. Admin Data Access Policies
+
+```sql
+-- Policy: Super admins can view all profiles
+CREATE POLICY "Super admins can view all profiles"
+  ON profiles FOR SELECT
+  USING (auth.uid() IN (SELECT user_id FROM super_admins));
+
+-- Policy: Super admins can update all profiles (e.g., set usernames)
+CREATE POLICY "Super admins can update all profiles"
+  ON profiles FOR UPDATE
+  USING (auth.uid() IN (SELECT user_id FROM super_admins));
+
+-- Policy: Super admins can view all saved_plans
+CREATE POLICY "Super admins can view all saved_plans"
+  ON saved_plans FOR SELECT
+  USING (auth.uid() IN (SELECT user_id FROM super_admins));
+```
+
+### 5. Admin Thread Policies
 
 ```sql
 -- Policy: Super admins can delete any thread
