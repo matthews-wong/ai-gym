@@ -1,9 +1,26 @@
 "use client"
 
+import { useEffect, useRef } from "react"
 import { Dumbbell, Sparkles } from "lucide-react"
 import WorkoutPlanForm from "@/components/workout-plan-form"
+import { useAuth } from "@/lib/hooks/useAuth"
+import { toast } from "@/components/ui/use-toast"
 
 export default function WorkoutPlanPage() {
+  const { user, loading } = useAuth()
+  const toastShown = useRef(false)
+
+  useEffect(() => {
+    if (!loading && !user && !toastShown.current) {
+      toastShown.current = true
+      toast({
+        variant: "warning",
+        title: "Not logged in",
+        description: "Your plan will not be saved. Please login to save your workout plan.",
+      })
+    }
+  }, [user, loading])
+
   return (
     <div className="min-h-screen bg-stone-950 pt-20">
       {/* Background */}

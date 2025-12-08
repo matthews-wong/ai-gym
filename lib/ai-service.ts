@@ -341,47 +341,50 @@ export async function generateWorkoutPlan(formData: WorkoutFormData): Promise<Wo
   // Map form values to human-readable context
   const context = mapWorkoutFormToContext(formData)
 
+  // Build the day keys list
+  const dayKeys = Array.from({ length: context.daysPerWeek }, (_, i) => `day${i + 1}`)
+  const dayKeysExample = dayKeys.map(key => `"${key}": { /* workout structure */ }`).join(",\n        ")
+
   // Create the prompt for Groq with specific JSON structure guidance
-  const prompt = `
-    Create a detailed workout plan with the following parameters:
-    - Fitness Goal: ${context.goal}
-    - Experience Level: ${context.level}
-    - Days Per Week: ${context.daysPerWeek}
-    - Session Length: ${context.sessionLength} minutes
-    - Focus Areas: ${context.focusAreas.join(", ")}
-    - Available Equipment: ${context.equipment}
-    
-    Return your response as a valid JSON object with EXACTLY the following structure:
-    {
-      "summary": {
-        "goal": "${context.goal}",
-        "level": "${context.level}",
-        "daysPerWeek": ${context.daysPerWeek},
-        "sessionLength": ${context.sessionLength},
-        "focusAreas": ${JSON.stringify(context.focusAreas)},
-        "equipment": "${context.equipment}"
-      },
-      "overview": "string with overall plan description",
-      "workouts": {
-        "day1": {
-          "focus": "string describing focus",
-          "description": "string describing workout",
-          "exercises": [
-            {
-              "name": "string with exercise name",
-              "sets": number (integer),
-              "reps": "string with rep range",
-              "rest": "string with rest time"
-            }
-          ],
-          "notes": ["string note 1", "string note 2"]
-        },
-        "day2": {
-          // same structure as day1
-        }
-      }
-    }
-  `
+  const prompt = `Create a ${context.daysPerWeek}-day workout plan.
+
+PARAMETERS:
+- Goal: ${context.goal}
+- Level: ${context.level}
+- Days: ${context.daysPerWeek} (MUST create exactly ${context.daysPerWeek} workout days)
+- Session: ${context.sessionLength} minutes
+- Focus: ${context.focusAreas.join(", ")}
+- Equipment: ${context.equipment}
+
+CRITICAL REQUIREMENTS:
+1. You MUST create EXACTLY ${context.daysPerWeek} workout days (${dayKeys.join(", ")})
+2. Each day MUST have 5-8 exercises appropriate for ${context.sessionLength} minutes
+3. Each exercise needs: name, sets (number), reps (string like "8-12"), rest (string like "60-90 sec")
+4. Include 2-3 notes per day with tips
+5. Make each day focus on different muscle groups for variety
+
+Return ONLY valid JSON:
+{
+  "summary": {
+    "goal": "${context.goal}",
+    "level": "${context.level}",
+    "daysPerWeek": ${context.daysPerWeek},
+    "sessionLength": ${context.sessionLength},
+    "focusAreas": ${JSON.stringify(context.focusAreas)},
+    "equipment": "${context.equipment}"
+  },
+  "overview": "Brief 2-3 sentence plan overview",
+  "workouts": {
+    ${dayKeys.map((key, i) => `"${key}": {
+      "focus": "Day ${i + 1} focus area",
+      "description": "Brief workout description",
+      "exercises": [
+        {"name": "Exercise Name", "sets": 3, "reps": "8-12", "rest": "60 sec"}
+      ],
+      "notes": ["Tip 1", "Tip 2"]
+    }`).join(",\n    ")}
+  }
+}`
 
   try {
     // Call Groq API with JSON response format
@@ -389,13 +392,13 @@ export async function generateWorkoutPlan(formData: WorkoutFormData): Promise<Wo
       messages: [
         {
           role: "system",
-          content:
-            "You are a professional fitness trainer. Generate detailed workout plans in JSON format that strictly follow the requested structure.",
+          content: `You are a professional fitness trainer. Generate a complete ${context.daysPerWeek}-day workout plan in JSON format. CRITICAL: You MUST include exactly ${context.daysPerWeek} days (${dayKeys.join(", ")}). Never return fewer days than requested. Each day must have complete exercises with sets, reps, and rest times.`,
         },
         { role: "user", content: prompt },
       ],
       model: "openai/gpt-oss-120b",
       response_format: { type: "json_object" },
+      temperature: 0.7,
     })
 
     // Parse and validate the response
@@ -406,6 +409,14 @@ export async function generateWorkoutPlan(formData: WorkoutFormData): Promise<Wo
     }
 
     const parsedResponse = JSON.parse(responseContent)
+    
+    // Validate that we got the correct number of days
+    const workoutDays = Object.keys(parsedResponse.workouts || {})
+    if (workoutDays.length < context.daysPerWeek) {
+      console.warn(`Expected ${context.daysPerWeek} days but got ${workoutDays.length}. Regenerating...`)
+      throw new Error(`Incomplete plan: expected ${context.daysPerWeek} days, got ${workoutDays.length}`)
+    }
+    
     return workoutPlanSchema.parse(parsedResponse)
   } catch (error) {
     console.error("Error generating workout plan:", error)

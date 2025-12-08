@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
-import { Menu, X, Dumbbell, LogOut, ChevronRight, Shield, Trophy, ChevronDown, Utensils } from "lucide-react"
+import { Menu, X, Dumbbell, LogOut, ChevronRight, Shield, Trophy, ChevronDown, Utensils, BookOpen } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { checkIsSuperAdmin } from "@/lib/services/adminService"
 import type { User } from "@supabase/supabase-js"
@@ -109,6 +109,13 @@ export function Navbar() {
               className="px-4 py-1.5 text-sm text-stone-300 hover:text-white hover:bg-stone-800/70 rounded-full transition-all"
             >
               Forum
+            </Link>
+            <Link 
+              href="/blog" 
+              className="px-4 py-1.5 text-sm text-stone-300 hover:text-white hover:bg-stone-800/70 rounded-full transition-all flex items-center gap-1.5"
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              Blog
             </Link>
             <Link 
               href="/leaderboard" 
@@ -239,6 +246,17 @@ export function Navbar() {
               className="flex items-center justify-between px-5 py-4 text-stone-100 bg-stone-900 border border-stone-800 rounded-xl hover:bg-stone-800 transition-colors"
             >
               <span className="font-semibold text-lg">Forum</span>
+              <ChevronRight className="w-5 h-5 text-stone-500" />
+            </Link>
+            <Link 
+              href="/blog" 
+              onClick={() => setIsMenuOpen(false)}
+              className="flex items-center justify-between px-5 py-4 text-stone-100 bg-stone-900 border border-stone-800 rounded-xl hover:bg-stone-800 transition-colors"
+            >
+              <span className="font-semibold text-lg flex items-center gap-2">
+                <BookOpen className="w-5 h-5 text-teal-400" />
+                Blog
+              </span>
               <ChevronRight className="w-5 h-5 text-stone-500" />
             </Link>
             <Link 

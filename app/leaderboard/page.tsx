@@ -5,17 +5,15 @@ import Link from "next/link"
 /* eslint-disable @next/next/no-img-element */
 import { 
   Trophy, 
-  Medal, 
   Camera, 
   Upload, 
   X, 
   Loader2,
   Crown,
-  Flame,
-  ImageIcon,
   Clock,
   Dumbbell,
-  ArrowRight
+  ImageIcon,
+  ChevronDown
 } from "lucide-react"
 import { useAuth } from "@/lib/hooks/useAuth"
 import {
@@ -33,23 +31,24 @@ import {
 
 function formatDate(dateString: string): string {
   const date = new Date(dateString)
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  })
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+  
+  if (diffHours < 1) return "Just now"
+  if (diffHours < 24) return `${diffHours}h ago`
+  if (diffDays < 7) return `${diffDays}d ago`
+  
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" })
 }
 
-// Compress image to max 1MB
-async function compressImage(file: File, maxSizeMB = 1): Promise<File> {
+async function compressImage(file: File): Promise<File> {
   return new Promise((resolve) => {
     const img = new Image()
     img.onload = () => {
       const canvas = document.createElement("canvas")
       let { width, height } = img
-      
-      // Max dimension 1200px
       const maxDim = 1200
       if (width > maxDim || height > maxDim) {
         if (width > height) {
@@ -60,20 +59,12 @@ async function compressImage(file: File, maxSizeMB = 1): Promise<File> {
           height = maxDim
         }
       }
-      
       canvas.width = width
       canvas.height = height
       const ctx = canvas.getContext("2d")!
       ctx.drawImage(img, 0, 0, width, height)
-      
       canvas.toBlob(
-        (blob) => {
-          if (blob) {
-            resolve(new File([blob], file.name, { type: "image/jpeg" }))
-          } else {
-            resolve(file)
-          }
-        },
+        (blob) => resolve(blob ? new File([blob], file.name, { type: "image/jpeg" }) : file),
         "image/jpeg",
         0.8
       )
@@ -82,13 +73,16 @@ async function compressImage(file: File, maxSizeMB = 1): Promise<File> {
   })
 }
 
+type ProofItem = 
+  | { type: "meal"; data: MealCompletion; date: Date }
+  | { type: "transform"; data: WorkoutTransformation; date: Date }
+
 export default function LeaderboardPage() {
   const { user } = useAuth()
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
   const [recentCompletions, setRecentCompletions] = useState<MealCompletion[]>([])
   const [transformations, setTransformations] = useState<WorkoutTransformation[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<"meals" | "transformations">("meals")
   
   // Meal upload state
   const [showUploadModal, setShowUploadModal] = useState(false)
@@ -111,17 +105,18 @@ export default function LeaderboardPage() {
   const beforeInputRef = useRef<HTMLInputElement>(null)
   const afterInputRef = useRef<HTMLInputElement>(null)
   
-  // View transformation modal
+  // View modals
   const [viewTransform, setViewTransform] = useState<WorkoutTransformation | null>(null)
-  
-  // View meal modal
   const [viewMeal, setViewMeal] = useState<MealCompletion | null>(null)
+  
+  // Proofs display
+  const [showAllProofs, setShowAllProofs] = useState(false)
 
   useEffect(() => {
     async function loadData() {
       const [lb, completions, transforms] = await Promise.all([
         getLeaderboard(50),
-        getRecentCompletions(20),
+        getRecentCompletions(50),
         getTransformations(20),
       ])
       setLeaderboard(lb)
@@ -131,6 +126,15 @@ export default function LeaderboardPage() {
     }
     loadData()
   }, [])
+
+  // Combine and sort all proofs by date
+  const allProofs: ProofItem[] = [
+    ...recentCompletions.map(m => ({ type: "meal" as const, data: m, date: new Date(m.completed_at) })),
+    ...transformations.map(t => ({ type: "transform" as const, data: t, date: new Date(t.created_at) }))
+  ].sort((a, b) => b.date.getTime() - a.date.getTime())
+  
+  const visibleProofs = showAllProofs ? allProofs : allProofs.slice(0, 9)
+  const hasMoreProofs = allProofs.length > 9
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -142,14 +146,11 @@ export default function LeaderboardPage() {
 
   const handleUpload = async () => {
     if (!user || !selectedFile) return
-
     setUploading(true)
     const photoUrl = await uploadMealPhoto(user.id, selectedFile)
-    
     if (photoUrl) {
       const completion = await createMealCompletion(user.id, photoUrl, description)
       if (completion) {
-        // Reset form and show success modal
         setShowUploadModal(false)
         setSelectedFile(null)
         setPreviewUrl(null)
@@ -167,7 +168,6 @@ export default function LeaderboardPage() {
     setDescription("")
   }
 
-  // Transformation handlers
   const handleBeforeSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
@@ -186,28 +186,17 @@ export default function LeaderboardPage() {
 
   const handleTransformUpload = async () => {
     if (!user || !beforeFile || !afterFile) return
-
     setUploadingTransform(true)
-    
-    // Compress images before upload
     const [compressedBefore, compressedAfter] = await Promise.all([
       compressImage(beforeFile),
       compressImage(afterFile),
     ])
-    
     const [beforeUrl, afterUrl] = await Promise.all([
       uploadTransformationPhoto(user.id, compressedBefore, "before"),
       uploadTransformationPhoto(user.id, compressedAfter, "after"),
     ])
-    
     if (beforeUrl && afterUrl) {
-      const transformation = await createTransformation(
-        user.id,
-        beforeUrl,
-        afterUrl,
-        transformDescription,
-        transformDuration
-      )
+      const transformation = await createTransformation(user.id, beforeUrl, afterUrl, transformDescription, transformDuration)
       if (transformation) {
         closeTransformModal()
         setShowSuccessModal(true)
@@ -226,636 +215,465 @@ export default function LeaderboardPage() {
     setTransformDuration("")
   }
 
-  const getRankIcon = (index: number) => {
-    if (index === 0) return <Crown className="w-5 h-5 text-yellow-400" />
-    if (index === 1) return <Medal className="w-5 h-5 text-gray-300" />
-    if (index === 2) return <Medal className="w-5 h-5 text-amber-600" />
-    return <span className="w-5 h-5 text-center text-stone-500 font-medium">{index + 1}</span>
-  }
-
-  const getRankBg = (index: number) => {
-    if (index === 0) return "bg-gradient-to-r from-yellow-500/20 to-amber-500/10 border-yellow-500/30"
-    if (index === 1) return "bg-gradient-to-r from-gray-400/20 to-gray-500/10 border-gray-400/30"
-    if (index === 2) return "bg-gradient-to-r from-amber-600/20 to-orange-500/10 border-amber-600/30"
-    return "bg-stone-900/80 border-stone-800/50"
-  }
-
   if (loading) {
     return (
       <div className="min-h-screen bg-stone-950 pt-20 flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+        <Loader2 className="w-8 h-8 text-teal-500 animate-spin" />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-stone-950 pt-20">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
-              <Trophy className="w-6 h-6 text-white" />
-            </div>
+    <div className="min-h-screen bg-stone-950 pt-20 pb-8">
+      <div className="max-w-2xl mx-auto px-4">
+        
+        {/* Header with Glassmorphism */}
+        <div className="relative mb-6 p-4 rounded-2xl overflow-hidden">
+          {/* Glassmorphism background */}
+          <div className="absolute inset-0 bg-gradient-to-br from-teal-500/10 to-emerald-500/5 backdrop-blur-sm border border-teal-500/20 rounded-2xl" />
+          <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
+          
+          <div className="relative flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-white">Leaderboard</h1>
-              <p className="text-stone-400 text-sm">Showcase your progress</p>
+              <h1 className="text-xl font-bold text-white">Leaderboard</h1>
+              <p className="text-xs text-stone-400">Upload proofs to climb the ranks</p>
+            </div>
+            
+            {user && (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowUploadModal(true)}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 text-white text-sm font-medium rounded-lg transition-all shadow-lg shadow-teal-500/20"
+                >
+                  <Camera className="w-4 h-4" />
+                  <span className="hidden sm:inline">Meal</span>
+                </button>
+                <button
+                  onClick={() => setShowTransformModal(true)}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-stone-800/80 hover:bg-stone-700 text-white text-sm font-medium rounded-lg border border-stone-700/50 transition-all"
+                >
+                  <Dumbbell className="w-4 h-4" />
+                  <span className="hidden sm:inline">Transform</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Rankings Section */}
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-3">
+            <Crown className="w-4 h-4 text-amber-400" />
+            <h2 className="text-sm font-semibold text-stone-400 uppercase tracking-wide">Rankings</h2>
+            <span className="text-xs text-stone-600">({leaderboard.length} members)</span>
+          </div>
+          
+          <div className="space-y-2">
+            {leaderboard.length === 0 ? (
+              <div className="bg-stone-900 border border-stone-800 rounded-xl p-8 text-center">
+                <Trophy className="w-10 h-10 text-stone-800 mx-auto mb-2" />
+                <p className="text-stone-500 text-sm">No rankings yet. Be the first!</p>
+              </div>
+            ) : (
+              leaderboard.slice(0, 10).map((entry, idx) => {
+                const isTop3 = idx < 3
+                // Gold, Silver, Bronze for top 3
+                const rankColors = [
+                  "from-amber-400 to-amber-600 text-amber-900",
+                  "from-stone-300 to-stone-400 text-stone-800", 
+                  "from-amber-600 to-amber-700 text-amber-100"
+                ]
+                
+                return (
+                  <div
+                    key={entry.user_id}
+                    className={`flex items-center gap-3 p-3 rounded-xl ${
+                      isTop3 
+                        ? "bg-stone-900 border border-stone-800" 
+                        : "bg-stone-900/50"
+                    }`}
+                  >
+                    <div className={`w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 text-xs font-bold ${
+                      isTop3 
+                        ? `bg-gradient-to-br ${rankColors[idx]}` 
+                        : "bg-stone-800 text-stone-500"
+                    }`}>
+                      {idx === 0 ? <Crown className="w-3.5 h-3.5" /> : idx + 1}
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <p className={`font-medium text-sm truncate ${isTop3 ? "text-white" : "text-stone-400"}`}>
+                        {entry.username}
+                      </p>
+                    </div>
+                    
+                    <div className="flex items-center gap-1.5">
+                      <span className={`text-base font-bold ${isTop3 ? "text-teal-400" : "text-stone-500"}`}>
+                        {entry.completion_count}
+                      </span>
+                      <span className="text-[10px] text-stone-600">proofs</span>
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
+        </div>
+
+        {/* Recent Proofs Section */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <ImageIcon className="w-4 h-4 text-teal-400" />
+              <h2 className="text-sm font-semibold text-stone-400 uppercase tracking-wide">Recent Proofs</h2>
+              {allProofs.length > 0 && (
+                <span className="text-xs text-stone-600">({allProofs.length})</span>
+              )}
             </div>
           </div>
-          {user && (
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowUploadModal(true)}
-                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-medium rounded-xl transition-all"
-              >
-                <Camera className="w-4 h-4" />
-                <span className="hidden sm:inline">Meal Proof</span>
-              </button>
-              <button
-                onClick={() => setShowTransformModal(true)}
-                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 text-white font-medium rounded-xl transition-all"
-              >
-                <Dumbbell className="w-4 h-4" />
-                <span className="hidden sm:inline">Transformation</span>
-              </button>
+          
+          {allProofs.length === 0 ? (
+            <div className="bg-stone-900 border border-stone-800 rounded-xl p-8 text-center">
+              <Camera className="w-10 h-10 text-stone-800 mx-auto mb-2" />
+              <p className="text-stone-500 text-sm">No proofs uploaded yet</p>
             </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-2">
+              {visibleProofs.map((proof) => {
+                if (proof.type === "meal") {
+                  const meal = proof.data
+                  return (
+                    <div
+                      key={`meal-${meal.id}`}
+                      onClick={() => setViewMeal(meal)}
+                      className="cursor-pointer bg-stone-900 border border-stone-800 rounded-lg overflow-hidden active:scale-[0.98] transition-transform"
+                    >
+                      <div className="aspect-square relative">
+                        <img
+                          src={meal.photo_url}
+                          alt="Meal"
+                          className="absolute inset-0 w-full h-full object-cover"
+                        />
+                        <div className="absolute top-1 left-1">
+                          <span className="flex items-center gap-0.5 px-1 py-0.5 bg-emerald-500 text-[8px] font-bold text-white rounded">
+                            <Camera className="w-2 h-2" />
+                          </span>
+                        </div>
+                      </div>
+                      <div className="p-1.5">
+                        <p className="font-medium text-white text-[11px] truncate">{meal.username}</p>
+                        <p className="text-[9px] text-stone-600">{formatDate(meal.completed_at)}</p>
+                      </div>
+                    </div>
+                  )
+                } else {
+                  const transform = proof.data
+                  return (
+                    <div
+                      key={`transform-${transform.id}`}
+                      onClick={() => setViewTransform(transform)}
+                      className="cursor-pointer bg-stone-900 border border-stone-800 rounded-lg overflow-hidden active:scale-[0.98] transition-transform"
+                    >
+                      <div className="aspect-square relative">
+                        <div className="absolute inset-0 grid grid-cols-2">
+                          <img
+                            src={transform.before_photo_url}
+                            alt="Before"
+                            className="w-full h-full object-cover"
+                          />
+                          <img
+                            src={transform.after_photo_url}
+                            alt="After"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="absolute top-1 left-1">
+                          <span className="flex items-center gap-0.5 px-1 py-0.5 bg-teal-500 text-[8px] font-bold text-white rounded">
+                            <Dumbbell className="w-2 h-2" />
+                          </span>
+                        </div>
+                        <div className="absolute inset-x-0 bottom-0 flex justify-center">
+                          <div className="w-4 h-4 -mb-2 bg-stone-900 rotate-45"></div>
+                        </div>
+                      </div>
+                      <div className="p-1.5">
+                        <p className="font-medium text-white text-[11px] truncate">{transform.username}</p>
+                        <p className="text-[9px] text-stone-600">
+                          {transform.duration || formatDate(transform.created_at)}
+                        </p>
+                      </div>
+                    </div>
+                  )
+                }
+              })}
+            </div>
+          )}
+          
+          {/* Show More / Show Less Button */}
+          {hasMoreProofs && (
+            <button
+              onClick={() => setShowAllProofs(!showAllProofs)}
+              className="w-full mt-3 py-3 flex items-center justify-center gap-2 bg-stone-900 hover:bg-stone-800 border border-stone-800 text-stone-400 hover:text-white text-sm font-medium rounded-xl transition-all"
+            >
+              <span>{showAllProofs ? "Show Less" : `Show All ${allProofs.length} Proofs`}</span>
+              <ChevronDown className={`w-4 h-4 transition-transform ${showAllProofs ? "rotate-180" : ""}`} />
+            </button>
           )}
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-6">
-          {/* Leaderboard */}
-          <div className="lg:col-span-2">
-            <div className="bg-stone-900/80 border border-stone-800/50 rounded-2xl p-6">
-              <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                <Flame className="w-5 h-5 text-amber-400" />
-                Top Contributors
-              </h2>
-              
-              {leaderboard.length === 0 ? (
-                <div className="text-center py-12">
-                  <Trophy className="w-12 h-12 text-stone-700 mx-auto mb-3" />
-                  <p className="text-stone-500">No completions yet. Be the first!</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {leaderboard.map((entry, index) => (
-                    <div
-                      key={entry.user_id}
-                      className={`flex items-center gap-4 p-4 rounded-xl border ${getRankBg(index)}`}
-                    >
-                      <div className="w-8 flex justify-center">
-                        {getRankIcon(index)}
-                      </div>
-                      <div className="w-10 h-10 rounded-full bg-stone-800 flex items-center justify-center overflow-hidden">
-                        {entry.avatar_url ? (
-                          <img
-                            src={entry.avatar_url}
-                            alt={entry.username}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <span className="text-sm font-medium text-stone-400">
-                            {entry.username.charAt(0).toUpperCase()}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium text-white">{entry.username}</p>
-                        <p className="text-xs text-stone-500">
-                          Last: {formatDate(entry.last_completion)}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xl font-bold text-amber-400">{entry.completion_count}</p>
-                        <p className="text-xs text-stone-500">proofs</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Recent Proofs - Combined Feed */}
-          <div>
-            <div className="bg-stone-900/80 border border-stone-800/50 rounded-2xl p-6">
-              <h2 className="text-lg font-semibold text-white mb-4 flex items-center justify-between">
-                <span className="flex items-center gap-2">
-                  <ImageIcon className="w-5 h-5 text-amber-400" />
-                  Recent Proofs
-                </span>
-                <span className="text-xs text-stone-500">
-                  {recentCompletions.length + transformations.length} total
-                </span>
-              </h2>
-
-              {/* Filter Tabs */}
-              <div className="flex gap-1 mb-4 p-1 bg-stone-800/50 rounded-lg">
-                <button
-                  onClick={() => setActiveTab("meals")}
-                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                    activeTab === "meals"
-                      ? "bg-amber-500/20 text-amber-400"
-                      : "text-stone-400 hover:text-white"
-                  }`}
-                >
-                  <Camera className="w-3.5 h-3.5" />
-                  Meals ({recentCompletions.length})
-                </button>
-                <button
-                  onClick={() => setActiveTab("transformations")}
-                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                    activeTab === "transformations"
-                      ? "bg-teal-500/20 text-teal-400"
-                      : "text-stone-400 hover:text-white"
-                  }`}
-                >
-                  <Dumbbell className="w-3.5 h-3.5" />
-                  Transforms ({transformations.length})
-                </button>
-              </div>
-              
-              {activeTab === "meals" ? (
-                recentCompletions.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Camera className="w-10 h-10 text-stone-700 mx-auto mb-2" />
-                    <p className="text-stone-500 text-sm">No meal proofs yet</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-2 max-h-[500px] overflow-y-auto pr-1">
-                    {recentCompletions.map((completion) => (
-                      <div
-                        key={completion.id}
-                        onClick={() => setViewMeal(completion)}
-                        className="bg-stone-800/30 rounded-lg overflow-hidden group cursor-pointer"
-                      >
-                        <div className="aspect-square relative">
-                          <img
-                            src={completion.photo_url}
-                            alt="Meal proof"
-                            className="absolute inset-0 w-full h-full object-cover"
-                          />
-                          <div className="absolute top-1.5 left-1.5">
-                            <span className="px-1.5 py-0.5 bg-amber-500/90 text-white text-[10px] font-medium rounded flex items-center gap-1">
-                              <Camera className="w-2.5 h-2.5" />
-                              Meal
-                            </span>
-                          </div>
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                          <div className="absolute bottom-0 left-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <p className="text-xs font-medium text-white truncate">{completion.username}</p>
-                            <p className="text-[10px] text-stone-300">{formatDate(completion.completed_at)}</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )
-              ) : (
-                transformations.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Dumbbell className="w-10 h-10 text-stone-700 mx-auto mb-2" />
-                    <p className="text-stone-500 text-sm">No transformations yet</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
-                    {transformations.map((transform) => (
-                      <div
-                        key={transform.id}
-                        onClick={() => setViewTransform(transform)}
-                        className="bg-stone-800/30 rounded-lg overflow-hidden cursor-pointer hover:bg-stone-800/50 transition-colors"
-                      >
-                        <div className="relative">
-                          <div className="absolute top-1.5 left-1.5 z-10">
-                            <span className="px-1.5 py-0.5 bg-teal-500/90 text-white text-[10px] font-medium rounded flex items-center gap-1">
-                              <Dumbbell className="w-2.5 h-2.5" />
-                              Transform
-                            </span>
-                          </div>
-                          <div className="grid grid-cols-2 gap-0.5">
-                            <div className="relative">
-                              <img
-                                src={transform.before_photo_url}
-                                alt="Before"
-                                className="w-full aspect-[4/5] object-cover"
-                              />
-                              <span className="absolute bottom-1 left-1 px-1 py-0.5 bg-black/70 text-white text-[10px] rounded">Before</span>
-                            </div>
-                            <div className="relative">
-                              <img
-                                src={transform.after_photo_url}
-                                alt="After"
-                                className="w-full aspect-[4/5] object-cover"
-                              />
-                              <span className="absolute bottom-1 right-1 px-1 py-0.5 bg-teal-500/90 text-white text-[10px] rounded">After</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="p-2">
-                          <div className="flex items-center justify-between">
-                            <p className="text-xs font-medium text-white">{transform.username}</p>
-                            {transform.duration && (
-                              <span className="text-[10px] text-teal-400 bg-teal-500/10 px-1.5 py-0.5 rounded">{transform.duration}</span>
-                            )}
-                          </div>
-                          <p className="text-[10px] text-stone-500 mt-0.5">{formatDate(transform.created_at)}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Upload Modal */}
-        {showUploadModal && (
-          <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-stone-900 border border-stone-800 rounded-2xl p-6 max-w-md w-full">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-white">Upload Meal Proof</h3>
-                <button
-                  onClick={closeModal}
-                  className="p-2 text-stone-400 hover:text-white rounded-lg hover:bg-stone-800"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {previewUrl ? (
-                <div className="mb-4">
-                  <div className="aspect-video relative rounded-xl overflow-hidden mb-3">
-                    <img
-                      src={previewUrl}
-                      alt="Preview"
-                      className="absolute inset-0 w-full h-full object-cover"
-                    />
-                  </div>
-                  <button
-                    onClick={() => {
-                      setSelectedFile(null)
-                      setPreviewUrl(null)
-                    }}
-                    className="text-sm text-stone-400 hover:text-white"
-                  >
-                    Choose different photo
-                  </button>
-                </div>
-              ) : (
-                <div
-                  onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-stone-700 rounded-xl p-8 text-center cursor-pointer hover:border-amber-500/50 transition-colors mb-4"
-                >
-                  <Upload className="w-10 h-10 text-stone-600 mx-auto mb-3" />
-                  <p className="text-stone-400 mb-1">Click to upload photo</p>
-                  <p className="text-xs text-stone-600">JPG, PNG up to 5MB</p>
-                </div>
-              )}
-
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleFileSelect}
-                className="hidden"
-              />
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-stone-300 mb-2">
-                  Description (optional)
-                </label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="What did you make?"
-                  rows={2}
-                  className="w-full px-4 py-3 bg-stone-800/50 border border-stone-700/50 rounded-xl text-white placeholder:text-stone-600 focus:outline-none focus:border-amber-500/50 resize-none"
-                />
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={closeModal}
-                  className="flex-1 py-2.5 text-stone-400 hover:text-white transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleUpload}
-                  disabled={!selectedFile || uploading}
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 disabled:from-stone-700 disabled:to-stone-700 text-white font-medium rounded-xl transition-all"
-                >
-                  {uploading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <>
-                      <Upload className="w-4 h-4" />
-                      Upload
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Transformation Upload Modal */}
-        {showTransformModal && (
-          <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-stone-900 border border-stone-800 rounded-2xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-white">Upload Transformation</h3>
-                <button
-                  onClick={closeTransformModal}
-                  className="p-2 text-stone-400 hover:text-white rounded-lg hover:bg-stone-800"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                {/* Before Photo */}
-                <div>
-                  <label className="block text-sm font-medium text-stone-300 mb-2">Before</label>
-                  {beforePreview ? (
-                    <div className="relative">
-                      <img
-                        src={beforePreview}
-                        alt="Before preview"
-                        className="w-full aspect-[3/4] object-cover rounded-xl"
-                      />
-                      <button
-                        onClick={() => {
-                          setBeforeFile(null)
-                          setBeforePreview(null)
-                        }}
-                        className="absolute top-2 right-2 p-1 bg-black/70 rounded-lg text-white hover:bg-black"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ) : (
-                    <div
-                      onClick={() => beforeInputRef.current?.click()}
-                      className="border-2 border-dashed border-stone-700 rounded-xl aspect-[3/4] flex flex-col items-center justify-center cursor-pointer hover:border-teal-500/50 transition-colors"
-                    >
-                      <Upload className="w-8 h-8 text-stone-600 mb-2" />
-                      <p className="text-stone-500 text-sm">Before photo</p>
-                    </div>
-                  )}
-                </div>
-
-                {/* After Photo */}
-                <div>
-                  <label className="block text-sm font-medium text-stone-300 mb-2">After</label>
-                  {afterPreview ? (
-                    <div className="relative">
-                      <img
-                        src={afterPreview}
-                        alt="After preview"
-                        className="w-full aspect-[3/4] object-cover rounded-xl"
-                      />
-                      <button
-                        onClick={() => {
-                          setAfterFile(null)
-                          setAfterPreview(null)
-                        }}
-                        className="absolute top-2 right-2 p-1 bg-black/70 rounded-lg text-white hover:bg-black"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ) : (
-                    <div
-                      onClick={() => afterInputRef.current?.click()}
-                      className="border-2 border-dashed border-stone-700 rounded-xl aspect-[3/4] flex flex-col items-center justify-center cursor-pointer hover:border-teal-500/50 transition-colors"
-                    >
-                      <Upload className="w-8 h-8 text-stone-600 mb-2" />
-                      <p className="text-stone-500 text-sm">After photo</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <input
-                ref={beforeInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleBeforeSelect}
-                className="hidden"
-              />
-              <input
-                ref={afterInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleAfterSelect}
-                className="hidden"
-              />
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-stone-300 mb-2">
-                  Duration (e.g., &quot;3 months&quot;)
-                </label>
-                <input
-                  value={transformDuration}
-                  onChange={(e) => setTransformDuration(e.target.value)}
-                  placeholder="How long did it take?"
-                  className="w-full px-4 py-3 bg-stone-800/50 border border-stone-700/50 rounded-xl text-white placeholder:text-stone-600 focus:outline-none focus:border-teal-500/50"
-                />
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-stone-300 mb-2">
-                  Description (optional)
-                </label>
-                <textarea
-                  value={transformDescription}
-                  onChange={(e) => setTransformDescription(e.target.value)}
-                  placeholder="Share your journey..."
-                  rows={2}
-                  className="w-full px-4 py-3 bg-stone-800/50 border border-stone-700/50 rounded-xl text-white placeholder:text-stone-600 focus:outline-none focus:border-teal-500/50 resize-none"
-                />
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={closeTransformModal}
-                  className="flex-1 py-2.5 text-stone-400 hover:text-white transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleTransformUpload}
-                  disabled={!beforeFile || !afterFile || uploadingTransform}
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 disabled:from-stone-700 disabled:to-stone-700 text-white font-medium rounded-xl transition-all"
-                >
-                  {uploadingTransform ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <>
-                      <Upload className="w-4 h-4" />
-                      Upload
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Success Modal */}
-        {showSuccessModal && (
-          <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-stone-900 border border-stone-800 rounded-2xl p-6 max-w-sm w-full text-center">
-              <div className="w-16 h-16 rounded-full bg-teal-500/20 flex items-center justify-center mx-auto mb-4">
-                <Clock className="w-8 h-8 text-teal-400" />
-              </div>
-              <h3 className="text-xl font-semibold text-white mb-2">Upload Successful!</h3>
-              <p className="text-stone-400 mb-6">
-                Your submission has been received. Please wait for admin approval before it appears on the leaderboard.
-              </p>
-              <button
-                onClick={() => setShowSuccessModal(false)}
-                className="w-full py-3 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 text-white font-medium rounded-xl transition-all"
-              >
-                Got it!
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* View Transformation Modal */}
-        {viewTransform && (
-          <div 
-            className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4"
-            onClick={() => setViewTransform(null)}
-          >
-            <div 
-              className="bg-stone-900 border border-stone-800 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between p-4 border-b border-stone-800">
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-1 bg-teal-500/20 text-teal-400 text-xs font-medium rounded flex items-center gap-1">
-                    <Dumbbell className="w-3 h-3" />
-                    Transformation
-                  </span>
-                  {viewTransform.duration && (
-                    <span className="text-sm text-teal-400">{viewTransform.duration}</span>
-                  )}
-                </div>
-                <button
-                  onClick={() => setViewTransform(null)}
-                  className="p-2 text-stone-400 hover:text-white rounded-lg hover:bg-stone-800"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-2 p-4">
-                <div className="relative">
-                  <img
-                    src={viewTransform.before_photo_url}
-                    alt="Before"
-                    className="w-full rounded-lg"
-                  />
-                  <span className="absolute bottom-2 left-2 px-2 py-1 bg-black/70 text-white text-sm rounded">Before</span>
-                </div>
-                <div className="relative">
-                  <img
-                    src={viewTransform.after_photo_url}
-                    alt="After"
-                    className="w-full rounded-lg"
-                  />
-                  <span className="absolute bottom-2 right-2 px-2 py-1 bg-teal-500/90 text-white text-sm rounded">After</span>
-                </div>
-              </div>
-              
-              <div className="p-4 border-t border-stone-800">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-full bg-stone-800 flex items-center justify-center">
-                    <span className="text-sm font-medium text-stone-400">
-                      {viewTransform.username?.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                  <div>
-                    <p className="font-medium text-white">{viewTransform.username}</p>
-                    <p className="text-xs text-stone-500">{formatDate(viewTransform.created_at)}</p>
-                  </div>
-                </div>
-                {viewTransform.description && (
-                  <p className="text-stone-300">{viewTransform.description}</p>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* View Meal Modal */}
-        {viewMeal && (
-          <div 
-            className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4"
-            onClick={() => setViewMeal(null)}
-          >
-            <div 
-              className="bg-stone-900 border border-stone-800 rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between p-4 border-b border-stone-800">
-                <span className="px-2 py-1 bg-amber-500/20 text-amber-400 text-xs font-medium rounded flex items-center gap-1">
-                  <Camera className="w-3 h-3" />
-                  Meal Proof
-                </span>
-                <button
-                  onClick={() => setViewMeal(null)}
-                  className="p-2 text-stone-400 hover:text-white rounded-lg hover:bg-stone-800"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              
-              <div className="p-4">
-                <img
-                  src={viewMeal.photo_url}
-                  alt="Meal proof"
-                  className="w-full rounded-lg"
-                />
-              </div>
-              
-              <div className="p-4 border-t border-stone-800">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-full bg-stone-800 flex items-center justify-center">
-                    <span className="text-sm font-medium text-stone-400">
-                      {viewMeal.username?.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                  <div>
-                    <p className="font-medium text-white">{viewMeal.username}</p>
-                    <p className="text-xs text-stone-500">{formatDate(viewMeal.completed_at)}</p>
-                  </div>
-                </div>
-                {viewMeal.description && (
-                  <p className="text-stone-300">{viewMeal.description}</p>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Not logged in prompt */}
         {!user && (
-          <div className="mt-8 bg-stone-900/80 border border-stone-800/50 rounded-2xl p-6 text-center">
-            <p className="text-stone-400 mb-4">Sign in to upload your meal proofs and join the leaderboard!</p>
+          <div className="mt-6 bg-stone-900 border border-teal-500/20 rounded-xl p-5 text-center">
+            <p className="text-stone-400 text-sm mb-3">Sign in to upload proofs and join the leaderboard</p>
             <Link
               href="/auth/login"
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-medium rounded-xl transition-all"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 text-white text-sm font-semibold rounded-lg transition-all shadow-lg shadow-teal-500/20"
             >
               Sign In
             </Link>
           </div>
         )}
       </div>
+
+      {/* Upload Modal */}
+      {showUploadModal && (
+        <div className="fixed inset-0 z-50 bg-black/90 flex items-end sm:items-center justify-center">
+          <div className="bg-stone-900 border-t sm:border border-stone-800 sm:rounded-2xl p-5 w-full sm:max-w-md sm:mx-4 max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-lg font-bold text-white">Upload Meal Proof</h3>
+              <button onClick={closeModal} className="p-2 text-stone-400 hover:text-white rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-stone-500 text-sm mb-4">Share a photo of your healthy meal to earn a proof on the leaderboard.</p>
+
+            {previewUrl ? (
+              <div className="mb-4">
+                <div className="aspect-square relative rounded-xl overflow-hidden mb-2">
+                  <img src={previewUrl} alt="Preview" className="absolute inset-0 w-full h-full object-cover" />
+                </div>
+                <button
+                  onClick={() => { setSelectedFile(null); setPreviewUrl(null) }}
+                  className="text-sm text-stone-500 hover:text-white"
+                >
+                  Change photo
+                </button>
+              </div>
+            ) : (
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-dashed border-stone-700 rounded-xl p-10 text-center cursor-pointer hover:border-teal-500/50 transition-colors mb-4"
+              >
+                <Camera className="w-10 h-10 text-stone-700 mx-auto mb-2" />
+                <p className="text-stone-500">Tap to select photo</p>
+              </div>
+            )}
+
+            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
+
+            <div className="mb-5">
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Add a description (optional)"
+                rows={2}
+                className="w-full px-4 py-3 bg-stone-800 border border-stone-700 rounded-xl text-white placeholder:text-stone-600 focus:outline-none focus:border-teal-500/50 resize-none text-sm"
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button onClick={closeModal} className="flex-1 py-3 text-stone-500 font-medium">
+                Cancel
+              </button>
+              <button
+                onClick={handleUpload}
+                disabled={!selectedFile || uploading}
+                className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 disabled:from-stone-700 disabled:to-stone-700 text-white disabled:text-stone-500 font-semibold rounded-xl transition-all"
+              >
+                {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Upload Proof"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Transformation Upload Modal */}
+      {showTransformModal && (
+        <div className="fixed inset-0 z-50 bg-black/90 flex items-end sm:items-center justify-center">
+          <div className="bg-stone-900 border-t sm:border border-stone-800 sm:rounded-2xl p-5 w-full sm:max-w-md sm:mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-lg font-bold text-white">Upload Transformation</h3>
+              <button onClick={closeTransformModal} className="p-2 text-stone-400 hover:text-white rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-stone-500 text-sm mb-4">Share your before &amp; after photos to inspire others and earn a proof.</p>
+
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div>
+                <p className="text-xs text-stone-500 mb-2 text-center">Before</p>
+                {beforePreview ? (
+                  <div className="relative">
+                    <img src={beforePreview} alt="Before" className="w-full aspect-[3/4] object-cover rounded-xl" />
+                    <button
+                      onClick={() => { setBeforeFile(null); setBeforePreview(null) }}
+                      className="absolute top-2 right-2 p-1.5 bg-black/70 rounded-lg text-white"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => beforeInputRef.current?.click()}
+                    className="border-2 border-dashed border-stone-700 rounded-xl aspect-[3/4] flex flex-col items-center justify-center cursor-pointer hover:border-teal-500/50 transition-colors"
+                  >
+                    <Upload className="w-6 h-6 text-stone-700 mb-1" />
+                    <p className="text-stone-600 text-xs">Tap to add</p>
+                  </div>
+                )}
+              </div>
+              <div>
+                <p className="text-xs text-stone-500 mb-2 text-center">After</p>
+                {afterPreview ? (
+                  <div className="relative">
+                    <img src={afterPreview} alt="After" className="w-full aspect-[3/4] object-cover rounded-xl" />
+                    <button
+                      onClick={() => { setAfterFile(null); setAfterPreview(null) }}
+                      className="absolute top-2 right-2 p-1.5 bg-black/70 rounded-lg text-white"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => afterInputRef.current?.click()}
+                    className="border-2 border-dashed border-stone-700 rounded-xl aspect-[3/4] flex flex-col items-center justify-center cursor-pointer hover:border-teal-500/50 transition-colors"
+                  >
+                    <Upload className="w-6 h-6 text-stone-700 mb-1" />
+                    <p className="text-stone-600 text-xs">Tap to add</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <input ref={beforeInputRef} type="file" accept="image/*" onChange={handleBeforeSelect} className="hidden" />
+            <input ref={afterInputRef} type="file" accept="image/*" onChange={handleAfterSelect} className="hidden" />
+
+            <input
+              value={transformDuration}
+              onChange={(e) => setTransformDuration(e.target.value)}
+              placeholder="Duration (e.g. 3 months)"
+              className="w-full px-4 py-3 bg-stone-800 border border-stone-700 rounded-xl text-white placeholder:text-stone-600 focus:outline-none focus:border-teal-500/50 mb-3 text-sm"
+            />
+
+            <textarea
+              value={transformDescription}
+              onChange={(e) => setTransformDescription(e.target.value)}
+              placeholder="Share your journey (optional)"
+              rows={2}
+              className="w-full px-4 py-3 bg-stone-800 border border-stone-700 rounded-xl text-white placeholder:text-stone-600 focus:outline-none focus:border-teal-500/50 resize-none mb-5 text-sm"
+            />
+
+            <div className="flex gap-3">
+              <button onClick={closeTransformModal} className="flex-1 py-3 text-stone-500 font-medium">
+                Cancel
+              </button>
+              <button
+                onClick={handleTransformUpload}
+                disabled={!beforeFile || !afterFile || uploadingTransform}
+                className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 disabled:from-stone-700 disabled:to-stone-700 text-white disabled:text-stone-500 font-semibold rounded-xl transition-all"
+              >
+                {uploadingTransform ? <Loader2 className="w-4 h-4 animate-spin" /> : "Upload Proof"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4">
+          <div className="bg-stone-900 border border-stone-800 rounded-2xl p-6 max-w-xs w-full text-center">
+            <div className="w-14 h-14 rounded-full bg-teal-500/20 flex items-center justify-center mx-auto mb-4">
+              <Clock className="w-7 h-7 text-teal-400" />
+            </div>
+            <h3 className="text-lg font-bold text-white mb-2">Proof Uploaded!</h3>
+            <p className="text-stone-500 text-sm mb-5">Awaiting admin approval. Once approved, it will count toward your ranking.</p>
+            <button
+              onClick={() => setShowSuccessModal(false)}
+              className="w-full py-3 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 text-white font-semibold rounded-xl transition-all"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* View Transformation Modal */}
+      {viewTransform && (
+        <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4" onClick={() => setViewTransform(null)}>
+          <div className="bg-stone-900 border border-stone-800 rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b border-stone-800">
+              <div className="flex items-center gap-2">
+                <span className="px-1.5 py-0.5 bg-teal-500 text-[10px] font-bold text-white rounded flex items-center gap-1">
+                  <Dumbbell className="w-2.5 h-2.5" /> TRANSFORM
+                </span>
+                <span className="text-white font-medium text-sm">{viewTransform.username}</span>
+              </div>
+              <button onClick={() => setViewTransform(null)} className="p-2 text-stone-400 hover:text-white rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex">
+              <div className="w-1/2 relative">
+                <img src={viewTransform.before_photo_url} alt="Before" className="w-full" />
+                <span className="absolute bottom-2 left-2 px-2 py-1 bg-black/70 text-white text-xs font-medium rounded">Before</span>
+              </div>
+              <div className="w-1/2 relative">
+                <img src={viewTransform.after_photo_url} alt="After" className="w-full" />
+                <span className="absolute bottom-2 right-2 px-2 py-1 bg-teal-500 text-white text-xs font-medium rounded">After</span>
+              </div>
+            </div>
+            {(viewTransform.description || viewTransform.duration) && (
+              <div className="p-4 border-t border-stone-800">
+                {viewTransform.duration && (
+                  <p className="text-teal-400 text-sm font-medium mb-2">{viewTransform.duration}</p>
+                )}
+                {viewTransform.description && (
+                  <p className="text-stone-300 text-sm">{viewTransform.description}</p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* View Meal Modal */}
+      {viewMeal && (
+        <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4" onClick={() => setViewMeal(null)}>
+          <div className="bg-stone-900 border border-stone-800 rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b border-stone-800">
+              <div className="flex items-center gap-2">
+                <span className="px-1.5 py-0.5 bg-emerald-500 text-[10px] font-bold text-white rounded flex items-center gap-1">
+                  <Camera className="w-2.5 h-2.5" /> MEAL
+                </span>
+                <span className="text-white font-medium text-sm">{viewMeal.username}</span>
+              </div>
+              <button onClick={() => setViewMeal(null)} className="p-2 text-stone-400 hover:text-white rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <img src={viewMeal.photo_url} alt="Meal" className="w-full" />
+            {viewMeal.description && (
+              <div className="p-4 border-t border-stone-800">
+                <p className="text-stone-300 text-sm">{viewMeal.description}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

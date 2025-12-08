@@ -940,4 +940,229 @@ CREATE POLICY "Users can delete own transformation photos"
   );
 ```
 
+---
+
+### 8. Blogs Table
+
+```sql
+CREATE TABLE blogs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  slug TEXT NOT NULL UNIQUE,
+  excerpt TEXT NOT NULL,
+  content TEXT NOT NULL,
+  category TEXT NOT NULL DEFAULT 'fitness',
+  cover_image TEXT,
+  tags TEXT[] DEFAULT '{}',
+  read_time INTEGER DEFAULT 5,
+  author TEXT DEFAULT 'Matthews Wong',
+  is_published BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- If table already exists, add author column:
+-- ALTER TABLE blogs ADD COLUMN author TEXT DEFAULT 'Matthews Wong';
+
+-- Enable RLS
+ALTER TABLE blogs ENABLE ROW LEVEL SECURITY;
+
+-- Policy: Anyone can read published blogs
+CREATE POLICY "Public can view published blogs"
+  ON blogs FOR SELECT
+  USING (is_published = true);
+
+-- Policy: Service role can insert blogs (for edge function)
+CREATE POLICY "Service role can insert blogs"
+  ON blogs FOR INSERT
+  WITH CHECK (true);
+
+-- Policy: Service role can update blogs
+CREATE POLICY "Service role can update blogs"
+  ON blogs FOR UPDATE
+  USING (true);
+
+-- Index for faster queries
+CREATE INDEX blogs_slug_idx ON blogs(slug);
+CREATE INDEX blogs_created_at_idx ON blogs(created_at DESC);
+CREATE INDEX blogs_category_idx ON blogs(category);
+
+-- Function to generate slug from title
+CREATE OR REPLACE FUNCTION generate_blog_slug()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.slug := LOWER(REGEXP_REPLACE(NEW.title, '[^a-zA-Z0-9]+', '-', 'g')) || '-' || TO_CHAR(NOW(), 'YYYYMMDD');
+  NEW.updated_at := NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER blog_slug_trigger
+  BEFORE INSERT ON blogs
+  FOR EACH ROW
+  WHEN (NEW.slug IS NULL OR NEW.slug = '')
+  EXECUTE FUNCTION generate_blog_slug();
+```
+
+---
+
+### 9. Supabase Edge Function for Daily Blog Generation
+
+Create a new Edge Function in your Supabase project:
+
+**File: supabase/functions/generate-daily-blog/index.ts**
+
+```typescript
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+const FITNESS_TOPICS = [
+  "Best compound exercises for building muscle mass",
+  "How to break through a weight loss plateau",
+  "The science behind protein timing for muscle growth",
+  "HIIT vs steady-state cardio: Which is better for fat loss",
+  "Top 10 mobility exercises for better workout performance",
+  "How to properly warm up before lifting weights",
+  "The benefits of progressive overload in strength training",
+  "Nutrition tips for muscle recovery after intense workouts",
+  "How to build a home gym on a budget",
+  "The importance of sleep for muscle growth and recovery",
+  "Best exercises for building a stronger core",
+  "How to track macros for optimal body composition",
+  "The role of creatine in athletic performance",
+  "Effective stretching routines for flexibility",
+  "How to prevent common gym injuries",
+  "Building mental toughness for fitness success",
+  "The benefits of resistance training for weight loss",
+  "How to stay motivated on your fitness journey",
+  "Understanding muscle soreness and recovery",
+  "Best pre-workout nutrition strategies",
+  "Post-workout meal ideas for muscle growth",
+  "How to balance cardio and strength training",
+  "The science of fat loss explained simply",
+  "Bodyweight exercises for a full-body workout",
+  "How to improve your squat form",
+  "The benefits of morning workouts",
+  "Hydration tips for optimal performance",
+  "How to build bigger arms naturally",
+  "The importance of rest days in training",
+  "Meal prep tips for busy fitness enthusiasts"
+]
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
+  try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const groqApiKey = Deno.env.get('GROQ_API_KEY')!
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
+    // Pick a random topic
+    const topic = FITNESS_TOPICS[Math.floor(Math.random() * FITNESS_TOPICS.length)]
+
+    // Generate blog content using Groq
+    const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${groqApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'llama-3.1-70b-versatile',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a professional fitness blogger. Write engaging, informative blog posts about fitness, nutrition, and health. Use a friendly, motivational tone. Include practical tips and scientific backing where appropriate.'
+          },
+          {
+            role: 'user',
+            content: `Write a comprehensive blog post about: "${topic}"
+
+Return your response as a JSON object with this exact structure:
+{
+  "title": "Catchy blog title",
+  "excerpt": "A compelling 1-2 sentence summary (max 200 characters)",
+  "content": "Full blog content in markdown format with headings (##), bullet points, and paragraphs. Make it 800-1200 words.",
+  "category": "one of: fitness, nutrition, recovery, mindset, workout",
+  "tags": ["tag1", "tag2", "tag3"],
+  "read_time": estimated minutes to read (number)
+}`
+          }
+        ],
+        response_format: { type: 'json_object' },
+        temperature: 0.8,
+      }),
+    })
+
+    const groqData = await groqResponse.json()
+    const blogData = JSON.parse(groqData.choices[0].message.content)
+
+    // Insert blog into database
+    const { data, error } = await supabase
+      .from('blogs')
+      .insert({
+        title: blogData.title,
+        excerpt: blogData.excerpt,
+        content: blogData.content,
+        category: blogData.category || 'fitness',
+        tags: blogData.tags || [],
+        read_time: blogData.read_time || 5,
+        is_published: true,
+      })
+      .select()
+      .single()
+
+    if (error) throw error
+
+    return new Response(
+      JSON.stringify({ success: true, blog: data }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+  } catch (error) {
+    return new Response(
+      JSON.stringify({ success: false, error: error.message }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+  }
+})
+```
+
+**Deploy the Edge Function:**
+```bash
+supabase functions deploy generate-daily-blog --no-verify-jwt
+```
+
+**Set up secrets:**
+```bash
+supabase secrets set GROQ_API_KEY=your_groq_api_key
+```
+
+**Set up daily cron job in Supabase Dashboard:**
+1. Go to Database > Extensions > Enable `pg_cron`
+2. Go to SQL Editor and run:
+
+```sql
+-- Schedule daily blog generation at 8 AM UTC
+SELECT cron.schedule(
+  'daily-blog-generation',
+  '0 8 * * *',
+  $$
+  SELECT net.http_post(
+    url := 'https://your-project-ref.supabase.co/functions/v1/generate-daily-blog',
+    headers := '{"Authorization": "Bearer YOUR_ANON_KEY"}'::jsonb,
+    body := '{}'::jsonb
+  ) AS request_id;
+  $$
+);
+```
+
 

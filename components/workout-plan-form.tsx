@@ -48,12 +48,31 @@ export default function WorkoutPlanForm() {
 
   const toggleFocus = (id: string) => {
     const current = formData.focusAreas
+    
+    // If clicking "Full Body"
+    if (id === "fullBody") {
+      if (current.includes("fullBody")) {
+        // Can't deselect if it's the only one
+        if (current.length > 1) {
+          updateField("focusAreas", current.filter((f) => f !== "fullBody"))
+        }
+      } else {
+        // Select Full Body and deselect all others
+        updateField("focusAreas", ["fullBody"])
+      }
+      return
+    }
+    
+    // If clicking a specific body part
     if (current.includes(id)) {
+      // Deselect only if there's more than one selected
       if (current.length > 1) {
         updateField("focusAreas", current.filter((f) => f !== id))
       }
     } else {
-      updateField("focusAreas", [...current, id])
+      // Add the body part and remove "Full Body" if selected
+      const newAreas = current.filter((f) => f !== "fullBody")
+      updateField("focusAreas", [...newAreas, id])
     }
   }
 

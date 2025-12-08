@@ -1,9 +1,26 @@
 "use client"
 
+import { useEffect, useRef } from "react"
 import { Utensils, Sparkles } from "lucide-react"
 import MealPlanForm from "@/components/meal-plan-form"
+import { useAuth } from "@/lib/hooks/useAuth"
+import { toast } from "@/components/ui/use-toast"
 
 export default function MealPlanPage() {
+  const { user, loading } = useAuth()
+  const toastShown = useRef(false)
+
+  useEffect(() => {
+    if (!loading && !user && !toastShown.current) {
+      toastShown.current = true
+      toast({
+        variant: "warning",
+        title: "Not logged in",
+        description: "Your plan will not be saved. Please login to save your meal plan.",
+      })
+    }
+  }, [user, loading])
+
   return (
     <div className="min-h-screen bg-stone-950 pt-20">
       {/* Background */}

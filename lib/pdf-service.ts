@@ -3,6 +3,35 @@
 import { jsPDF } from "jspdf"
 import autoTable from "jspdf-autotable"
 
+// Helper function to sanitize text for PDF rendering
+function sanitizeText(text: string | null | undefined): string {
+  if (!text) return ""
+  return text
+    .replace(/[\u2018\u2019\u0060\u00B4]/g, "'")  // Smart single quotes, backtick, acute accent
+    .replace(/[\u201C\u201D\u00AB\u00BB]/g, '"')  // Smart double quotes, guillemets
+    .replace(/[\u2013\u2014\u2012\u2015\u2212\uFE58\uFE63\uFF0D]/g, "-")  // All dash variants
+    .replace(/\u2026/g, "...")        // Ellipsis
+    .replace(/\u00A0/g, " ")          // Non-breaking space
+    .replace(/[\u200B-\u200D\uFEFF]/g, "") // Zero-width chars
+    .replace(/[^\x00-\x7F]/g, (char) => {
+      // Replace other non-ASCII with closest ASCII equivalent or remove
+      const asciiMap: Record<string, string> = {
+        'é': 'e', 'è': 'e', 'ê': 'e', 'ë': 'e',
+        'á': 'a', 'à': 'a', 'â': 'a', 'ä': 'a', 'ã': 'a',
+        'í': 'i', 'ì': 'i', 'î': 'i', 'ï': 'i',
+        'ó': 'o', 'ò': 'o', 'ô': 'o', 'ö': 'o', 'õ': 'o',
+        'ú': 'u', 'ù': 'u', 'û': 'u', 'ü': 'u',
+        'ñ': 'n', 'ç': 'c',
+        '°': ' degrees', '²': '2', '³': '3',
+        '½': '1/2', '¼': '1/4', '¾': '3/4',
+        '•': '-', '·': '-',
+        '–': '-', '—': '-', '−': '-',  // Additional dash fallbacks
+      }
+      return asciiMap[char] || ''
+    })
+    .trim()
+}
+
 // Define proper types for the workout and meal plans
 interface ExerciseDetail {
   name: string
@@ -143,9 +172,9 @@ export function generatePDF(plan: PlanType, type: PlanCategory): void {
 
   let summaryText = ""
   if (isWorkoutPlan(plan, type)) {
-    summaryText = `Goal: ${plan.summary.goal} | Level: ${plan.summary.level} | ${plan.summary.daysPerWeek} days per week | ${plan.summary.sessionLength} min sessions`
+    summaryText = sanitizeText(`Goal: ${plan.summary.goal} | Level: ${plan.summary.level} | ${plan.summary.daysPerWeek} days per week | ${plan.summary.sessionLength} min sessions`)
   } else if (isMealPlan(plan, type)) {
-    summaryText = `Goal: ${plan.summary.goal} | ${plan.summary.calories} calories | Diet: ${plan.summary.dietType} | ${plan.summary.mealsPerDay} meals per day`
+    summaryText = sanitizeText(`Goal: ${plan.summary.goal} | ${plan.summary.calories} calories | Diet: ${plan.summary.dietType} | ${plan.summary.mealsPerDay} meals per day`)
   }
 
   doc.setFontSize(10)
@@ -159,7 +188,7 @@ export function generatePDF(plan: PlanType, type: PlanCategory): void {
   doc.setLineWidth(0.2)
   doc.line(14, 58, 55, 58)
 
-  const splitOverview = doc.splitTextToSize(plan.overview, 180)
+  const splitOverview = doc.splitTextToSize(sanitizeText(plan.overview), 180)
   doc.setFontSize(10)
   doc.setFont("helvetica", "normal")
   doc.text(splitOverview, 14, 65)
@@ -269,7 +298,7 @@ export function generatePDF(plan: PlanType, type: PlanCategory): void {
       doc.setFontSize(14)
       doc.setFont("helvetica", "bold")
       doc.setTextColor(16, 185, 129)
-      doc.text(`Day ${dayNumber}: ${workout.focus}`, 14, yPosition)
+      doc.text(`Day ${dayNumber}: ${sanitizeText(workout.focus)}`, 14, yPosition)
 
       // Add divider
       doc.setDrawColor(16, 185, 129)
@@ -281,7 +310,7 @@ export function generatePDF(plan: PlanType, type: PlanCategory): void {
       doc.setFontSize(10)
       doc.setFont("helvetica", "normal")
       doc.setTextColor(70, 70, 70)
-      const splitDesc = doc.splitTextToSize(workout.description, 180)
+      const splitDesc = doc.splitTextToSize(sanitizeText(workout.description), 180)
       doc.text(splitDesc, 14, yPosition)
       yPosition += splitDesc.length * 5 + 5
 
@@ -290,10 +319,10 @@ export function generatePDF(plan: PlanType, type: PlanCategory): void {
         startY: yPosition,
         head: [["Exercise", "Sets", "Reps", "Rest"]],
         body: workout.exercises.map((exercise) => [
-          exercise.name,
+          sanitizeText(exercise.name),
           exercise.sets.toString(),
-          exercise.reps,
-          exercise.rest,
+          sanitizeText(exercise.reps),
+          sanitizeText(exercise.rest),
         ]),
         theme: "grid",
         styles: { fontSize: 9, cellPadding: 3, lineWidth: 0.1 },
@@ -317,7 +346,7 @@ export function generatePDF(plan: PlanType, type: PlanCategory): void {
 
       doc.setFont("helvetica", "normal")
       workout.notes.forEach((note) => {
-        const splitNote = doc.splitTextToSize(`• ${note}`, 180)
+        const splitNote = doc.splitTextToSize(`- ${sanitizeText(note)}`, 180)
         doc.text(splitNote, 14, yPosition)
         yPosition += splitNote.length * 5
       })
@@ -364,7 +393,7 @@ export function generatePDF(plan: PlanType, type: PlanCategory): void {
         doc.setFontSize(12)
         doc.setFont("helvetica", "bold")
         doc.setTextColor(16, 185, 129)
-        doc.text(meal.name, 14, yPosition)
+        doc.text(sanitizeText(meal.name), 14, yPosition)
         yPosition += 7
 
         // Food table
@@ -372,8 +401,8 @@ export function generatePDF(plan: PlanType, type: PlanCategory): void {
           startY: yPosition,
           head: [["Food", "Amount", "Protein", "Carbs", "Fat", "Calories"]],
           body: meal.foods.map((food) => [
-            food.name,
-            food.amount,
+            sanitizeText(food.name),
+            sanitizeText(food.amount),
             `${food.protein}g`,
             `${food.carbs}g`,
             `${food.fat}g`,
@@ -417,7 +446,7 @@ export function generatePDF(plan: PlanType, type: PlanCategory): void {
           yPosition += 5
 
           doc.setFont("helvetica", "normal")
-          const splitNote = doc.splitTextToSize(meal.notes, 180)
+          const splitNote = doc.splitTextToSize(sanitizeText(meal.notes), 180)
           doc.text(splitNote, 14, yPosition)
           yPosition += splitNote.length * 5 + 10
         } else {
@@ -459,14 +488,14 @@ export function generatePDF(plan: PlanType, type: PlanCategory): void {
           doc.setFontSize(11)
           doc.setFont("helvetica", "bold")
           doc.setTextColor(214, 156, 60)
-          doc.text(`Snack ${snackIndex + 1}: ${snack.name}`, 14, yPosition)
+          doc.text(`Snack ${snackIndex + 1}: ${sanitizeText(snack.name)}`, 14, yPosition)
           yPosition += 6
 
           // Snack table
           autoTable(doc, {
             startY: yPosition,
             head: [["Food", "Amount", "Calories"]],
-            body: snack.foods.map((food) => [food.name, food.amount, food.calories.toString()]),
+            body: snack.foods.map((food) => [sanitizeText(food.name), sanitizeText(food.amount), food.calories.toString()]),
             theme: "grid",
             styles: { fontSize: 9, cellPadding: 3, lineWidth: 0.1 },
             headStyles: {
@@ -496,7 +525,7 @@ export function generatePDF(plan: PlanType, type: PlanCategory): void {
             yPosition += 4
 
             doc.setFont("helvetica", "normal")
-            const splitNote = doc.splitTextToSize(snack.notes, 180)
+            const splitNote = doc.splitTextToSize(sanitizeText(snack.notes), 180)
             doc.text(splitNote, 14, yPosition)
             yPosition += splitNote.length * 4 + 8
           } else {

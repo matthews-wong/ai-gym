@@ -330,18 +330,32 @@ export async function approveCompletion(completionId: string): Promise<boolean> 
 
 export async function rejectCompletion(completionId: string): Promise<boolean> {
   // First get the completion to get the photo URL
-  const { data: completion } = await supabase
+  const { data: completion, error: fetchError } = await supabase
     .from("meal_completions")
     .select("photo_url")
     .eq("id", completionId)
     .single()
 
+  if (fetchError) {
+    console.error("Error fetching completion:", fetchError)
+    return false
+  }
+
+  // Delete photo from storage
   if (completion?.photo_url) {
-    // Extract file path from URL (format: .../meal-photos/userId/filename.ext)
-    const urlParts = completion.photo_url.split("/meal-photos/")
+    // Extract file path from URL (remove query params if any)
+    const cleanUrl = completion.photo_url.split("?")[0]
+    const urlParts = cleanUrl.split("/meal-photos/")
     if (urlParts[1]) {
       const filePath = urlParts[1]
-      await supabase.storage.from("meal-photos").remove([filePath])
+      const { error: storageError } = await supabase.storage
+        .from("meal-photos")
+        .remove([filePath])
+      
+      if (storageError) {
+        console.error("Error deleting meal photo:", storageError)
+        // Continue to delete the record even if photo deletion fails
+      }
     }
   }
 
@@ -442,27 +456,42 @@ export async function approveTransformation(transformationId: string): Promise<b
 
 export async function rejectTransformation(transformationId: string): Promise<boolean> {
   // First get the transformation to get photo URLs
-  const { data: transform } = await supabase
+  const { data: transform, error: fetchError } = await supabase
     .from("workout_transformations")
     .select("before_photo_url, after_photo_url")
     .eq("id", transformationId)
     .single()
 
+  if (fetchError) {
+    console.error("Error fetching transformation:", fetchError)
+    return false
+  }
+
+  // Delete photos from storage
   if (transform) {
     const filesToDelete: string[] = []
     
-    // Extract file paths from URLs
+    // Extract file paths from URLs (remove query params if any)
     if (transform.before_photo_url) {
-      const urlParts = transform.before_photo_url.split("/transformation-photos/")
+      const cleanUrl = transform.before_photo_url.split("?")[0]
+      const urlParts = cleanUrl.split("/transformation-photos/")
       if (urlParts[1]) filesToDelete.push(urlParts[1])
     }
     if (transform.after_photo_url) {
-      const urlParts = transform.after_photo_url.split("/transformation-photos/")
+      const cleanUrl = transform.after_photo_url.split("?")[0]
+      const urlParts = cleanUrl.split("/transformation-photos/")
       if (urlParts[1]) filesToDelete.push(urlParts[1])
     }
     
     if (filesToDelete.length > 0) {
-      await supabase.storage.from("transformation-photos").remove(filesToDelete)
+      const { error: storageError } = await supabase.storage
+        .from("transformation-photos")
+        .remove(filesToDelete)
+      
+      if (storageError) {
+        console.error("Error deleting transformation photos:", storageError)
+        // Continue to delete the record even if photo deletion fails
+      }
     }
   }
 

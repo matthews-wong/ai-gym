@@ -4,6 +4,7 @@ import { Plus_Jakarta_Sans } from "next/font/google"
 import "./globals.css"
 import type { Metadata, Viewport } from "next"
 import { Navbar } from "../components/Navbar"
+import { Toaster } from "@/components/ui/toaster"
 import Script from "next/script"
 
 const jakarta = Plus_Jakarta_Sans({ 
@@ -131,8 +132,9 @@ const jsonLdSchema = {
         addressCountry: "ID",
         addressLocality: "Indonesia"
       },
-      url: "https://aigymbro.web.id",
+      url: "https://matthewswong.com",
       sameAs: [
+        "https://matthewswong.com",
         "https://linkedin.com/in/matthewswong",
         "https://github.com/matthewswong"
       ],
@@ -313,6 +315,7 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
           <Navbar />
           <main>{children}</main>
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>
