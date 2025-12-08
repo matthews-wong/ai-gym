@@ -9,7 +9,8 @@ import {
   Utensils, 
   ChevronRight,
   Sparkles,
-  Loader2
+  Loader2,
+  Settings
 } from "lucide-react";
 
 interface SavedPlan {
@@ -87,9 +88,18 @@ export default function DashboardPage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12">
         
         {/* Header */}
-        <header className="mb-12">
-          <p className="text-stone-500 text-sm mb-1">{greeting}</p>
-          <h1 className="text-3xl font-bold text-white">{userName}</h1>
+        <header className="mb-12 flex items-start justify-between">
+          <div>
+            <p className="text-stone-500 text-sm mb-1">{greeting}</p>
+            <h1 className="text-3xl font-bold text-white">{userName}</h1>
+          </div>
+          <Link 
+            href="/dashboard/settings"
+            className="p-2.5 text-stone-500 hover:text-white hover:bg-stone-800 rounded-xl transition-colors"
+            title="Settings"
+          >
+            <Settings className="w-5 h-5" />
+          </Link>
         </header>
 
         {/* Plans */}
