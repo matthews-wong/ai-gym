@@ -160,14 +160,22 @@ export async function getTransformations(limit = 20): Promise<WorkoutTransformat
 
   // Fetch usernames for all transformations
   const userIds = [...new Set(data.map(t => t.user_id))]
-  const { data: profiles } = await supabase
+  const { data: profiles, error: profileError } = await supabase
     .from("profiles")
     .select("id, username, email")
     .in("id", userIds)
 
-  const profileMap = new Map(
-    (profiles || []).map(p => [p.id, p.username || p.email?.split("@")[0] || "User"])
-  )
+  if (profileError) {
+    console.error("Error fetching profiles:", profileError)
+  }
+
+  const profileMap = new Map<string, string>()
+  if (profiles) {
+    for (const p of profiles) {
+      const displayName = p.username || (p.email ? p.email.split("@")[0] : null) || "User"
+      profileMap.set(p.id, displayName)
+    }
+  }
 
   return data.map(t => ({
     ...t,
