@@ -1,13 +1,15 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { Loader2, AlertTriangle, Calculator, ArrowRight, ArrowLeft, RotateCcw, Sparkles } from "lucide-react"
+import Link from "next/link"
+import { Loader2, AlertTriangle, Calculator, ArrowRight, ArrowLeft, RotateCcw, Sparkles, LogIn } from "lucide-react"
 import type { MealPlan } from "@/lib/services/ai"
 import MealPlanDisplay from "./meal-plan-display"
 import LoadingModal from "./loading-modal"
 import CalorieCalculatorModal from "./calorie-calculator-modal"
 import { useStreamingFetch } from "@/lib/hooks/useStreamingFetch"
 import { usePrefetch, usePredictiveParams } from "@/lib/hooks/usePrefetch"
+import { supabase } from "@/lib/supabase"
 
 type Step = 1 | 2 | 3
 
@@ -16,6 +18,12 @@ export default function MealPlanForm() {
   const [mealPlan, setMealPlan] = useState<MealPlan | null>(null)
   const [apiStatus, setApiStatus] = useState<{ available: boolean } | null>(null)
   const [showCalorieCalculator, setShowCalorieCalculator] = useState(false)
+  const [requiresAuth, setRequiresAuth] = useState(false)
+
+  const getAuthToken = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession()
+    return session?.access_token || null
+  }, [])
 
   const {
     isLoading,
@@ -29,6 +37,8 @@ export default function MealPlanForm() {
   } = useStreamingFetch<MealPlan>({
     type: "meal",
     onComplete: (plan) => setMealPlan(plan as MealPlan),
+    onError: (_, needsAuth) => setRequiresAuth(needsAuth || false),
+    getAuthToken,
   })
 
   const { prefetch } = usePrefetch({
@@ -156,16 +166,30 @@ export default function MealPlanForm() {
       )}
 
       {apiError && (
-        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-3">
-          <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0" />
+        <div className={`mb-6 p-4 ${requiresAuth ? "bg-amber-500/10 border-amber-500/20" : "bg-red-500/10 border-red-500/20"} border rounded-xl flex items-start gap-3`}>
+          {requiresAuth ? (
+            <LogIn className="w-5 h-5 text-amber-400 flex-shrink-0" />
+          ) : (
+            <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0" />
+          )}
           <div className="flex-1">
-            <p className="text-sm text-red-300">{apiError}</p>
-            <button
-              onClick={handleSubmit}
-              className="mt-2 text-xs text-red-400 hover:text-red-300 underline"
-            >
-              Try again
-            </button>
+            <p className={`text-sm ${requiresAuth ? "text-amber-300" : "text-red-300"}`}>{apiError}</p>
+            {requiresAuth ? (
+              <Link
+                href="/auth/login"
+                className="mt-3 inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 rounded-lg transition-all"
+              >
+                <LogIn className="w-4 h-4" />
+                Sign in to continue
+              </Link>
+            ) : (
+              <button
+                onClick={handleSubmit}
+                className="mt-2 text-xs text-red-400 hover:text-red-300 underline"
+              >
+                Try again
+              </button>
+            )}
           </div>
         </div>
       )}

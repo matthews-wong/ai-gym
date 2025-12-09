@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import Groq from "groq-sdk"
 import { z } from "zod"
+import { createClient } from "@supabase/supabase-js"
 import { rateLimit, getClientIp } from "@/lib/rate-limit"
 import { generateCacheKey, getCachedResponse, setCachedResponse } from "@/lib/cache"
 import { workoutFormSchema, type WorkoutFormInput } from "@/lib/validations"
@@ -14,10 +15,10 @@ import {
 import { 
   generateRequestKey, 
   hasPendingRequest, 
-  getPendingRequest,
   registerPendingRequest,
   cancelPendingRequest 
 } from "@/lib/api/request-dedup"
+import { checkUsageLimit, recordUsage } from "@/lib/services/usageService"
 
 const apiKey = process.env.GROQ_API_KEY
 let groq: Groq | null = null
@@ -141,6 +142,9 @@ Return ONLY valid JSON:
   )
 }
 
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+
 export async function POST(request: Request) {
   try {
     const clientIp = getClientIp(request)
@@ -155,6 +159,32 @@ export async function POST(request: Request) {
 
     if (!groq) {
       return NextResponse.json({ error: "AI service is not available." }, { status: 500 })
+    }
+
+    // Check for auth token
+    const authHeader = request.headers.get("authorization")
+    let userId: string | null = null
+
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.slice(7)
+      const supabase = createClient(supabaseUrl, supabaseServiceKey)
+      const { data: { user } } = await supabase.auth.getUser(token)
+      userId = user?.id || null
+    }
+
+    // Check usage limits
+    const usageCheck = await checkUsageLimit(userId, "workout", clientIp)
+    if (!usageCheck.allowed) {
+      return NextResponse.json(
+        { 
+          error: usageCheck.requiresAuth 
+            ? "You've reached your free limit. Please sign in to generate more workout plans."
+            : "You've reached your daily limit for workout plans. Try again tomorrow.",
+          requiresAuth: usageCheck.requiresAuth,
+          remaining: usageCheck.remaining,
+        },
+        { status: 403 }
+      )
     }
 
     const body = await request.json()
@@ -327,6 +357,9 @@ Return valid JSON with summary, overview, and workouts object.` },
           // Sanitize and cache
           const sanitizedPlan = sanitizeObject(validatedPlan)
           await setCachedResponse(cacheKey, { plan: sanitizedPlan }, 1440)
+          
+          // Record usage after successful generation
+          await recordUsage(userId, "workout", clientIp)
           
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, plan: sanitizedPlan })}\n\n`))
           controller.close()

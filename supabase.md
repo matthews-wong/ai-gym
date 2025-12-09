@@ -1205,4 +1205,75 @@ $$ LANGUAGE plpgsql;
 -- SELECT cron.schedule('cleanup-cache', '0 0 * * *', 'SELECT cleanup_expired_cache()');
 ```
 
+---
+
+## User Usage Tracking Tables
+
+These tables track plan generation usage for both authenticated and anonymous users.
+
+```sql
+-- Authenticated user usage tracking
+CREATE TABLE user_usage (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  usage_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  workout_count INTEGER DEFAULT 0,
+  meal_count INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(user_id, usage_date)
+);
+
+-- Index for faster lookups
+CREATE INDEX idx_user_usage_user_date ON user_usage(user_id, usage_date);
+
+-- Enable RLS
+ALTER TABLE user_usage ENABLE ROW LEVEL SECURITY;
+
+-- Users can only see their own usage
+CREATE POLICY "Users can view own usage"
+  ON user_usage FOR SELECT
+  USING (auth.uid() = user_id);
+
+-- Users can insert their own usage
+CREATE POLICY "Users can insert own usage"
+  ON user_usage FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+-- Users can update their own usage
+CREATE POLICY "Users can update own usage"
+  ON user_usage FOR UPDATE
+  USING (auth.uid() = user_id);
+
+-- Anonymous user usage tracking (by IP)
+CREATE TABLE anonymous_usage (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  identifier TEXT NOT NULL UNIQUE,
+  count INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Index for faster lookups
+CREATE INDEX idx_anonymous_usage_identifier ON anonymous_usage(identifier);
+
+-- Allow all operations (server-side only via service role)
+ALTER TABLE anonymous_usage ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Service role full access on anonymous_usage"
+  ON anonymous_usage FOR ALL
+  USING (true)
+  WITH CHECK (true);
+
+-- Auto-cleanup old anonymous usage (run daily)
+CREATE OR REPLACE FUNCTION cleanup_old_anonymous_usage()
+RETURNS void AS $$
+BEGIN
+  DELETE FROM anonymous_usage WHERE created_at < NOW() - INTERVAL '2 days';
+END;
+$$ LANGUAGE plpgsql;
+
+-- Schedule cleanup with pg_cron
+-- SELECT cron.schedule('cleanup-anonymous-usage', '0 1 * * *', 'SELECT cleanup_old_anonymous_usage()');
+```
+
 

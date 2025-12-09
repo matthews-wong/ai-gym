@@ -21,8 +21,9 @@ interface UseStreamingFetchOptions<T> {
   type: GenerationType
   onChunk?: (chunk: string) => void
   onComplete?: (data: T) => void
-  onError?: (error: string) => void
+  onError?: (error: string, requiresAuth?: boolean) => void
   onProgress?: (progress: number, stage: string) => void
+  getAuthToken?: () => Promise<string | null>
 }
 
 const STAGES = {
@@ -53,7 +54,7 @@ function getStageLabel(type: GenerationType, progress: number): string {
 }
 
 export function useStreamingFetch<T>(options: UseStreamingFetchOptions<T>) {
-  const { type, onChunk, onComplete, onError, onProgress } = options
+  const { type, onChunk, onComplete, onError, onProgress, getAuthToken } = options
   const abortControllerRef = useRef<AbortController | null>(null)
 
   const [state, setState] = useState<StreamingState<T>>({
@@ -110,16 +111,26 @@ export function useStreamingFetch<T>(options: UseStreamingFetchOptions<T>) {
       })
 
       try {
+        // Get auth token if available
+        const token = await getAuthToken?.()
+        const headers: Record<string, string> = { "Content-Type": "application/json" }
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`
+        }
+
         const response = await fetch(url, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers,
           body: JSON.stringify(body),
           signal: abortControllerRef.current.signal,
         })
 
         if (!response.ok) {
           const errorData = await response.json()
-          throw new Error(errorData.error || `Request failed with status ${response.status}`)
+          const error = new Error(errorData.error || `Request failed with status ${response.status}`)
+          // Attach requiresAuth flag for usage limit errors
+          ;(error as Error & { requiresAuth?: boolean }).requiresAuth = errorData.requiresAuth || false
+          throw error
         }
 
         const contentType = response.headers.get("content-type")
@@ -247,6 +258,8 @@ export function useStreamingFetch<T>(options: UseStreamingFetchOptions<T>) {
         }
 
         const errorMessage = error instanceof Error ? error.message : "An error occurred"
+        const requiresAuth = (error as Error & { requiresAuth?: boolean })?.requiresAuth || false
+        
         generationStore.fail(generationId, errorMessage)
 
         setState((prev) => ({
@@ -254,10 +267,10 @@ export function useStreamingFetch<T>(options: UseStreamingFetchOptions<T>) {
           isLoading: false,
           isStreaming: false,
           error: errorMessage,
-          canResume: true,
+          canResume: !requiresAuth, // Don't allow resume if auth is required
         }))
 
-        onError?.(errorMessage)
+        onError?.(errorMessage, requiresAuth)
         throw error
       }
     },
