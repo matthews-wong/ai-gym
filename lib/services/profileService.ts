@@ -12,12 +12,11 @@ export interface Profile {
 export async function getProfile(userId: string): Promise<Profile | null> {
   const { data, error } = await supabase
     .from("profiles")
-    .select("*")
+    .select("id, email, username, avatar_url, bio, created_at")
     .eq("id", userId)
     .single();
 
   if (error) {
-    console.error("Error fetching profile:", error);
     return null;
   }
 

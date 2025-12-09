@@ -62,13 +62,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
               alt: blog.title,
             },
           ]
-        : undefined,
+        : [
+            {
+              url: "https://aigymbro.web.id/og-image/blog.png",
+              width: 1200,
+              height: 630,
+              alt: "AI GymBRO Fitness Blog",
+            },
+          ],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: blog.cover_image ? [blog.cover_image] : undefined,
+      images: blog.cover_image ? [blog.cover_image] : ["https://aigymbro.web.id/og-image/blog.png"],
     },
     robots: {
       index: true,

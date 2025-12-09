@@ -87,8 +87,8 @@ export default function MealsPage() {
         .maybeSingle();
 
       if (data) setPlan(data as MealPlan);
-    } catch (error) {
-      console.log("No meal plan found");
+    } catch {
+      // No meal plan found
     } finally {
       setLoading(false);
     }

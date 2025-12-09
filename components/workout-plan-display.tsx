@@ -51,8 +51,8 @@ export default function WorkoutPlanDisplay({ plan, onBack }: WorkoutPlanDisplayP
     setIsGeneratingPDF(true)
     try {
       await generatePDF(plan, "workout")
-    } catch (error) {
-      console.error("Error generating PDF:", error)
+    } catch {
+      // PDF generation failed
     } finally {
       setIsGeneratingPDF(false)
     }

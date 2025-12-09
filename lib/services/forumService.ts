@@ -62,7 +62,6 @@ export async function getCategories(): Promise<ForumCategory[]> {
     .order("sort_order")
 
   if (error) {
-    console.error("Error fetching categories:", error)
     return []
   }
 
@@ -84,7 +83,6 @@ export async function getThreads(categorySlug?: string, limit = 20): Promise<For
   const { data, error } = await query
 
   if (error) {
-    console.error("Error fetching threads:", error)
     return []
   }
 
@@ -100,7 +98,6 @@ export async function getThread(categorySlug: string, threadSlug: string): Promi
     .maybeSingle()
 
   if (error) {
-    console.error("Error fetching thread:", error)
     return null
   }
 
@@ -124,7 +121,6 @@ export async function getReplies(threadId: string): Promise<ForumReply[]> {
     .order("created_at")
 
   if (error) {
-    console.error("Error fetching replies:", error)
     return []
   }
 
@@ -152,7 +148,6 @@ export async function createThread(
     .single()
 
   if (error) {
-    console.error("Error creating thread:", error)
     return null
   }
 
@@ -175,7 +170,6 @@ export async function createReply(
     .single()
 
   if (error) {
-    console.error("Error creating reply:", error)
     return null
   }
 
@@ -190,7 +184,6 @@ export async function getCategoryBySlug(slug: string): Promise<ForumCategory | n
     .maybeSingle()
 
   if (error) {
-    console.error("Error fetching category:", error)
     return null
   }
 

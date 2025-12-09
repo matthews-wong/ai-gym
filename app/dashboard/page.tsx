@@ -62,8 +62,8 @@ export default function DashboardPage() {
       if (workoutResult.data) setWorkoutPlan(workoutResult.data as SavedPlan);
       if (mealResult.data) setMealPlan(mealResult.data as SavedPlan);
 
-    } catch (error) {
-      console.log("No plans found or tables not created yet");
+    } catch {
+      // No plans found or tables not created yet
     } finally {
       setLoading(false);
     }

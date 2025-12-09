@@ -29,6 +29,7 @@ import {
   type MealCompletion,
   type WorkoutTransformation
 } from "@/lib/services/leaderboardService"
+import { BackToTop } from "@/components/back-to-top"
 
 function formatDate(dateString: string): string {
   const date = new Date(dateString)
@@ -702,6 +703,8 @@ export default function LeaderboardPage() {
           </div>
         </div>
       )}
+
+      <BackToTop />
     </div>
   )
 }

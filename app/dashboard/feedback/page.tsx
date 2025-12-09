@@ -51,8 +51,8 @@ function FeedbackContent() {
       if (data) {
         setItemName(data.item_name);
       }
-    } catch (error) {
-      console.error("Error fetching item:", error);
+    } catch {
+      // Error fetching item
     } finally {
       setLoading(false);
     }
@@ -86,8 +86,8 @@ function FeedbackContent() {
         router.push("/dashboard");
       }, 2000);
 
-    } catch (error) {
-      console.error("Error submitting feedback:", error);
+    } catch {
+      // Error submitting feedback
     } finally {
       setSubmitting(false);
     }

@@ -71,8 +71,8 @@ export default function WorkoutsPage() {
         .maybeSingle();
 
       if (data) setPlan(data as WorkoutPlan);
-    } catch (error) {
-      console.log("No workout plan found");
+    } catch {
+      // No workout plan found
     } finally {
       setLoading(false);
     }

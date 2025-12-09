@@ -51,11 +51,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       siteName: "AI GymBRO Forum",
       locale: "en_US",
       url: `https://aigymbro.web.id/forum/${category}`,
+      images: [
+        {
+          url: "https://aigymbro.web.id/og-image/forum.png",
+          width: 1200,
+          height: 630,
+          alt: `${categoryData.name} - AI GymBRO Forum`,
+        },
+      ],
     },
     twitter: {
-      card: "summary",
+      card: "summary_large_image",
       title,
       description,
+      images: ["https://aigymbro.web.id/og-image/forum.png"],
     },
     robots: {
       index: true,

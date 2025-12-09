@@ -36,8 +36,8 @@ export default function MealPlanDisplay({ plan, onBack }: MealPlanDisplayProps) 
     setIsGeneratingPDF(true)
     try {
       await generatePDF(plan, "meal")
-    } catch (error) {
-      console.error("Error generating PDF:", error)
+    } catch {
+      // PDF generation failed
     } finally {
       setIsGeneratingPDF(false)
     }

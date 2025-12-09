@@ -55,8 +55,8 @@ This document outlines how to reorganize your **AIGymBro** project into a cleane
 > **Do NOT commit this file.**
 
 ```
-NEXT_PUBLIC_SUPABASE_URL=https://zehwsojhfsztpfathqpp.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InplaHdzb2poZnN6dHBmYXRocXBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUwNjY3NTUsImV4cCI6MjA4MDY0Mjc1NX0.PffgxYwwjTebPlDUXziHfbzE29zSAENYjoKS3h9EaIk
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url_here
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
 GROQ_API_KEY=your_groq_key_here
 ```
 

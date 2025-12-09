@@ -35,11 +35,10 @@ export interface WorkoutTransformation {
 export async function getLeaderboard(limit = 50): Promise<LeaderboardEntry[]> {
   const { data, error } = await supabase
     .from("leaderboard")
-    .select("*")
+    .select("user_id, username, avatar_url, completion_count, last_completion")
     .limit(limit)
 
   if (error) {
-    console.error("Error fetching leaderboard:", error)
     return []
   }
 
@@ -55,7 +54,6 @@ export async function getRecentCompletions(limit = 20): Promise<MealCompletion[]
     .limit(limit)
 
   if (error) {
-    console.error("Error fetching completions:", error)
     return []
   }
 
@@ -68,12 +66,11 @@ export async function getRecentCompletions(limit = 20): Promise<MealCompletion[]
 export async function getUserCompletions(userId: string): Promise<MealCompletion[]> {
   const { data, error } = await supabase
     .from("meal_completions")
-    .select("*")
+    .select("id, user_id, plan_id, photo_url, description, completed_at, created_at, is_approved")
     .eq("user_id", userId)
     .order("completed_at", { ascending: false })
 
   if (error) {
-    console.error("Error fetching user completions:", error)
     return []
   }
 
@@ -92,7 +89,6 @@ export async function uploadMealPhoto(
     .upload(fileName, file)
 
   if (uploadError) {
-    console.error("Error uploading photo:", uploadError)
     return null
   }
 
@@ -121,7 +117,6 @@ export async function createMealCompletion(
     .single()
 
   if (error) {
-    console.error("Error creating completion:", error)
     return null
   }
 
@@ -135,7 +130,6 @@ export async function deleteMealCompletion(completionId: string): Promise<boolea
     .eq("id", completionId)
 
   if (error) {
-    console.error("Error deleting completion:", error)
     return false
   }
 
@@ -152,7 +146,6 @@ export async function getTransformations(limit = 20): Promise<WorkoutTransformat
     .limit(limit)
 
   if (error) {
-    console.error("Error fetching transformations:", error)
     return []
   }
 
@@ -166,7 +159,7 @@ export async function getTransformations(limit = 20): Promise<WorkoutTransformat
     .in("id", userIds)
 
   if (profileError) {
-    console.error("Error fetching profiles:", profileError)
+    // Continue without usernames
   }
 
   const profileMap = new Map<string, string>()
@@ -196,8 +189,8 @@ export async function uploadTransformationPhoto(
     .upload(fileName, file)
 
   if (uploadError) {
-    console.error("Error uploading transformation photo:", uploadError)
     return null
+  }
   }
 
   const { data } = supabase.storage
@@ -227,7 +220,6 @@ export async function createTransformation(
     .single()
 
   if (error) {
-    console.error("Error creating transformation:", error)
     return null
   }
 

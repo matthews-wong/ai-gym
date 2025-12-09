@@ -29,7 +29,7 @@ export default function ProgressPage() {
     try {
       const { data: logsData } = await supabase
         .from("progress_logs")
-        .select("*")
+        .select("id, user_id, date, weight, notes, created_at")
         .eq("user_id", user.id)
         .order("date", { ascending: false })
         .limit(10);
@@ -51,8 +51,8 @@ export default function ProgressPage() {
         setCompletionRate(Math.round((completed / items.length) * 100));
       }
 
-    } catch (error) {
-      console.error("Error fetching progress:", error);
+    } catch {
+      // Error fetching progress
     } finally {
       setLoading(false);
     }

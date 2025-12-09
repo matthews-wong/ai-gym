@@ -116,7 +116,6 @@ export async function getRecentPlans(limit = 20): Promise<RecentPlan[]> {
     .limit(limit)
 
   if (plansError || !plans) {
-    console.error("Error fetching recent plans:", plansError)
     return []
   }
 
@@ -148,7 +147,6 @@ export async function getRecentUsers(limit = 20): Promise<RecentUser[]> {
     .limit(limit)
 
   if (error) {
-    console.error("Error fetching recent users:", error)
     return []
   }
 
@@ -158,11 +156,10 @@ export async function getRecentUsers(limit = 20): Promise<RecentUser[]> {
 export async function getAllThreadsAdmin(): Promise<ForumThreadAdmin[]> {
   const { data, error } = await supabase
     .from("forum_threads_with_author")
-    .select("*")
+    .select("id, title, slug, category_slug, category_name, author_username, created_at, views, reply_count, is_pinned, is_locked")
     .order("created_at", { ascending: false })
 
   if (error) {
-    console.error("Error fetching threads:", error)
     return []
   }
 
@@ -188,7 +185,6 @@ export async function deleteThread(threadId: string): Promise<boolean> {
     .eq("id", threadId)
 
   if (error) {
-    console.error("Error deleting thread:", error)
     return false
   }
 
@@ -202,7 +198,6 @@ export async function togglePinThread(threadId: string, isPinned: boolean): Prom
     .eq("id", threadId)
 
   if (error) {
-    console.error("Error toggling pin:", error)
     return false
   }
 
@@ -216,7 +211,6 @@ export async function toggleLockThread(threadId: string, isLocked: boolean): Pro
     .eq("id", threadId)
 
   if (error) {
-    console.error("Error toggling lock:", error)
     return false
   }
 
@@ -241,7 +235,6 @@ export async function updateUsername(userId: string, username: string): Promise<
     .eq("id", userId)
 
   if (error) {
-    console.error("Error updating username:", error)
     return false
   }
 
@@ -268,7 +261,6 @@ export async function getPendingCompletions(): Promise<MealCompletionAdmin[]> {
     .order("completed_at", { ascending: false })
 
   if (error) {
-    console.error("Error fetching pending completions:", error)
     return []
   }
 
@@ -295,7 +287,6 @@ export async function getAllCompletions(): Promise<MealCompletionAdmin[]> {
     .order("completed_at", { ascending: false })
 
   if (error) {
-    console.error("Error fetching completions:", error)
     return []
   }
 
@@ -321,7 +312,6 @@ export async function approveCompletion(completionId: string): Promise<boolean> 
     .eq("id", completionId)
 
   if (error) {
-    console.error("Error approving completion:", error)
     return false
   }
 
@@ -337,7 +327,6 @@ export async function rejectCompletion(completionId: string): Promise<boolean> {
     .single()
 
   if (fetchError) {
-    console.error("Error fetching completion:", fetchError)
     return false
   }
 
@@ -353,7 +342,6 @@ export async function rejectCompletion(completionId: string): Promise<boolean> {
         .remove([filePath])
       
       if (storageError) {
-        console.error("Error deleting meal photo:", storageError)
         // Continue to delete the record even if photo deletion fails
       }
     }
@@ -366,7 +354,6 @@ export async function rejectCompletion(completionId: string): Promise<boolean> {
     .eq("id", completionId)
 
   if (error) {
-    console.error("Error rejecting completion:", error)
     return false
   }
 
@@ -390,12 +377,11 @@ export interface TransformationAdmin {
 export async function getPendingTransformations(): Promise<TransformationAdmin[]> {
   const { data, error } = await supabase
     .from("workout_transformations")
-    .select("*")
+    .select("id, user_id, before_photo_url, after_photo_url, description, duration, is_approved, created_at")
     .eq("is_approved", false)
     .order("created_at", { ascending: false })
 
   if (error) {
-    console.error("Error fetching pending transformations:", error)
     return []
   }
 
@@ -417,11 +403,10 @@ export async function getPendingTransformations(): Promise<TransformationAdmin[]
 export async function getAllTransformations(): Promise<TransformationAdmin[]> {
   const { data, error } = await supabase
     .from("workout_transformations")
-    .select("*")
+    .select("id, user_id, before_photo_url, after_photo_url, description, duration, is_approved, created_at")
     .order("created_at", { ascending: false })
 
   if (error) {
-    console.error("Error fetching transformations:", error)
     return []
   }
 
@@ -447,7 +432,6 @@ export async function approveTransformation(transformationId: string): Promise<b
     .eq("id", transformationId)
 
   if (error) {
-    console.error("Error approving transformation:", error)
     return false
   }
 
@@ -463,7 +447,6 @@ export async function rejectTransformation(transformationId: string): Promise<bo
     .single()
 
   if (fetchError) {
-    console.error("Error fetching transformation:", fetchError)
     return false
   }
 
@@ -489,7 +472,6 @@ export async function rejectTransformation(transformationId: string): Promise<bo
         .remove(filesToDelete)
       
       if (storageError) {
-        console.error("Error deleting transformation photos:", storageError)
         // Continue to delete the record even if photo deletion fails
       }
     }
@@ -502,7 +484,6 @@ export async function rejectTransformation(transformationId: string): Promise<bo
     .eq("id", transformationId)
 
   if (error) {
-    console.error("Error rejecting transformation:", error)
     return false
   }
 

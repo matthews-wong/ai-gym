@@ -9,7 +9,6 @@ export async function savePlanToDatabase({ planType, planData }: SavePlanOptions
   const { data: { user } } = await supabase.auth.getUser();
   
   if (!user) {
-    console.log("No user logged in - plan not saved to database");
     return null;
   }
 
@@ -27,13 +26,11 @@ export async function savePlanToDatabase({ planType, planData }: SavePlanOptions
       .single();
 
     if (planError) {
-      console.error("Error saving plan:", planError);
       return null;
     }
 
     return savedPlan;
-  } catch (error) {
-    console.error("Error in savePlanToDatabase:", error);
+  } catch {
     return null;
   }
 }
@@ -45,7 +42,7 @@ export async function getUserPlans(planType?: "workout" | "meal") {
 
   let query = supabase
     .from("saved_plans")
-    .select("*")
+    .select("id, user_id, plan_type, plan_data, plan_date, created_at")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
@@ -56,7 +53,6 @@ export async function getUserPlans(planType?: "workout" | "meal") {
   const { data, error } = await query;
   
   if (error) {
-    console.error("Error fetching plans:", error);
     return [];
   }
 
@@ -70,7 +66,7 @@ export async function getLatestPlan(planType: "workout" | "meal") {
 
   const { data, error } = await supabase
     .from("saved_plans")
-    .select("*")
+    .select("id, user_id, plan_type, plan_data, plan_date, created_at")
     .eq("user_id", user.id)
     .eq("plan_type", planType)
     .order("created_at", { ascending: false })
@@ -78,7 +74,6 @@ export async function getLatestPlan(planType: "workout" | "meal") {
     .single();
 
   if (error) {
-    console.error("Error fetching latest plan:", error);
     return null;
   }
 

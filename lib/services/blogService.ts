@@ -19,13 +19,12 @@ export interface Blog {
 export async function getBlogs(limit = 20, offset = 0): Promise<Blog[]> {
   const { data, error } = await supabase
     .from("blogs")
-    .select("*")
+    .select("id, title, slug, excerpt, content, category, cover_image, tags, read_time, author, is_published, created_at, updated_at")
     .eq("is_published", true)
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1)
 
   if (error) {
-    console.error("Error fetching blogs:", error)
     return []
   }
 
@@ -35,13 +34,12 @@ export async function getBlogs(limit = 20, offset = 0): Promise<Blog[]> {
 export async function getBlogBySlug(slug: string): Promise<Blog | null> {
   const { data, error } = await supabase
     .from("blogs")
-    .select("*")
+    .select("id, title, slug, excerpt, content, category, cover_image, tags, read_time, author, is_published, created_at, updated_at")
     .eq("slug", slug)
     .eq("is_published", true)
     .single()
 
   if (error) {
-    console.error("Error fetching blog:", error)
     return null
   }
 
@@ -51,14 +49,13 @@ export async function getBlogBySlug(slug: string): Promise<Blog | null> {
 export async function getBlogsByCategory(category: string, limit = 10): Promise<Blog[]> {
   const { data, error } = await supabase
     .from("blogs")
-    .select("*")
+    .select("id, title, slug, excerpt, content, category, cover_image, tags, read_time, author, is_published, created_at, updated_at")
     .eq("category", category)
     .eq("is_published", true)
     .order("created_at", { ascending: false })
     .limit(limit)
 
   if (error) {
-    console.error("Error fetching blogs by category:", error)
     return []
   }
 
@@ -74,7 +71,6 @@ export async function getRecentBlogs(limit = 5): Promise<Blog[]> {
     .limit(limit)
 
   if (error) {
-    console.error("Error fetching recent blogs:", error)
     return []
   }
 
@@ -88,7 +84,6 @@ export async function getBlogsCount(): Promise<number> {
     .eq("is_published", true)
 
   if (error) {
-    console.error("Error fetching blogs count:", error)
     return 0
   }
 

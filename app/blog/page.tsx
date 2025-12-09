@@ -5,6 +5,7 @@ import Link from "next/link"
 import { BookOpen, Clock, ArrowRight, ChevronLeft, ChevronRight } from "lucide-react"
 import { getBlogs, formatBlogDate, getCategoryColor, type Blog } from "@/lib/services/blogService"
 import { BlogCardSkeleton } from "@/components/ui/skeleton-loaders"
+import { BackToTop } from "@/components/back-to-top"
 
 const BLOGS_PER_PAGE = 9
 
@@ -213,6 +214,7 @@ export default function BlogPage() {
           </>
         )}
       </div>
+      <BackToTop />
     </div>
   )
 }

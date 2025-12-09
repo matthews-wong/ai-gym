@@ -200,6 +200,8 @@ export function Navbar() {
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             className="md:hidden w-10 h-10 flex items-center justify-center text-stone-300 hover:text-white bg-stone-900/50 border border-stone-800/50 rounded-xl transition-colors"
             aria-label="Toggle menu"
+            aria-expanded={isMenuOpen}
+            aria-controls="mobile-menu"
           >
             {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
@@ -208,7 +210,7 @@ export function Navbar() {
 
       {/* Mobile Menu - Full Screen Solid */}
       {isMenuOpen && (
-        <div className="md:hidden fixed inset-0 top-0 bg-stone-950 z-50">
+        <div id="mobile-menu" className="md:hidden fixed inset-0 top-0 bg-stone-950 z-50" role="dialog" aria-modal="true" aria-label="Mobile navigation menu">
           {/* Mobile Header */}
           <div className="flex items-center justify-between h-16 px-4 border-b border-stone-800">
             <Link href="/" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-2.5">
@@ -220,12 +222,13 @@ export function Navbar() {
             <button
               onClick={() => setIsMenuOpen(false)}
               className="w-10 h-10 flex items-center justify-center text-stone-300 hover:text-white bg-stone-900 border border-stone-800 rounded-xl"
+              aria-label="Close menu"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
           
-          <nav className="flex flex-col p-5 space-y-3 overflow-y-auto" style={{ height: 'calc(100vh - 64px)' }}>
+          <nav className="flex flex-col p-5 space-y-3 overflow-y-auto" style={{ height: 'calc(100vh - 64px)' }} role="navigation" aria-label="Mobile navigation">
             <Link 
               href="/" 
               onClick={() => setIsMenuOpen(false)}

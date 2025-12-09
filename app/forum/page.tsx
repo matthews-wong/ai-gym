@@ -6,6 +6,7 @@ import { MessageCircle, Dumbbell, Utensils, TrendingUp, HelpCircle, Plus, Eye, M
 import { getCategories, getThreads, type ForumCategory, type ForumThread } from "@/lib/services/forumService"
 import { useAuth } from "@/lib/hooks/useAuth"
 import { ForumThreadSkeleton, Skeleton } from "@/components/ui/skeleton-loaders"
+import { BackToTop } from "@/components/back-to-top"
 
 const iconMap: Record<string, React.ReactNode> = {
   MessageCircle: <MessageCircle className="w-5 h-5" />,
@@ -199,6 +200,7 @@ export default function ForumPage() {
           </div>
         )}
       </div>
+      <BackToTop />
     </div>
   )
 }
