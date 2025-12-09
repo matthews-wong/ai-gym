@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { Loader2, AlertTriangle, Calculator, ArrowRight, ArrowLeft, RotateCcw } from "lucide-react"
 import type { MealPlan } from "@/lib/services/ai"
 import MealPlanDisplay from "./meal-plan-display"
-import MealSkeleton from "./skeletons/meal-skeleton"
+import LoadingModal from "./loading-modal"
 import CalorieCalculatorModal from "./calorie-calculator-modal"
 import { useStreamingFetch } from "@/lib/hooks/useStreamingFetch"
 import { usePrefetch, usePredictiveParams } from "@/lib/hooks/usePrefetch"
@@ -21,8 +21,6 @@ export default function MealPlanForm() {
     isLoading,
     isStreaming,
     error: apiError,
-    progress,
-    stage,
     canResume,
     fetchStream,
     resume,
@@ -116,17 +114,14 @@ export default function MealPlanForm() {
     reset()
   }
 
-  // Show skeleton during loading/streaming
-  if (isLoading || isStreaming) {
-    return <MealSkeleton progress={progress} stage={stage} />
-  }
-
   if (mealPlan) {
     return <MealPlanDisplay plan={mealPlan} onBack={handleBack} />
   }
 
   return (
     <>
+      <LoadingModal isOpen={isLoading || isStreaming} type="meal" />
+      
       <CalorieCalculatorModal
         isOpen={showCalorieCalculator}
         onClose={() => setShowCalorieCalculator(false)}

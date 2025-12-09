@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { Loader2, AlertTriangle, ArrowRight, ArrowLeft, Check, RotateCcw } from "lucide-react"
 import WorkoutPlanDisplay from "./workout-plan-display"
-import WorkoutSkeleton from "./skeletons/workout-skeleton"
+import LoadingModal from "./loading-modal"
 import { useStreamingFetch } from "@/lib/hooks/useStreamingFetch"
 import { usePrefetch, usePredictiveParams } from "@/lib/hooks/usePrefetch"
 
@@ -29,8 +29,6 @@ export default function WorkoutPlanForm() {
     isLoading,
     isStreaming,
     error: apiError,
-    progress,
-    stage,
     canResume,
     fetchStream,
     resume,
@@ -132,11 +130,6 @@ export default function WorkoutPlanForm() {
     reset()
   }
 
-  // Show skeleton during loading/streaming
-  if (isLoading || isStreaming) {
-    return <WorkoutSkeleton progress={progress} stage={stage} />
-  }
-
   if (workoutPlan) {
     return (
       <WorkoutPlanDisplay
@@ -148,6 +141,8 @@ export default function WorkoutPlanForm() {
 
   return (
     <>
+      <LoadingModal isOpen={isLoading || isStreaming} type="workout" />
+
       {/* Resume banner */}
       {canResume && !isLoading && (
         <div className="mb-6 p-4 bg-teal-500/10 border border-teal-500/20 rounded-xl flex items-center justify-between">

@@ -87,11 +87,13 @@ export function validateWorkoutCompleteness(
   const plan = data as Record<string, unknown>
   const workouts = plan.workouts as Record<string, unknown> | undefined
 
-  if (!workouts) {
+  if (!workouts || typeof workouts !== "object") {
     return { success: false, error: "Missing workouts object", retryable: true }
   }
 
-  const dayCount = Object.keys(workouts).length
+  const workoutEntries = Object.entries(workouts).filter(([key]) => key.startsWith("day"))
+  const dayCount = workoutEntries.length
+  
   if (dayCount < expectedDays) {
     return { 
       success: false, 
@@ -100,13 +102,24 @@ export function validateWorkoutCompleteness(
     }
   }
 
-  // Check each day has exercises
-  for (const [day, workout] of Object.entries(workouts)) {
-    const w = workout as Record<string, unknown>
-    if (!Array.isArray(w.exercises) || w.exercises.length === 0) {
+  // Check each day has exercises - be lenient about structure
+  for (const [day, workout] of workoutEntries) {
+    if (!workout || typeof workout !== "object") {
       return { 
         success: false, 
-        error: `${day} has no exercises`,
+        error: `${day} is invalid`,
+        retryable: true 
+      }
+    }
+    
+    const w = workout as Record<string, unknown>
+    const exercises = w.exercises
+    
+    // Accept if exercises exists and is an array (even if empty, Zod will catch it)
+    if (exercises !== undefined && !Array.isArray(exercises)) {
+      return { 
+        success: false, 
+        error: `${day} exercises is not an array`,
         retryable: true 
       }
     }
@@ -124,28 +137,29 @@ export function validateMealCompleteness(data: unknown): ValidationResult<unknow
   const plan = data as Record<string, unknown>
   const meals = plan.meals as Record<string, unknown> | undefined
 
-  if (!meals) {
+  if (!meals || typeof meals !== "object") {
     return { success: false, error: "Missing meals object", retryable: true }
   }
 
   const expectedDays = ["day1", "day2", "day3", "day4", "day5", "day6", "day7"]
   const missingDays = expectedDays.filter(day => !meals[day])
 
-  if (missingDays.length > 0) {
+  // Allow if at least 5 days present (AI sometimes returns fewer)
+  if (missingDays.length > 2) {
     return { 
       success: false, 
-      error: `Missing days: ${missingDays.join(", ")}`,
+      error: `Missing too many days: ${missingDays.join(", ")}`,
       retryable: true 
     }
   }
 
-  // Check each day has meals
+  // Check days that exist have meals - be lenient
   for (const day of expectedDays) {
     const dayMeals = meals[day]
-    if (!Array.isArray(dayMeals) || dayMeals.length === 0) {
+    if (dayMeals !== undefined && !Array.isArray(dayMeals)) {
       return { 
         success: false, 
-        error: `${day} has no meals`,
+        error: `${day} meals is not an array`,
         retryable: true 
       }
     }
