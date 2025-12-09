@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { BookOpen, Clock, ArrowRight, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
+import { BookOpen, Clock, ArrowRight, ChevronLeft, ChevronRight } from "lucide-react"
 import { getBlogs, formatBlogDate, getCategoryColor, type Blog } from "@/lib/services/blogService"
+import { BlogCardSkeleton } from "@/components/ui/skeleton-loaders"
 
 const BLOGS_PER_PAGE = 9
 
@@ -40,8 +41,21 @@ export default function BlogPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-stone-950 pt-20 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-teal-500 animate-spin" />
+      <div className="min-h-screen bg-stone-950 pt-20 pb-12">
+        <div className="fixed inset-0 z-0">
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,#a8a29e05_1px,transparent_1px),linear-gradient(to_bottom,#a8a29e05_1px,transparent_1px)] bg-[size:40px_40px]" />
+        </div>
+        <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6">
+          <div className="text-center mb-12">
+            <div className="h-12 w-64 bg-stone-800/50 rounded animate-pulse mx-auto mb-4" />
+            <div className="h-6 w-96 bg-stone-800/50 rounded animate-pulse mx-auto" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <BlogCardSkeleton key={i} />
+            ))}
+          </div>
+        </div>
       </div>
     )
   }

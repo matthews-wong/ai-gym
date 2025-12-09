@@ -5,6 +5,7 @@ import Link from "next/link"
 import { MessageCircle, Dumbbell, Utensils, TrendingUp, HelpCircle, Plus, Eye, MessageSquare, Clock, Megaphone } from "lucide-react"
 import { getCategories, getThreads, type ForumCategory, type ForumThread } from "@/lib/services/forumService"
 import { useAuth } from "@/lib/hooks/useAuth"
+import { ForumThreadSkeleton, Skeleton } from "@/components/ui/skeleton-loaders"
 
 const iconMap: Record<string, React.ReactNode> = {
   MessageCircle: <MessageCircle className="w-5 h-5" />,
@@ -84,8 +85,31 @@ export default function ForumPage() {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="w-8 h-8 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
+          <div className="grid lg:grid-cols-3 gap-6">
+            {/* Categories Skeleton */}
+            <div className="lg:col-span-1">
+              <h2 className="text-lg font-semibold text-white mb-4">Categories</h2>
+              <div className="space-y-2">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="flex items-center gap-3 p-4 bg-stone-900/80 border border-stone-800/50 rounded-xl">
+                    <Skeleton className="w-10 h-10 rounded-lg" />
+                    <div className="flex-1">
+                      <Skeleton className="h-4 w-24 mb-2" />
+                      <Skeleton className="h-3 w-32" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* Threads Skeleton */}
+            <div className="lg:col-span-2">
+              <h2 className="text-lg font-semibold text-white mb-4">Recent Discussions</h2>
+              <div className="space-y-2">
+                {[...Array(4)].map((_, i) => (
+                  <ForumThreadSkeleton key={i} />
+                ))}
+              </div>
+            </div>
           </div>
         ) : (
           <div className="grid lg:grid-cols-3 gap-6">

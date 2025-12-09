@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import Link from "next/link"
 import { Menu, X, Dumbbell, LogOut, ChevronRight, Shield, Trophy, ChevronDown, Utensils, BookOpen } from "lucide-react"
 import { supabase } from "@/lib/supabase"
@@ -9,9 +9,11 @@ import type { User } from "@supabase/supabase-js"
 
 export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isServicesOpen, setIsServicesOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [user, setUser] = useState<User | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
+  const servicesRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     // Use auth state listener as primary - faster than getSession
@@ -43,6 +45,17 @@ export function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
+  // Close services dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (servicesRef.current && !servicesRef.current.contains(event.target as Node)) {
+        setIsServicesOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
   useEffect(() => {
     if (isMenuOpen) {
       document.body.style.overflow = "hidden"
@@ -72,37 +85,48 @@ export function Navbar() {
           </Link>
 
           {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-1 bg-stone-900/50 border border-stone-800/50 rounded-full px-1.5 py-1.5">
+          <nav className="hidden md:flex items-center gap-1 bg-stone-900/50 border border-stone-800/50 rounded-full px-1.5 py-1.5" role="navigation" aria-label="Main navigation">
             <Link 
               href="/" 
               className="px-4 py-1.5 text-sm text-stone-300 hover:text-white hover:bg-stone-800/70 rounded-full transition-all"
             >
               Home
             </Link>
-            {/* Services Dropdown */}
-            <div className="relative group">
-              <button className="px-4 py-1.5 text-sm text-teal-400 hover:text-teal-300 hover:bg-teal-500/20 rounded-full transition-all flex items-center gap-1.5">
+            {/* Services Dropdown - Click-based for better mobile/touch support */}
+            <div className="relative" ref={servicesRef}>
+              <button 
+                onClick={() => setIsServicesOpen(!isServicesOpen)}
+                className={`px-4 py-1.5 text-sm text-teal-400 hover:text-teal-300 hover:bg-teal-500/20 rounded-full transition-all flex items-center gap-1.5 ${isServicesOpen ? 'bg-teal-500/20' : ''}`}
+                aria-expanded={isServicesOpen}
+                aria-haspopup="true"
+              >
                 Services
-                <ChevronDown className="w-3.5 h-3.5 group-hover:rotate-180 transition-transform" />
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isServicesOpen ? 'rotate-180' : ''}`} />
               </button>
-              <div className="absolute top-full left-0 pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
-                <div className="bg-stone-900 border border-stone-800 rounded-xl shadow-xl shadow-black/20 py-2 min-w-[180px]">
-                  <Link 
-                    href="/workout-plan" 
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-stone-300 hover:text-white hover:bg-stone-800/70 transition-all"
-                  >
-                    <Dumbbell className="w-4 h-4 text-emerald-400" />
-                    Workout Plan
-                  </Link>
-                  <Link 
-                    href="/meal-plan" 
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-stone-300 hover:text-white hover:bg-stone-800/70 transition-all"
-                  >
-                    <Utensils className="w-4 h-4 text-amber-400" />
-                    Meal Plan
-                  </Link>
+              {isServicesOpen && (
+                <div className="absolute top-full left-0 pt-2 z-50">
+                  <div className="bg-stone-900 border border-stone-800 rounded-xl shadow-xl shadow-black/20 py-2 min-w-[180px]" role="menu">
+                    <Link 
+                      href="/workout-plan"
+                      onClick={() => setIsServicesOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-stone-300 hover:text-white hover:bg-stone-800/70 transition-all"
+                      role="menuitem"
+                    >
+                      <Dumbbell className="w-4 h-4 text-emerald-400" />
+                      Workout Plan
+                    </Link>
+                    <Link 
+                      href="/meal-plan"
+                      onClick={() => setIsServicesOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-stone-300 hover:text-white hover:bg-stone-800/70 transition-all"
+                      role="menuitem"
+                    >
+                      <Utensils className="w-4 h-4 text-amber-400" />
+                      Meal Plan
+                    </Link>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
             <Link 
               href="/forum" 

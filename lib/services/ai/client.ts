@@ -22,20 +22,3 @@ export function getGroqClient(): Groq | null {
 export function isAIServiceAvailable(): boolean {
   return !!groqClient;
 }
-
-export function getApiStatus() {
-  return {
-    apiKeyAvailable: !!apiKey,
-    clientInitialized: !!groqClient,
-    apiKeyLength: apiKey?.length || 0,
-    modelAvailable: true,
-    timestamp: new Date().toISOString(),
-    responseStatus: {
-      success: !!groqClient,
-      message: groqClient
-        ? "AI service is ready"
-        : "AI service not available, please check your API key",
-      serviceAvailable: !!groqClient,
-    },
-  };
-}

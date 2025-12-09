@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Loader2, AlertTriangle, Calculator, ArrowRight, ArrowLeft } from "lucide-react"
-import type { MealPlan } from "@/lib/types/plans"
+import type { MealPlan } from "@/lib/services/ai"
 import MealPlanDisplay from "./meal-plan-display"
 import LoadingModal from "./loading-modal"
 import CalorieCalculatorModal from "./calorie-calculator-modal"

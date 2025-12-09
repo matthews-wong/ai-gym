@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react"
 import Link from "next/link"
-/* eslint-disable @next/next/no-img-element */
+import Image from "next/image"
 import { 
   Trophy, 
   Camera, 
@@ -16,6 +16,7 @@ import {
   ChevronDown
 } from "lucide-react"
 import { useAuth } from "@/lib/hooks/useAuth"
+import { LeaderboardSkeleton } from "@/components/ui/skeleton-loaders"
 import {
   getLeaderboard,
   getRecentCompletions,
@@ -217,8 +218,23 @@ export default function LeaderboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-stone-950 pt-20 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-teal-500 animate-spin" />
+      <div className="min-h-screen bg-stone-950 pt-20 pb-8">
+        <div className="max-w-2xl mx-auto px-4">
+          <div className="relative mb-6 p-4 rounded-2xl overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-teal-500/10 to-emerald-500/5 backdrop-blur-sm border border-teal-500/20 rounded-2xl" />
+            <div className="relative">
+              <div className="h-6 w-32 bg-stone-800/50 rounded animate-pulse mb-2" />
+              <div className="h-4 w-48 bg-stone-800/50 rounded animate-pulse" />
+            </div>
+          </div>
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-3">
+              <Crown className="w-4 h-4 text-amber-400" />
+              <h2 className="text-sm font-semibold text-stone-400 uppercase tracking-wide">Rankings</h2>
+            </div>
+            <LeaderboardSkeleton />
+          </div>
+        </div>
       </div>
     )
   }
@@ -349,12 +365,14 @@ export default function LeaderboardPage() {
                       className="cursor-pointer bg-stone-900 border border-stone-800 rounded-lg overflow-hidden active:scale-[0.98] transition-transform"
                     >
                       <div className="aspect-square relative">
-                        <img
+                        <Image
                           src={meal.photo_url}
                           alt="Meal"
-                          className="absolute inset-0 w-full h-full object-cover"
+                          fill
+                          className="object-cover"
+                          sizes="(max-width: 768px) 33vw, 200px"
                         />
-                        <div className="absolute top-1 left-1">
+                        <div className="absolute top-1 left-1 z-10">
                           <span className="flex items-center gap-0.5 px-1 py-0.5 bg-emerald-500 text-[8px] font-bold text-white rounded">
                             <Camera className="w-2 h-2" />
                           </span>
@@ -376,18 +394,26 @@ export default function LeaderboardPage() {
                     >
                       <div className="aspect-square relative">
                         <div className="absolute inset-0 grid grid-cols-2">
-                          <img
-                            src={transform.before_photo_url}
-                            alt="Before"
-                            className="w-full h-full object-cover"
-                          />
-                          <img
-                            src={transform.after_photo_url}
-                            alt="After"
-                            className="w-full h-full object-cover"
-                          />
+                          <div className="relative bg-stone-950">
+                            <Image
+                              src={transform.before_photo_url}
+                              alt="Before"
+                              fill
+                              className="object-contain"
+                              sizes="(max-width: 768px) 16vw, 100px"
+                            />
+                          </div>
+                          <div className="relative bg-stone-950">
+                            <Image
+                              src={transform.after_photo_url}
+                              alt="After"
+                              fill
+                              className="object-contain"
+                              sizes="(max-width: 768px) 16vw, 100px"
+                            />
+                          </div>
                         </div>
-                        <div className="absolute top-1 left-1">
+                        <div className="absolute top-1 left-1 z-10">
                           <span className="flex items-center gap-0.5 px-1 py-0.5 bg-teal-500 text-[8px] font-bold text-white rounded">
                             <Dumbbell className="w-2 h-2" />
                           </span>
@@ -627,13 +653,13 @@ export default function LeaderboardPage() {
               </button>
             </div>
             <div className="flex">
-              <div className="w-1/2 relative">
-                <img src={viewTransform.before_photo_url} alt="Before" className="w-full" />
-                <span className="absolute bottom-2 left-2 px-2 py-1 bg-black/70 text-white text-xs font-medium rounded">Before</span>
+              <div className="w-1/2 relative aspect-[3/4] bg-stone-950">
+                <Image src={viewTransform.before_photo_url} alt="Before" fill className="object-contain" sizes="(max-width: 768px) 50vw, 256px" />
+                <span className="absolute bottom-2 left-2 px-2 py-1 bg-black/70 text-white text-xs font-medium rounded z-10">Before</span>
               </div>
-              <div className="w-1/2 relative">
-                <img src={viewTransform.after_photo_url} alt="After" className="w-full" />
-                <span className="absolute bottom-2 right-2 px-2 py-1 bg-teal-500 text-white text-xs font-medium rounded">After</span>
+              <div className="w-1/2 relative aspect-[3/4] bg-stone-950">
+                <Image src={viewTransform.after_photo_url} alt="After" fill className="object-contain" sizes="(max-width: 768px) 50vw, 256px" />
+                <span className="absolute bottom-2 right-2 px-2 py-1 bg-teal-500 text-white text-xs font-medium rounded z-10">After</span>
               </div>
             </div>
             {(viewTransform.description || viewTransform.duration) && (
@@ -665,7 +691,9 @@ export default function LeaderboardPage() {
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <img src={viewMeal.photo_url} alt="Meal" className="w-full" />
+            <div className="relative w-full aspect-square">
+              <Image src={viewMeal.photo_url} alt="Meal" fill className="object-cover" sizes="(max-width: 768px) 100vw, 448px" />
+            </div>
             {viewMeal.description && (
               <div className="p-4 border-t border-stone-800">
                 <p className="text-stone-300 text-sm">{viewMeal.description}</p>

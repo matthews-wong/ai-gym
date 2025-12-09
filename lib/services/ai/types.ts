@@ -169,12 +169,6 @@ export const mealPlanSchema = z.object({
 export type MealPlan = z.infer<typeof mealPlanSchema>;
 
 // Coach Types
-export interface CoachMessage {
-  role: "user" | "assistant";
-  content: string;
-  timestamp: Date;
-}
-
 export interface CoachResponse {
   response: string;
   error?: string;
