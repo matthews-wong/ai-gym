@@ -1,12 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Loader2, AlertTriangle, Calculator, ArrowRight, ArrowLeft } from "lucide-react"
+import { useState, useEffect, useCallback } from "react"
+import { Loader2, AlertTriangle, Calculator, ArrowRight, ArrowLeft, RotateCcw } from "lucide-react"
 import type { MealPlan } from "@/lib/services/ai"
 import MealPlanDisplay from "./meal-plan-display"
-import LoadingModal from "./loading-modal"
+import MealSkeleton from "./skeletons/meal-skeleton"
 import CalorieCalculatorModal from "./calorie-calculator-modal"
 import { useStreamingFetch } from "@/lib/hooks/useStreamingFetch"
+import { usePrefetch, usePredictiveParams } from "@/lib/hooks/usePrefetch"
 
 type Step = 1 | 2 | 3
 
@@ -16,11 +17,30 @@ export default function MealPlanForm() {
   const [apiStatus, setApiStatus] = useState<{ available: boolean } | null>(null)
   const [showCalorieCalculator, setShowCalorieCalculator] = useState(false)
 
-  const { isLoading, isStreaming, error: apiError, fetchStream } = useStreamingFetch<MealPlan>({
+  const {
+    isLoading,
+    isStreaming,
+    error: apiError,
+    progress,
+    stage,
+    canResume,
+    fetchStream,
+    resume,
+    reset,
+    clearIncomplete,
+  } = useStreamingFetch<MealPlan>({
+    type: "meal",
     onComplete: (plan) => setMealPlan(plan as MealPlan),
   })
 
-  // Form data
+  const { prefetch } = usePrefetch({
+    type: "meal",
+    url: "/api/meal/generate",
+    debounceMs: 1500,
+  })
+
+  const { getPredictions } = usePredictiveParams("meal")
+
   const [formData, setFormData] = useState({
     nutritionGoal: "",
     dietType: "",
@@ -39,9 +59,19 @@ export default function MealPlanForm() {
       .catch(() => setApiStatus({ available: false }))
   }, [])
 
-  const updateField = (field: string, value: string | number | boolean) => {
+  // Predictive prefetching when user reaches step 2
+  useEffect(() => {
+    if (step === 2 && formData.nutritionGoal && formData.dietType) {
+      const predictions = getPredictions(formData)
+      predictions.forEach((params, index) => {
+        prefetch(params, 2 - index)
+      })
+    }
+  }, [step, formData.nutritionGoal, formData.dietType, getPredictions, prefetch, formData])
+
+  const updateField = useCallback((field: string, value: string | number | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
-  }
+  }, [])
 
   const canProceed = () => {
     if (step === 1) return formData.nutritionGoal && formData.dietType
@@ -69,17 +99,34 @@ export default function MealPlanForm() {
         snackType: "balanced",
       })
     } catch {
-      // Error is handled by the hook
+      // Error handled by hook
     }
   }
 
+  const handleResume = async () => {
+    try {
+      await resume("/api/meal/generate")
+    } catch {
+      // Error handled by hook
+    }
+  }
+
+  const handleBack = () => {
+    setMealPlan(null)
+    reset()
+  }
+
+  // Show skeleton during loading/streaming
+  if (isLoading || isStreaming) {
+    return <MealSkeleton progress={progress} stage={stage} />
+  }
+
   if (mealPlan) {
-    return <MealPlanDisplay plan={mealPlan} onBack={() => setMealPlan(null)} />
+    return <MealPlanDisplay plan={mealPlan} onBack={handleBack} />
   }
 
   return (
     <>
-      <LoadingModal isOpen={isLoading} type="meal" />
       <CalorieCalculatorModal
         isOpen={showCalorieCalculator}
         onClose={() => setShowCalorieCalculator(false)}
@@ -89,10 +136,42 @@ export default function MealPlanForm() {
         }}
       />
 
+      {/* Resume banner */}
+      {canResume && !isLoading && (
+        <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <RotateCcw className="w-5 h-5 text-amber-400" />
+            <p className="text-sm text-amber-300">You have an incomplete generation. Resume where you left off?</p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={clearIncomplete}
+              className="px-3 py-1.5 text-xs text-stone-400 hover:text-white transition-colors"
+            >
+              Dismiss
+            </button>
+            <button
+              onClick={handleResume}
+              className="px-3 py-1.5 text-xs font-medium text-amber-400 bg-amber-500/20 hover:bg-amber-500/30 rounded-lg transition-colors"
+            >
+              Resume
+            </button>
+          </div>
+        </div>
+      )}
+
       {apiError && (
         <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-3">
           <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0" />
-          <p className="text-sm text-red-300">{apiError}</p>
+          <div className="flex-1">
+            <p className="text-sm text-red-300">{apiError}</p>
+            <button
+              onClick={handleSubmit}
+              className="mt-2 text-xs text-red-400 hover:text-red-300 underline"
+            >
+              Try again
+            </button>
+          </div>
         </div>
       )}
 
@@ -102,9 +181,7 @@ export default function MealPlanForm() {
           <div key={s} className="flex items-center">
             <div
               className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
-                s <= step
-                  ? "bg-amber-500 text-white"
-                  : "bg-stone-800 text-stone-500"
+                s <= step ? "bg-amber-500 text-white" : "bg-stone-800 text-stone-500"
               }`}
             >
               {s}
@@ -290,7 +367,7 @@ export default function MealPlanForm() {
             Back
           </button>
         )}
-        
+
         {step < 3 ? (
           <button
             type="button"

@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Loader2, AlertTriangle, ArrowRight, ArrowLeft, Check } from "lucide-react"
+import { useState, useEffect, useCallback } from "react"
+import { Loader2, AlertTriangle, ArrowRight, ArrowLeft, Check, RotateCcw } from "lucide-react"
 import WorkoutPlanDisplay from "./workout-plan-display"
-import LoadingModal from "./loading-modal"
+import WorkoutSkeleton from "./skeletons/workout-skeleton"
 import { useStreamingFetch } from "@/lib/hooks/useStreamingFetch"
+import { usePrefetch, usePredictiveParams } from "@/lib/hooks/usePrefetch"
 
 type Step = 1 | 2 | 3
 
@@ -24,9 +25,29 @@ export default function WorkoutPlanForm() {
   const [workoutPlan, setWorkoutPlan] = useState<unknown | null>(null)
   const [hasGroqKey, setHasGroqKey] = useState<boolean | null>(null)
 
-  const { isLoading, isStreaming, error: apiError, fetchStream } = useStreamingFetch({
+  const {
+    isLoading,
+    isStreaming,
+    error: apiError,
+    progress,
+    stage,
+    canResume,
+    fetchStream,
+    resume,
+    reset,
+    clearIncomplete,
+  } = useStreamingFetch<unknown>({
+    type: "workout",
     onComplete: (plan) => setWorkoutPlan(plan),
   })
+
+  const { prefetch } = usePrefetch({
+    type: "workout",
+    url: "/api/workout/generate",
+    debounceMs: 1500,
+  })
+
+  const { getPredictions } = usePredictiveParams("workout")
 
   const [formData, setFormData] = useState({
     fitnessGoal: "",
@@ -44,39 +65,45 @@ export default function WorkoutPlanForm() {
       .catch(() => setHasGroqKey(false))
   }, [])
 
-  const updateField = (field: string, value: string | number | string[]) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
-  }
+  // Predictive prefetching when user reaches step 2
+  useEffect(() => {
+    if (step === 2 && formData.fitnessGoal && formData.experienceLevel) {
+      const predictions = getPredictions(formData)
+      predictions.forEach((params, index) => {
+        prefetch(params, 2 - index) // Higher priority for first prediction
+      })
+    }
+  }, [step, formData.fitnessGoal, formData.experienceLevel, getPredictions, prefetch, formData])
 
-  const toggleFocus = (id: string) => {
-    const current = formData.focusAreas
-    
-    // If clicking "Full Body"
-    if (id === "fullBody") {
-      if (current.includes("fullBody")) {
-        // Can't deselect if it's the only one
-        if (current.length > 1) {
-          updateField("focusAreas", current.filter((f) => f !== "fullBody"))
+  const updateField = useCallback((field: string, value: string | number | string[]) => {
+    setFormData((prev) => ({ ...prev, [field]: value }))
+  }, [])
+
+  const toggleFocus = useCallback((id: string) => {
+    setFormData((prev) => {
+      const current = prev.focusAreas
+
+      if (id === "fullBody") {
+        if (current.includes("fullBody")) {
+          if (current.length > 1) {
+            return { ...prev, focusAreas: current.filter((f) => f !== "fullBody") }
+          }
+          return prev
         }
-      } else {
-        // Select Full Body and deselect all others
-        updateField("focusAreas", ["fullBody"])
+        return { ...prev, focusAreas: ["fullBody"] }
       }
-      return
-    }
-    
-    // If clicking a specific body part
-    if (current.includes(id)) {
-      // Deselect only if there's more than one selected
-      if (current.length > 1) {
-        updateField("focusAreas", current.filter((f) => f !== id))
+
+      if (current.includes(id)) {
+        if (current.length > 1) {
+          return { ...prev, focusAreas: current.filter((f) => f !== id) }
+        }
+        return prev
       }
-    } else {
-      // Add the body part and remove "Full Body" if selected
+
       const newAreas = current.filter((f) => f !== "fullBody")
-      updateField("focusAreas", [...newAreas, id])
-    }
-  }
+      return { ...prev, focusAreas: [...newAreas, id] }
+    })
+  }, [])
 
   const canProceed = () => {
     if (step === 1) return formData.fitnessGoal && formData.experienceLevel
@@ -88,22 +115,75 @@ export default function WorkoutPlanForm() {
     try {
       await fetchStream("/api/workout/generate", formData)
     } catch {
-      // Error is handled by the hook
+      // Error handled by hook
     }
   }
 
+  const handleResume = async () => {
+    try {
+      await resume("/api/workout/generate")
+    } catch {
+      // Error handled by hook
+    }
+  }
+
+  const handleBack = () => {
+    setWorkoutPlan(null)
+    reset()
+  }
+
+  // Show skeleton during loading/streaming
+  if (isLoading || isStreaming) {
+    return <WorkoutSkeleton progress={progress} stage={stage} />
+  }
+
   if (workoutPlan) {
-    return <WorkoutPlanDisplay plan={workoutPlan as Parameters<typeof WorkoutPlanDisplay>[0]["plan"]} onBack={() => setWorkoutPlan(null)} />
+    return (
+      <WorkoutPlanDisplay
+        plan={workoutPlan as Parameters<typeof WorkoutPlanDisplay>[0]["plan"]}
+        onBack={handleBack}
+      />
+    )
   }
 
   return (
     <>
-      <LoadingModal isOpen={isLoading} type="workout" />
+      {/* Resume banner */}
+      {canResume && !isLoading && (
+        <div className="mb-6 p-4 bg-teal-500/10 border border-teal-500/20 rounded-xl flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <RotateCcw className="w-5 h-5 text-teal-400" />
+            <p className="text-sm text-teal-300">You have an incomplete generation. Resume where you left off?</p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={clearIncomplete}
+              className="px-3 py-1.5 text-xs text-stone-400 hover:text-white transition-colors"
+            >
+              Dismiss
+            </button>
+            <button
+              onClick={handleResume}
+              className="px-3 py-1.5 text-xs font-medium text-teal-400 bg-teal-500/20 hover:bg-teal-500/30 rounded-lg transition-colors"
+            >
+              Resume
+            </button>
+          </div>
+        </div>
+      )}
 
       {apiError && (
         <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-3">
           <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0" />
-          <p className="text-sm text-red-300">{apiError}</p>
+          <div className="flex-1">
+            <p className="text-sm text-red-300">{apiError}</p>
+            <button
+              onClick={handleSubmit}
+              className="mt-2 text-xs text-red-400 hover:text-red-300 underline"
+            >
+              Try again
+            </button>
+          </div>
         </div>
       )}
 
@@ -294,7 +374,7 @@ export default function WorkoutPlanForm() {
             Back
           </button>
         )}
-        
+
         {step < 3 ? (
           <button
             type="button"

@@ -4,6 +4,20 @@ import { z } from "zod"
 import { rateLimit, getClientIp } from "@/lib/rate-limit"
 import { generateCacheKey, getCachedResponse, setCachedResponse } from "@/lib/cache"
 import { workoutFormSchema, type WorkoutFormInput } from "@/lib/validations"
+import { 
+  validateResponse, 
+  validateWorkoutCompleteness, 
+  sanitizeObject, 
+  safeJsonParse,
+  withRetry 
+} from "@/lib/api/response-validator"
+import { 
+  generateRequestKey, 
+  hasPendingRequest, 
+  getPendingRequest,
+  registerPendingRequest,
+  cancelPendingRequest 
+} from "@/lib/api/request-dedup"
 
 const apiKey = process.env.GROQ_API_KEY
 let groq: Groq | null = null
@@ -55,9 +69,80 @@ function mapWorkoutFormToContext(formData: WorkoutFormInput) {
   }
 }
 
+async function generateWorkoutWithRetry(
+  groqClient: Groq,
+  context: ReturnType<typeof mapWorkoutFormToContext>,
+  expectedDays: number
+): Promise<z.infer<typeof workoutPlanSchema>> {
+  const dayKeys = Array.from({ length: context.daysPerWeek }, (_, i) => `day${i + 1}`)
+
+  const prompt = `Create a ${context.daysPerWeek}-day workout plan.
+
+PARAMETERS:
+- Goal: ${context.goal}
+- Level: ${context.level}
+- Days: ${context.daysPerWeek}
+- Session: ${context.sessionLength} minutes
+- Focus: ${context.focusAreas.join(", ")}
+- Equipment: ${context.equipment}
+
+CRITICAL: You MUST create EXACTLY ${context.daysPerWeek} workout days with at least 4 exercises each.
+
+Return ONLY valid JSON:
+{
+  "summary": { "goal": "${context.goal}", "level": "${context.level}", "daysPerWeek": ${context.daysPerWeek}, "sessionLength": ${context.sessionLength}, "focusAreas": ${JSON.stringify(context.focusAreas)}, "equipment": "${context.equipment}" },
+  "overview": "Brief 2-3 sentence plan overview",
+  "workouts": { ${dayKeys.map((key, i) => `"${key}": { "focus": "Day ${i + 1} focus", "description": "Brief description", "exercises": [{"name": "Exercise", "sets": 3, "reps": "8-12", "rest": "60 sec"}], "notes": ["Tip 1"] }`).join(", ")} }
+}`
+
+  return withRetry(
+    async () => {
+      const completion = await groqClient.chat.completions.create({
+        messages: [
+          { role: "system", content: `You are a professional fitness trainer. Generate a complete ${context.daysPerWeek}-day workout plan in JSON format. Include exactly ${context.daysPerWeek} days with 4-6 exercises each.` },
+          { role: "user", content: prompt },
+        ],
+        model: "openai/gpt-oss-120b",
+        response_format: { type: "json_object" },
+        temperature: 0.7,
+      })
+
+      const content = completion.choices[0]?.message?.content
+      if (!content) {
+        throw new Error("Empty response from AI")
+      }
+
+      const parseResult = safeJsonParse(content)
+      if (!parseResult.success) {
+        throw new Error(`JSON parse error: ${parseResult.error}`)
+      }
+
+      // Validate completeness
+      const completenessResult = validateWorkoutCompleteness(parseResult.data, expectedDays)
+      if (!completenessResult.success) {
+        throw new Error(completenessResult.error)
+      }
+
+      // Validate schema
+      const validationResult = validateResponse(parseResult.data, workoutPlanSchema)
+      if (!validationResult.success) {
+        throw new Error(validationResult.error)
+      }
+
+      return validationResult.data!
+    },
+    {
+      maxRetries: 2,
+      delayMs: 1000,
+      onRetry: (attempt, error) => {
+        console.log(`Workout generation retry ${attempt}: ${error}`)
+      },
+    }
+  )
+}
+
 export async function POST(request: Request) {
   try {
-    // Rate limiting
     const clientIp = getClientIp(request)
     const rateLimitResult = rateLimit(`workout_${clientIp}`, { maxRequests: 10, windowMs: 60000 })
     
@@ -74,7 +159,11 @@ export async function POST(request: Request) {
 
     const body = await request.json()
     
-    // Input validation with Zod
+    // Skip prefetch requests
+    if (body._prefetch) {
+      return NextResponse.json({ status: "prefetch_acknowledged" })
+    }
+
     const validationResult = workoutFormSchema.safeParse(body)
     if (!validationResult.success) {
       return NextResponse.json(
@@ -84,18 +173,33 @@ export async function POST(request: Request) {
     }
 
     const formData = validationResult.data
-
-    // Check cache
     const cacheKey = generateCacheKey("workout", formData)
+    
+    // Check cache first
     const cachedPlan = await getCachedResponse<{ plan: z.infer<typeof workoutPlanSchema> }>(cacheKey)
     if (cachedPlan) {
       return NextResponse.json(cachedPlan, { headers: { "X-Cache": "HIT" } })
     }
 
-    const context = mapWorkoutFormToContext(formData)
-    const dayKeys = Array.from({ length: context.daysPerWeek }, (_, i) => `day${i + 1}`)
+    // Request deduplication
+    const requestKey = generateRequestKey("/api/workout/generate", formData)
+    
+    // Cancel any existing request for this key and start fresh
+    if (hasPendingRequest(requestKey)) {
+      cancelPendingRequest(requestKey)
+    }
 
-    const prompt = `Create a ${context.daysPerWeek}-day workout plan.
+    const context = mapWorkoutFormToContext(formData)
+    const encoder = new TextEncoder()
+
+    // Create abort controller for deduplication
+    const abortController = new AbortController()
+
+    const streamPromise = (async () => {
+      const stream = await groq!.chat.completions.create({
+        messages: [
+          { role: "system", content: `You are a professional fitness trainer. Generate a ${context.daysPerWeek}-day workout plan in JSON format.` },
+          { role: "user", content: `Create a ${context.daysPerWeek}-day workout plan.
 
 PARAMETERS:
 - Goal: ${context.goal}
@@ -105,48 +209,131 @@ PARAMETERS:
 - Focus: ${context.focusAreas.join(", ")}
 - Equipment: ${context.equipment}
 
-Return ONLY valid JSON:
-{
-  "summary": { "goal": "${context.goal}", "level": "${context.level}", "daysPerWeek": ${context.daysPerWeek}, "sessionLength": ${context.sessionLength}, "focusAreas": ${JSON.stringify(context.focusAreas)}, "equipment": "${context.equipment}" },
-  "overview": "Brief 2-3 sentence plan overview",
-  "workouts": { ${dayKeys.map((key, i) => `"${key}": { "focus": "Day ${i + 1} focus", "description": "Brief description", "exercises": [{"name": "Exercise", "sets": 3, "reps": "8-12", "rest": "60 sec"}], "notes": ["Tip 1"] }`).join(", ")} }
-}`
+CRITICAL: Create EXACTLY ${context.daysPerWeek} days with 4-6 exercises each.
 
-    // Streaming response
-    const stream = await groq.chat.completions.create({
-      messages: [
-        { role: "system", content: `You are a professional fitness trainer. Generate a ${context.daysPerWeek}-day workout plan in JSON format.` },
-        { role: "user", content: prompt },
-      ],
-      model: "openai/gpt-oss-120b",
-      response_format: { type: "json_object" },
-      temperature: 0.7,
-      stream: true,
-    })
+Return valid JSON with summary, overview, and workouts object.` },
+        ],
+        model: "openai/gpt-oss-120b",
+        response_format: { type: "json_object" },
+        temperature: 0.7,
+        stream: true,
+      })
 
-    let fullContent = ""
-    const encoder = new TextEncoder()
+      let fullContent = ""
+      const chunks: string[] = []
+
+      for await (const chunk of stream) {
+        if (abortController.signal.aborted) {
+          throw new Error("Request aborted")
+        }
+        const content = chunk.choices[0]?.delta?.content || ""
+        fullContent += content
+        chunks.push(content)
+      }
+
+      return { fullContent, chunks }
+    })()
+
+    registerPendingRequest(requestKey, streamPromise, abortController)
 
     const readableStream = new ReadableStream({
       async start(controller) {
         try {
+          const stream = await groq!.chat.completions.create({
+            messages: [
+              { role: "system", content: `You are a professional fitness trainer. Generate a ${context.daysPerWeek}-day workout plan in JSON format.` },
+              { role: "user", content: `Create a ${context.daysPerWeek}-day workout plan.
+
+PARAMETERS:
+- Goal: ${context.goal}
+- Level: ${context.level}
+- Days: ${context.daysPerWeek}
+- Session: ${context.sessionLength} minutes
+- Focus: ${context.focusAreas.join(", ")}
+- Equipment: ${context.equipment}
+
+CRITICAL: Create EXACTLY ${context.daysPerWeek} days with 4-6 exercises each.
+
+Return valid JSON with summary, overview, and workouts object.` },
+            ],
+            model: "openai/gpt-oss-120b",
+            response_format: { type: "json_object" },
+            temperature: 0.7,
+            stream: true,
+          })
+
+          let fullContent = ""
+          let retryCount = 0
+          const maxRetries = 2
+
           for await (const chunk of stream) {
             const content = chunk.choices[0]?.delta?.content || ""
             fullContent += content
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ chunk: content })}\n\n`))
           }
 
-          // Validate and cache the complete response
-          const parsedResponse = JSON.parse(fullContent)
-          const validatedPlan = workoutPlanSchema.parse(parsedResponse)
+          // Validate and potentially retry
+          let validatedPlan: z.infer<typeof workoutPlanSchema> | null = null
           
-          // Cache the result
-          await setCachedResponse(cacheKey, { plan: validatedPlan }, 1440) // 24 hours
+          while (retryCount <= maxRetries && !validatedPlan) {
+            const parseResult = safeJsonParse(fullContent)
+            
+            if (!parseResult.success) {
+              if (retryCount < maxRetries) {
+                retryCount++
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ retry: retryCount, reason: "Invalid JSON" })}\n\n`))
+                
+                // Regenerate
+                const retryPlan = await generateWorkoutWithRetry(groq!, context, formData.daysPerWeek)
+                validatedPlan = retryPlan
+                break
+              }
+              throw new Error("Failed to parse response after retries")
+            }
+
+            const completenessResult = validateWorkoutCompleteness(parseResult.data, formData.daysPerWeek)
+            if (!completenessResult.success) {
+              if (retryCount < maxRetries) {
+                retryCount++
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ retry: retryCount, reason: completenessResult.error })}\n\n`))
+                
+                const retryPlan = await generateWorkoutWithRetry(groq!, context, formData.daysPerWeek)
+                validatedPlan = retryPlan
+                break
+              }
+              throw new Error(completenessResult.error)
+            }
+
+            const schemaResult = validateResponse(parseResult.data, workoutPlanSchema)
+            if (!schemaResult.success) {
+              if (retryCount < maxRetries) {
+                retryCount++
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ retry: retryCount, reason: schemaResult.error })}\n\n`))
+                
+                const retryPlan = await generateWorkoutWithRetry(groq!, context, formData.daysPerWeek)
+                validatedPlan = retryPlan
+                break
+              }
+              throw new Error(schemaResult.error)
+            }
+
+            validatedPlan = schemaResult.data!
+          }
+
+          if (!validatedPlan) {
+            throw new Error("Failed to generate valid workout plan")
+          }
+
+          // Sanitize and cache
+          const sanitizedPlan = sanitizeObject(validatedPlan)
+          await setCachedResponse(cacheKey, { plan: sanitizedPlan }, 1440)
           
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, plan: validatedPlan })}\n\n`))
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, plan: sanitizedPlan })}\n\n`))
           controller.close()
         } catch (error) {
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: "Failed to generate plan" })}\n\n`))
+          const errorMsg = error instanceof Error ? error.message : "Failed to generate plan"
+          console.error("Workout generation error:", error)
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: errorMsg })}\n\n`))
           controller.close()
         }
       },
