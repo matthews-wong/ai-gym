@@ -385,7 +385,7 @@ export async function POST(request: Request) {
         },
         { role: "user", content: prompt },
       ],
-      model: "llama-3.1-70b-versatile",
+      model: "openai/gpt-oss-120b",
       response_format: { type: "json_object" },
       temperature: 0.7,
     })

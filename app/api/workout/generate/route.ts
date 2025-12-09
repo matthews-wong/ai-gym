@@ -161,7 +161,7 @@ Return ONLY valid JSON:
         },
         { role: "user", content: prompt },
       ],
-      model: "llama-3.1-70b-versatile",
+      model: "openai/gpt-oss-120b",
       response_format: { type: "json_object" },
       temperature: 0.7,
     })
@@ -188,8 +188,9 @@ Return ONLY valid JSON:
     const validatedPlan = workoutPlanSchema.parse(parsedResponse)
     return NextResponse.json({ plan: validatedPlan })
   } catch (error) {
+    console.error("Workout generation error:", error)
     return NextResponse.json(
-      { error: "Failed to generate workout plan. Please try again." },
+      { error: "Failed to generate workout plan. Please try again.", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     )
   }
