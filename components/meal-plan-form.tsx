@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { Loader2, AlertTriangle, Calculator, ArrowRight, ArrowLeft, RotateCcw } from "lucide-react"
+import { Loader2, AlertTriangle, Calculator, ArrowRight, ArrowLeft, RotateCcw, Sparkles } from "lucide-react"
 import type { MealPlan } from "@/lib/services/ai"
 import MealPlanDisplay from "./meal-plan-display"
 import LoadingModal from "./loading-modal"
@@ -351,12 +351,12 @@ export default function MealPlanForm() {
       )}
 
       {/* Navigation */}
-      <div className="flex gap-3 mt-8">
+      <div className="flex gap-3 mt-10">
         {step > 1 && (
           <button
             type="button"
             onClick={() => setStep((step - 1) as Step)}
-            className="flex-1 py-3.5 text-sm font-medium text-stone-300 bg-stone-800 hover:bg-stone-700 rounded-xl transition-colors flex items-center justify-center gap-2"
+            className="flex-1 py-4 text-sm font-medium text-stone-300 bg-stone-800/80 hover:bg-stone-700/80 border border-stone-700/50 hover:border-stone-600 rounded-2xl transition-all duration-200 flex items-center justify-center gap-2 backdrop-blur-sm"
           >
             <ArrowLeft className="w-4 h-4" />
             Back
@@ -368,7 +368,7 @@ export default function MealPlanForm() {
             type="button"
             onClick={() => setStep((step + 1) as Step)}
             disabled={!canProceed()}
-            className="flex-1 py-3.5 text-sm font-semibold text-white bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 disabled:from-stone-700 disabled:to-stone-700 disabled:text-stone-500 rounded-xl transition-all flex items-center justify-center gap-2"
+            className="flex-1 py-4 text-sm font-semibold text-white bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 disabled:from-stone-800 disabled:to-stone-800 disabled:text-stone-500 rounded-2xl transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30 disabled:shadow-none hover:scale-[1.02] active:scale-[0.98]"
           >
             Continue
             <ArrowRight className="w-4 h-4" />
@@ -378,7 +378,7 @@ export default function MealPlanForm() {
             type="button"
             onClick={handleSubmit}
             disabled={isLoading || !apiStatus?.available}
-            className="flex-1 py-3.5 text-sm font-semibold text-white bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 disabled:from-stone-700 disabled:to-stone-700 disabled:text-stone-500 rounded-xl shadow-lg shadow-amber-500/25 disabled:shadow-none transition-all flex items-center justify-center gap-2"
+            className="flex-1 py-4 text-sm font-semibold text-white bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 disabled:from-stone-800 disabled:to-stone-800 disabled:text-stone-500 rounded-2xl shadow-lg shadow-amber-500/20 hover:shadow-amber-500/40 disabled:shadow-none transition-all duration-200 flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
           >
             {isLoading ? (
               <>
@@ -386,7 +386,10 @@ export default function MealPlanForm() {
                 Generating...
               </>
             ) : (
-              "Generate Meal Plan"
+              <>
+                <Sparkles className="w-4 h-4" />
+                Generate Plan
+              </>
             )}
           </button>
         )}
