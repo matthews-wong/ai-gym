@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server"
 import Groq from "groq-sdk"
 import { z } from "zod"
+import { rateLimit, getClientIp } from "@/lib/rate-limit"
+import { generateCacheKey, getCachedResponse, setCachedResponse } from "@/lib/cache"
+import { workoutFormSchema, type WorkoutFormInput } from "@/lib/validations"
 
-// Initialize Groq client with server-only key
 const apiKey = process.env.GROQ_API_KEY
 let groq: Groq | null = null
 
@@ -10,17 +12,6 @@ if (apiKey) {
   groq = new Groq({ apiKey })
 }
 
-// Define interfaces for form data
-interface WorkoutFormData {
-  fitnessGoal: "muscleGain" | "fatLoss" | "strength" | "endurance"
-  experienceLevel: "beginner" | "intermediate" | "advanced"
-  daysPerWeek: number
-  sessionLength: number
-  focusAreas: Array<"fullBody" | "upperBody" | "lowerBody" | "core" | "arms" | "back" | "chest" | "shoulders" | "legs">
-  equipment: "fullGym" | "homeBasic" | "bodyweight"
-}
-
-// Define the workout plan schema
 const workoutPlanSchema = z.object({
   summary: z.object({
     goal: z.string(),
@@ -48,38 +39,11 @@ const workoutPlanSchema = z.object({
   ),
 })
 
-// Helper function to map form values to human-readable descriptions
-function mapWorkoutFormToContext(formData: WorkoutFormData) {
-  const goalMap = {
-    muscleGain: "Muscle Gain",
-    fatLoss: "Fat Loss",
-    strength: "Strength",
-    endurance: "Endurance",
-  }
-
-  const levelMap = {
-    beginner: "Beginner",
-    intermediate: "Intermediate",
-    advanced: "Advanced",
-  }
-
-  const focusAreaMap = {
-    fullBody: "Full Body",
-    upperBody: "Upper Body",
-    lowerBody: "Lower Body",
-    core: "Core",
-    arms: "Arms",
-    back: "Back",
-    chest: "Chest",
-    shoulders: "Shoulders",
-    legs: "Legs",
-  }
-
-  const equipmentMap = {
-    fullGym: "Full Gym",
-    homeBasic: "Home Basic (Dumbbells, Resistance Bands)",
-    bodyweight: "Bodyweight Only",
-  }
+function mapWorkoutFormToContext(formData: WorkoutFormInput) {
+  const goalMap = { muscleGain: "Muscle Gain", fatLoss: "Fat Loss", strength: "Strength", endurance: "Endurance" }
+  const levelMap = { beginner: "Beginner", intermediate: "Intermediate", advanced: "Advanced" }
+  const focusAreaMap = { fullBody: "Full Body", upperBody: "Upper Body", lowerBody: "Lower Body", core: "Core", arms: "Arms", back: "Back", chest: "Chest", shoulders: "Shoulders", legs: "Legs" }
+  const equipmentMap = { fullGym: "Full Gym", homeBasic: "Home Basic (Dumbbells, Resistance Bands)", bodyweight: "Bodyweight Only" }
 
   return {
     goal: goalMap[formData.fitnessGoal],
@@ -93,21 +57,39 @@ function mapWorkoutFormToContext(formData: WorkoutFormData) {
 
 export async function POST(request: Request) {
   try {
-    if (!groq) {
+    // Rate limiting
+    const clientIp = getClientIp(request)
+    const rateLimitResult = rateLimit(`workout_${clientIp}`, { maxRequests: 10, windowMs: 60000 })
+    
+    if (!rateLimitResult.success) {
       return NextResponse.json(
-        { error: "AI service is not available. Please check server configuration." },
-        { status: 500 }
+        { error: "Too many requests. Please try again later.", resetIn: Math.ceil(rateLimitResult.resetIn / 1000) },
+        { status: 429, headers: { "X-RateLimit-Remaining": "0", "X-RateLimit-Reset": String(rateLimitResult.resetIn) } }
       )
     }
 
-    const formData: WorkoutFormData = await request.json()
+    if (!groq) {
+      return NextResponse.json({ error: "AI service is not available." }, { status: 500 })
+    }
 
-    // Validate required fields
-    if (!formData.fitnessGoal || !formData.experienceLevel || !formData.daysPerWeek) {
+    const body = await request.json()
+    
+    // Input validation with Zod
+    const validationResult = workoutFormSchema.safeParse(body)
+    if (!validationResult.success) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Invalid input", details: validationResult.error.flatten().fieldErrors },
         { status: 400 }
       )
+    }
+
+    const formData = validationResult.data
+
+    // Check cache
+    const cacheKey = generateCacheKey("workout", formData)
+    const cachedPlan = await getCachedResponse<{ plan: z.infer<typeof workoutPlanSchema> }>(cacheKey)
+    if (cachedPlan) {
+      return NextResponse.json(cachedPlan, { headers: { "X-Cache": "HIT" } })
     }
 
     const context = mapWorkoutFormToContext(formData)
@@ -118,79 +100,71 @@ export async function POST(request: Request) {
 PARAMETERS:
 - Goal: ${context.goal}
 - Level: ${context.level}
-- Days: ${context.daysPerWeek} (MUST create exactly ${context.daysPerWeek} workout days)
+- Days: ${context.daysPerWeek}
 - Session: ${context.sessionLength} minutes
 - Focus: ${context.focusAreas.join(", ")}
 - Equipment: ${context.equipment}
 
-CRITICAL REQUIREMENTS:
-1. You MUST create EXACTLY ${context.daysPerWeek} workout days (${dayKeys.join(", ")})
-2. Each day MUST have 5-8 exercises appropriate for ${context.sessionLength} minutes
-3. Each exercise needs: name, sets (number), reps (string like "8-12"), rest (string like "60-90 sec")
-4. Include 2-3 notes per day with tips
-5. Make each day focus on different muscle groups for variety
-
 Return ONLY valid JSON:
 {
-  "summary": {
-    "goal": "${context.goal}",
-    "level": "${context.level}",
-    "daysPerWeek": ${context.daysPerWeek},
-    "sessionLength": ${context.sessionLength},
-    "focusAreas": ${JSON.stringify(context.focusAreas)},
-    "equipment": "${context.equipment}"
-  },
+  "summary": { "goal": "${context.goal}", "level": "${context.level}", "daysPerWeek": ${context.daysPerWeek}, "sessionLength": ${context.sessionLength}, "focusAreas": ${JSON.stringify(context.focusAreas)}, "equipment": "${context.equipment}" },
   "overview": "Brief 2-3 sentence plan overview",
-  "workouts": {
-    ${dayKeys.map((key, i) => `"${key}": {
-      "focus": "Day ${i + 1} focus area",
-      "description": "Brief workout description",
-      "exercises": [
-        {"name": "Exercise Name", "sets": 3, "reps": "8-12", "rest": "60 sec"}
-      ],
-      "notes": ["Tip 1", "Tip 2"]
-    }`).join(",\n    ")}
-  }
+  "workouts": { ${dayKeys.map((key, i) => `"${key}": { "focus": "Day ${i + 1} focus", "description": "Brief description", "exercises": [{"name": "Exercise", "sets": 3, "reps": "8-12", "rest": "60 sec"}], "notes": ["Tip 1"] }`).join(", ")} }
 }`
 
-    const completion = await groq.chat.completions.create({
+    // Streaming response
+    const stream = await groq.chat.completions.create({
       messages: [
-        {
-          role: "system",
-          content: `You are a professional fitness trainer. Generate a complete ${context.daysPerWeek}-day workout plan in JSON format. CRITICAL: You MUST include exactly ${context.daysPerWeek} days (${dayKeys.join(", ")}). Never return fewer days than requested. Each day must have complete exercises with sets, reps, and rest times.`,
-        },
+        { role: "system", content: `You are a professional fitness trainer. Generate a ${context.daysPerWeek}-day workout plan in JSON format.` },
         { role: "user", content: prompt },
       ],
       model: "openai/gpt-oss-120b",
       response_format: { type: "json_object" },
       temperature: 0.7,
+      stream: true,
     })
 
-    const responseContent = completion.choices[0]?.message?.content
+    let fullContent = ""
+    const encoder = new TextEncoder()
 
-    if (!responseContent) {
-      return NextResponse.json(
-        { error: "Received empty response from AI service" },
-        { status: 500 }
-      )
-    }
+    const readableStream = new ReadableStream({
+      async start(controller) {
+        try {
+          for await (const chunk of stream) {
+            const content = chunk.choices[0]?.delta?.content || ""
+            fullContent += content
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ chunk: content })}\n\n`))
+          }
 
-    const parsedResponse = JSON.parse(responseContent)
-    
-    const workoutDays = Object.keys(parsedResponse.workouts || {})
-    if (workoutDays.length < context.daysPerWeek) {
-      return NextResponse.json(
-        { error: `Incomplete plan: expected ${context.daysPerWeek} days, got ${workoutDays.length}` },
-        { status: 500 }
-      )
-    }
-    
-    const validatedPlan = workoutPlanSchema.parse(parsedResponse)
-    return NextResponse.json({ plan: validatedPlan })
+          // Validate and cache the complete response
+          const parsedResponse = JSON.parse(fullContent)
+          const validatedPlan = workoutPlanSchema.parse(parsedResponse)
+          
+          // Cache the result
+          await setCachedResponse(cacheKey, { plan: validatedPlan }, 1440) // 24 hours
+          
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, plan: validatedPlan })}\n\n`))
+          controller.close()
+        } catch (error) {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: "Failed to generate plan" })}\n\n`))
+          controller.close()
+        }
+      },
+    })
+
+    return new Response(readableStream, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+        "X-Cache": "MISS",
+        "X-RateLimit-Remaining": String(rateLimitResult.remaining),
+      },
+    })
   } catch (error) {
     console.error("Workout generation error:", error)
     return NextResponse.json(
-      { error: "Failed to generate workout plan. Please try again.", details: error instanceof Error ? error.message : String(error) },
+      { error: "Failed to generate workout plan.", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     )
   }

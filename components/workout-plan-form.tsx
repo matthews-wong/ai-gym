@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Loader2, AlertTriangle, ArrowRight, ArrowLeft, Check } from "lucide-react"
 import WorkoutPlanDisplay from "./workout-plan-display"
 import LoadingModal from "./loading-modal"
+import { useStreamingFetch } from "@/lib/hooks/useStreamingFetch"
 
 type Step = 1 | 2 | 3
 
@@ -20,10 +21,12 @@ const focusOptions = [
 
 export default function WorkoutPlanForm() {
   const [step, setStep] = useState<Step>(1)
-  const [isLoading, setIsLoading] = useState(false)
   const [workoutPlan, setWorkoutPlan] = useState<unknown | null>(null)
   const [hasGroqKey, setHasGroqKey] = useState<boolean | null>(null)
-  const [apiError, setApiError] = useState<string | null>(null)
+
+  const { isLoading, isStreaming, error: apiError, fetchStream } = useStreamingFetch({
+    onComplete: (plan) => setWorkoutPlan(plan),
+  })
 
   const [formData, setFormData] = useState({
     fitnessGoal: "",
@@ -82,28 +85,10 @@ export default function WorkoutPlanForm() {
   }
 
   const handleSubmit = async () => {
-    setIsLoading(true)
-    setApiError(null)
-
     try {
-      const response = await fetch("/api/workout/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      })
-      
-      const data = await response.json()
-      
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to generate workout plan")
-      }
-      
-      setWorkoutPlan(data.plan)
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to generate workout plan"
-      setApiError(errorMessage)
-    } finally {
-      setIsLoading(false)
+      await fetchStream("/api/workout/generate", formData)
+    } catch {
+      // Error is handled by the hook
     }
   }
 

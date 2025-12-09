@@ -6,16 +6,19 @@ import type { MealPlan } from "@/lib/services/ai"
 import MealPlanDisplay from "./meal-plan-display"
 import LoadingModal from "./loading-modal"
 import CalorieCalculatorModal from "./calorie-calculator-modal"
+import { useStreamingFetch } from "@/lib/hooks/useStreamingFetch"
 
 type Step = 1 | 2 | 3
 
 export default function MealPlanForm() {
   const [step, setStep] = useState<Step>(1)
-  const [isLoading, setIsLoading] = useState(false)
   const [mealPlan, setMealPlan] = useState<MealPlan | null>(null)
   const [apiStatus, setApiStatus] = useState<{ available: boolean } | null>(null)
-  const [apiError, setApiError] = useState<string | null>(null)
   const [showCalorieCalculator, setShowCalorieCalculator] = useState(false)
+
+  const { isLoading, isStreaming, error: apiError, fetchStream } = useStreamingFetch<MealPlan>({
+    onComplete: (plan) => setMealPlan(plan as MealPlan),
+  })
 
   // Form data
   const [formData, setFormData] = useState({
@@ -48,44 +51,25 @@ export default function MealPlanForm() {
 
   const handleSubmit = async () => {
     if (!apiStatus?.available) {
-      setApiError("AI service is not available. Please try again later.")
       return
     }
 
-    setIsLoading(true)
-    setApiError(null)
-
     try {
-      const response = await fetch("/api/meal/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...formData,
-          mealComplexity: "moderate",
-          budgetLevel: "medium",
-          cookingTime: "moderate",
-          seasonalPreference: "any",
-          healthConditions: "none",
-          proteinPreference: "balanced",
-          mealPrepOption: "daily",
-          includeDesserts: false,
-          snackFrequency: "twice",
-          snackType: "balanced",
-        }),
+      await fetchStream("/api/meal/generate", {
+        ...formData,
+        mealComplexity: "moderate",
+        budgetLevel: "medium",
+        cookingTime: "moderate",
+        seasonalPreference: "any",
+        healthConditions: "none",
+        proteinPreference: "balanced",
+        mealPrepOption: "daily",
+        includeDesserts: false,
+        snackFrequency: "twice",
+        snackType: "balanced",
       })
-      
-      const data = await response.json()
-      
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to generate meal plan")
-      }
-      
-      setMealPlan(data.plan)
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to generate meal plan"
-      setApiError(errorMessage)
-    } finally {
-      setIsLoading(false)
+    } catch {
+      // Error is handled by the hook
     }
   }
 

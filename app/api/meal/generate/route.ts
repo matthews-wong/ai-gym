@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server"
 import Groq from "groq-sdk"
 import { z } from "zod"
+import { rateLimit, getClientIp } from "@/lib/rate-limit"
+import { generateCacheKey, getCachedResponse, setCachedResponse } from "@/lib/cache"
+import { mealFormSchema, type MealFormInput } from "@/lib/validations"
 
-// Initialize Groq client with server-only key
 const apiKey = process.env.GROQ_API_KEY
 let groq: Groq | null = null
 
@@ -10,29 +12,6 @@ if (apiKey) {
   groq = new Groq({ apiKey })
 }
 
-// Define interfaces for form data
-interface MealFormData {
-  nutritionGoal: "muscleGain" | "fatLoss" | "maintenance" | "performance" | "healthyEating"
-  dailyCalories: number
-  dietType: "balanced" | "highProtein" | "lowCarb" | "keto" | "mediterranean" | "paleo"
-  mealsPerDay: number
-  dietaryRestrictions: "none" | "vegetarian" | "vegan" | "glutenFree" | "dairyFree" | "pescatarian"
-  cuisinePreference?: "any" | "indonesian" | "asian" | "mediterranean" | "western" | "mexican" | "indian"
-  mealComplexity?: "simple" | "moderate" | "complex"
-  includeDesserts?: boolean
-  allergies?: "none" | "nuts" | "shellfish" | "eggs" | "soy" | "wheat" | "dairy"
-  budgetLevel?: "low" | "medium" | "high"
-  cookingTime?: "minimal" | "moderate" | "extended"
-  seasonalPreference?: "any" | "spring" | "summer" | "fall" | "winter"
-  healthConditions?: "none" | "diabetes" | "heartHealth" | "lowSodium" | "lowFodmap"
-  proteinPreference?: "balanced" | "poultry" | "seafood" | "redMeat" | "plantBased"
-  mealPrepOption?: "daily" | "batchCook" | "weeklyPrep"
-  includeSnacks?: boolean
-  snackFrequency?: "once" | "twice" | "thrice"
-  snackType?: "balanced" | "protein" | "lowCalorie" | "sweet" | "savory" | "fruit"
-}
-
-// Define the meal plan schema
 const mealPlanSchema = z.object({
   summary: z.object({
     goal: z.string(),
@@ -55,151 +34,26 @@ const mealPlanSchema = z.object({
     snackType: z.string().optional(),
   }),
   overview: z.string(),
-  macros: z.object({
-    protein: z.number(),
-    carbs: z.number(),
-    fat: z.number(),
-  }),
+  macros: z.object({ protein: z.number(), carbs: z.number(), fat: z.number() }),
   meals: z.record(
     z.array(
       z.object({
         name: z.string(),
-        foods: z.array(
-          z.object({
-            name: z.string(),
-            amount: z.string(),
-            protein: z.number(),
-            carbs: z.number(),
-            fat: z.number(),
-            calories: z.number(),
-          }),
-        ),
-        totals: z.object({
-          protein: z.number(),
-          carbs: z.number(),
-          fat: z.number(),
-          calories: z.number(),
-        }),
+        foods: z.array(z.object({ name: z.string(), amount: z.string(), protein: z.number(), carbs: z.number(), fat: z.number(), calories: z.number() })),
+        totals: z.object({ protein: z.number(), carbs: z.number(), fat: z.number(), calories: z.number() }),
         notes: z.string().optional(),
         cookingTime: z.string().optional(),
         isSnack: z.boolean().optional(),
-      }),
-    ),
+      })
+    )
   ),
 })
 
-// Helper function to map form values to human-readable descriptions
-function mapMealFormToContext(formData: MealFormData) {
-  const goalMap = {
-    muscleGain: "Muscle Gain",
-    fatLoss: "Fat Loss",
-    maintenance: "Maintenance",
-    performance: "Performance",
-    healthyEating: "Healthy Eating",
-  }
-
-  const dietTypeMap: Record<string, string> = {
-    balanced: "Balanced",
-    highProtein: "High Protein",
-    lowCarb: "Low Carb",
-    keto: "Keto",
-    mediterranean: "Mediterranean",
-    paleo: "Paleo",
-    vegetarian: "Vegetarian",
-    vegan: "Vegan",
-  }
-
-  const restrictionsMap = {
-    none: "None",
-    vegetarian: "Vegetarian",
-    vegan: "Vegan",
-    glutenFree: "Gluten Free",
-    dairyFree: "Dairy Free",
-    pescatarian: "Pescatarian",
-  }
-
-  const cuisineMap = {
-    any: "Any / No Preference",
-    indonesian: "Indonesian",
-    asian: "Asian",
-    mediterranean: "Mediterranean",
-    western: "Western",
-    mexican: "Mexican",
-    indian: "Indian",
-  }
-
-  const complexityMap = {
-    simple: "Simple",
-    moderate: "Moderate",
-    complex: "Complex",
-  }
-
-  const allergiesMap = {
-    none: "None",
-    nuts: "Nuts",
-    shellfish: "Shellfish",
-    eggs: "Eggs",
-    soy: "Soy",
-    wheat: "Wheat",
-    dairy: "Dairy",
-  }
-
-  const budgetMap = {
-    low: "Budget-Friendly",
-    medium: "Moderate",
-    high: "Premium",
-  }
-
-  const cookingTimeMap = {
-    minimal: "Minimal (15 min or less)",
-    moderate: "Moderate (15-30 min)",
-    extended: "Extended (30+ min)",
-  }
-
-  const seasonalMap = {
-    any: "Any / No Preference",
-    spring: "Spring",
-    summer: "Summer",
-    fall: "Fall",
-    winter: "Winter",
-  }
-
-  const healthConditionsMap = {
-    none: "None",
-    diabetes: "Diabetes-Friendly",
-    heartHealth: "Heart Health",
-    lowSodium: "Low Sodium",
-    lowFodmap: "Low FODMAP",
-  }
-
-  const proteinPreferenceMap = {
-    balanced: "Balanced (All Sources)",
-    poultry: "Poultry-Focused",
-    seafood: "Seafood-Focused",
-    redMeat: "Red Meat-Focused",
-    plantBased: "Plant-Based Proteins",
-  }
-
-  const mealPrepMap = {
-    daily: "Daily Cooking",
-    batchCook: "Batch Cooking (2-3 days)",
-    weeklyPrep: "Weekly Meal Prep",
-  }
-
-  const snackFrequencyMap = {
-    once: "Once a day",
-    twice: "Twice a day",
-    thrice: "Three times a day",
-  }
-
-  const snackTypeMap = {
-    balanced: "Balanced",
-    protein: "High Protein",
-    lowCalorie: "Low Calorie",
-    sweet: "Sweet",
-    savory: "Savory",
-    fruit: "Fruit-based",
-  }
+function mapMealFormToContext(formData: MealFormInput) {
+  const goalMap = { muscleGain: "Muscle Gain", fatLoss: "Fat Loss", maintenance: "Maintenance", performance: "Performance", healthyEating: "Healthy Eating" }
+  const dietTypeMap: Record<string, string> = { balanced: "Balanced", highProtein: "High Protein", lowCarb: "Low Carb", keto: "Keto", mediterranean: "Mediterranean", paleo: "Paleo" }
+  const restrictionsMap = { none: "None", vegetarian: "Vegetarian", vegan: "Vegan", glutenFree: "Gluten Free", dairyFree: "Dairy Free", pescatarian: "Pescatarian" }
+  const cuisineMap = { any: "Any", indonesian: "Indonesian", asian: "Asian", mediterranean: "Mediterranean", western: "Western", mexican: "Mexican", indian: "Indian" }
 
   return {
     goal: goalMap[formData.nutritionGoal],
@@ -208,203 +62,113 @@ function mapMealFormToContext(formData: MealFormData) {
     mealsPerDay: formData.mealsPerDay,
     restrictions: restrictionsMap[formData.dietaryRestrictions],
     cuisine: formData.cuisinePreference ? cuisineMap[formData.cuisinePreference] : "Any",
-    complexity: formData.mealComplexity ? complexityMap[formData.mealComplexity] : "Moderate",
-    includeDesserts: formData.includeDesserts || false,
-    allergies: formData.allergies ? allergiesMap[formData.allergies] : "None",
-    budget: formData.budgetLevel ? budgetMap[formData.budgetLevel] : "Moderate",
-    cookingTime: formData.cookingTime ? cookingTimeMap[formData.cookingTime] : "Moderate",
-    seasonalPreference: formData.seasonalPreference ? seasonalMap[formData.seasonalPreference] : "Any",
-    healthConditions: formData.healthConditions ? healthConditionsMap[formData.healthConditions] : "None",
-    proteinPreference: formData.proteinPreference ? proteinPreferenceMap[formData.proteinPreference] : "Balanced",
-    mealPrepOption: formData.mealPrepOption ? mealPrepMap[formData.mealPrepOption] : "Daily Cooking",
     includeSnacks: formData.includeSnacks || false,
-    snackFrequency: formData.snackFrequency ? snackFrequencyMap[formData.snackFrequency] : "Twice a day",
-    snackType: formData.snackType ? snackTypeMap[formData.snackType] : "Balanced",
   }
+}
+
+function getMacros(dietType: string, calories: number) {
+  const macroMap: Record<string, [number, number, number]> = {
+    highProtein: [40, 30, 30], lowCarb: [35, 15, 50], keto: [20, 5, 75], mediterranean: [15, 55, 30], paleo: [30, 25, 45], balanced: [25, 50, 25],
+  }
+  const [p, c, f] = macroMap[dietType] || macroMap.balanced
+  return { protein: Math.round((calories * p / 100) / 4), carbs: Math.round((calories * c / 100) / 4), fat: Math.round((calories * f / 100) / 9), proteinPercent: p, carbsPercent: c, fatPercent: f }
 }
 
 export async function POST(request: Request) {
   try {
-    if (!groq) {
+    // Rate limiting
+    const clientIp = getClientIp(request)
+    const rateLimitResult = rateLimit(`meal_${clientIp}`, { maxRequests: 10, windowMs: 60000 })
+    
+    if (!rateLimitResult.success) {
       return NextResponse.json(
-        { error: "AI service is not available. Please check server configuration." },
-        { status: 500 }
+        { error: "Too many requests. Please try again later.", resetIn: Math.ceil(rateLimitResult.resetIn / 1000) },
+        { status: 429, headers: { "X-RateLimit-Remaining": "0" } }
       )
     }
 
-    const formData: MealFormData = await request.json()
+    if (!groq) {
+      return NextResponse.json({ error: "AI service is not available." }, { status: 500 })
+    }
 
-    // Validate required fields
-    if (!formData.nutritionGoal || !formData.dailyCalories || !formData.dietType) {
+    const body = await request.json()
+    
+    // Input validation
+    const validationResult = mealFormSchema.safeParse(body)
+    if (!validationResult.success) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Invalid input", details: validationResult.error.flatten().fieldErrors },
         { status: 400 }
       )
     }
 
+    const formData = validationResult.data
+
+    // Check cache
+    const cacheKey = generateCacheKey("meal", formData)
+    const cachedPlan = await getCachedResponse<{ plan: z.infer<typeof mealPlanSchema> }>(cacheKey)
+    if (cachedPlan) {
+      return NextResponse.json(cachedPlan, { headers: { "X-Cache": "HIT" } })
+    }
+
     const context = mapMealFormToContext(formData)
+    const macros = getMacros(formData.dietType, formData.dailyCalories)
 
-    // Calculate macronutrient distribution based on diet type
-    let proteinPercent, carbsPercent, fatPercent
+    const prompt = `Create a 7-day meal plan.
+PARAMETERS: Goal: ${context.goal}, Diet: ${context.dietType}, Meals/Day: ${context.mealsPerDay}, Restrictions: ${context.restrictions}, Cuisine: ${context.cuisine}
+CALORIES: ${context.calories}/day, Protein: ${macros.protein}g, Carbs: ${macros.carbs}g, Fat: ${macros.fat}g
+Return JSON with summary, overview, macros, and meals (day1-day7). Each meal needs: name, foods array (name, amount, protein, carbs, fat, calories), totals, notes.`
 
-    switch (formData.dietType) {
-      case "highProtein":
-        proteinPercent = 40
-        carbsPercent = 30
-        fatPercent = 30
-        break
-      case "lowCarb":
-        proteinPercent = 35
-        carbsPercent = 15
-        fatPercent = 50
-        break
-      case "keto":
-        proteinPercent = 20
-        carbsPercent = 5
-        fatPercent = 75
-        break
-      case "mediterranean":
-        proteinPercent = 15
-        carbsPercent = 55
-        fatPercent = 30
-        break
-      case "paleo":
-        proteinPercent = 30
-        carbsPercent = 25
-        fatPercent = 45
-        break
-      default:
-        proteinPercent = 25
-        carbsPercent = 50
-        fatPercent = 25
-    }
-
-    const targetCalories = formData.dailyCalories
-    const targetProteinGrams = Math.round((targetCalories * (proteinPercent / 100)) / 4)
-    const targetCarbsGrams = Math.round((targetCalories * (carbsPercent / 100)) / 4)
-    const targetFatGrams = Math.round((targetCalories * (fatPercent / 100)) / 9)
-    const caloriesPerMeal = Math.round(targetCalories / context.mealsPerDay)
-
-    const prompt = `
-  Create a 7-day meal plan with the following parameters:
-  - Nutrition Goal: ${context.goal}
-  - Diet Type: ${context.dietType}
-  - Meals Per Day: ${context.mealsPerDay}
-  - Dietary Restrictions: ${context.restrictions}
-  - Cuisine Preference: ${context.cuisine}
-  - Include Snacks: ${context.includeSnacks ? "Yes" : "No"}
-  
-  CRITICAL CALORIE REQUIREMENTS (MUST FOLLOW EXACTLY):
-  - Total Daily Calories: EXACTLY ${targetCalories} calories per day
-  - Each meal should have approximately ${caloriesPerMeal} calories
-  - The sum of all meals each day MUST equal ${targetCalories} calories (allow ±50 calories tolerance)
-  - Use realistic portion sizes with accurate calorie counts
-  
-  Macronutrient Targets (per day):
-  - Protein: ${targetProteinGrams}g (${proteinPercent}%)
-  - Carbs: ${targetCarbsGrams}g (${carbsPercent}%)
-  - Fat: ${targetFatGrams}g (${fatPercent}%)
-  
-  CRITICAL VARIETY REQUIREMENTS (MUST FOLLOW):
-  - EACH DAY MUST HAVE COMPLETELY DIFFERENT MEALS - NO REPETITION
-  - Day 1, Day 2, Day 3, Day 4, Day 5, Day 6, Day 7 must all be unique
-  - Do NOT copy the same breakfast/lunch/dinner across multiple days
-  - Use different proteins each day (chicken, beef, fish, eggs, tofu, etc.)
-  - Use different cooking methods (grilled, baked, stir-fried, steamed, etc.)
-  - Provide variety in vegetables, grains, and sides
-  
-  Return your response as a valid JSON object with EXACTLY the following structure:
-  {
-    "summary": {
-      "goal": "${context.goal}",
-      "calories": ${targetCalories},
-      "dietType": "${context.dietType}",
-      "mealsPerDay": ${context.mealsPerDay},
-      "restrictions": "${context.restrictions}",
-      "cuisine": "${context.cuisine}",
-      "complexity": "${context.complexity}",
-      "includeDesserts": ${context.includeDesserts},
-      "allergies": "${context.allergies}",
-      "budget": "${context.budget}",
-      "cookingTime": "${context.cookingTime}",
-      "seasonalPreference": "${context.seasonalPreference}",
-      "healthConditions": "${context.healthConditions}",
-      "proteinPreference": "${context.proteinPreference}",
-      "mealPrepOption": "${context.mealPrepOption}",
-      "includeSnacks": ${context.includeSnacks},
-      "snackFrequency": "${context.includeSnacks ? context.snackFrequency : "None"}",
-      "snackType": "${context.includeSnacks ? context.snackType : "None"}"
-    },
-    "overview": "string with overall plan description",
-    "macros": {
-      "protein": ${targetProteinGrams},
-      "carbs": ${targetCarbsGrams},
-      "fat": ${targetFatGrams}
-    },
-    "meals": {
-      "day1": [
-        {
-          "name": "string with meal name",
-          "cookingTime": "string with cooking time",
-          "isSnack": false,
-          "foods": [
-            {
-              "name": "string with food name",
-              "amount": "string with amount",
-              "protein": number (grams),
-              "carbs": number (grams),
-              "fat": number (grams),
-              "calories": number (integer)
-            }
-          ],
-          "totals": {
-            "protein": number (sum of protein in grams),
-            "carbs": number (sum of carbs in grams),
-            "fat": number (sum of fat in grams),
-            "calories": number (sum of calories)
-          },
-          "notes": "string with preparation notes"
-        }
-      ],
-      "day2": [],
-      "day3": [],
-      "day4": [],
-      "day5": [],
-      "day6": [],
-      "day7": []
-    }
-  }
-`
-
-    const completion = await groq.chat.completions.create({
+    // Streaming response
+    const stream = await groq.chat.completions.create({
       messages: [
-        {
-          role: "system",
-          content:
-            "You are a professional nutritionist with expertise in global cuisines, especially Indonesian cuisine. Generate detailed meal plans in JSON format that strictly follow the requested structure. CRITICAL: Each of the 7 days MUST have completely different meals - never repeat the same meal across different days. Create diverse, varied meals using different proteins, cooking methods, and ingredients each day. When Indonesian cuisine is requested, incorporate authentic Indonesian dishes with accurate nutritional information. Do not include any explanations or comments in your response, only the JSON object.",
-        },
+        { role: "system", content: "You are a professional nutritionist. Generate 7-day meal plans in JSON format with variety across all days." },
         { role: "user", content: prompt },
       ],
       model: "openai/gpt-oss-120b",
       response_format: { type: "json_object" },
       temperature: 0.7,
+      stream: true,
     })
 
-    const responseContent = completion.choices[0]?.message?.content
+    let fullContent = ""
+    const encoder = new TextEncoder()
 
-    if (!responseContent) {
-      return NextResponse.json(
-        { error: "Received empty response from AI service" },
-        { status: 500 }
-      )
-    }
+    const readableStream = new ReadableStream({
+      async start(controller) {
+        try {
+          for await (const chunk of stream) {
+            const content = chunk.choices[0]?.delta?.content || ""
+            fullContent += content
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ chunk: content })}\n\n`))
+          }
 
-    const parsedResponse = JSON.parse(responseContent)
-    const validatedPlan = mealPlanSchema.parse(parsedResponse)
-    return NextResponse.json({ plan: validatedPlan })
+          const parsedResponse = JSON.parse(fullContent)
+          const validatedPlan = mealPlanSchema.parse(parsedResponse)
+          await setCachedResponse(cacheKey, { plan: validatedPlan }, 1440)
+          
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, plan: validatedPlan })}\n\n`))
+          controller.close()
+        } catch (error) {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: "Failed to generate plan" })}\n\n`))
+          controller.close()
+        }
+      },
+    })
+
+    return new Response(readableStream, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+        "X-Cache": "MISS",
+        "X-RateLimit-Remaining": String(rateLimitResult.remaining),
+      },
+    })
   } catch (error) {
+    console.error("Meal generation error:", error)
     return NextResponse.json(
-      { error: "Failed to generate meal plan. Please try again." },
+      { error: "Failed to generate meal plan.", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     )
   }

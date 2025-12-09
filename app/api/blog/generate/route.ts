@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
+import { rateLimit, getClientIp } from "@/lib/rate-limit"
 
 const FITNESS_TOPICS = [
   "Best compound exercises for building muscle mass",
@@ -36,6 +37,17 @@ const FITNESS_TOPICS = [
 
 export async function POST(request: Request) {
   try {
+    // Rate limiting
+    const clientIp = getClientIp(request)
+    const rateLimitResult = rateLimit(`blog_${clientIp}`, { maxRequests: 5, windowMs: 60000 })
+    
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429 }
+      )
+    }
+
     // Verify secret key for security
     const authHeader = request.headers.get("authorization")
     const expectedKey = process.env.BLOG_GENERATE_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY

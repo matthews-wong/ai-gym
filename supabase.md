@@ -1165,4 +1165,44 @@ SELECT cron.schedule(
 );
 ```
 
+---
+
+## API Cache Table
+
+This table is used to cache AI-generated responses to reduce API costs and improve response times.
+
+```sql
+CREATE TABLE api_cache (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  cache_key TEXT UNIQUE NOT NULL,
+  response JSONB NOT NULL,
+  expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Index for faster lookups
+CREATE INDEX idx_api_cache_key ON api_cache(cache_key);
+CREATE INDEX idx_api_cache_expires ON api_cache(expires_at);
+
+-- Enable RLS (optional - can be disabled for server-only access)
+ALTER TABLE api_cache ENABLE ROW LEVEL SECURITY;
+
+-- Policy: Allow all operations from service role (server-side only)
+CREATE POLICY "Service role full access"
+  ON api_cache FOR ALL
+  USING (true)
+  WITH CHECK (true);
+
+-- Auto-cleanup expired cache entries (run daily)
+CREATE OR REPLACE FUNCTION cleanup_expired_cache()
+RETURNS void AS $$
+BEGIN
+  DELETE FROM api_cache WHERE expires_at < NOW();
+END;
+$$ LANGUAGE plpgsql;
+
+-- Optional: Schedule cleanup with pg_cron
+-- SELECT cron.schedule('cleanup-cache', '0 0 * * *', 'SELECT cleanup_expired_cache()');
+```
+
 
