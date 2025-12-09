@@ -191,7 +191,6 @@ export async function uploadTransformationPhoto(
   if (uploadError) {
     return null
   }
-  }
 
   const { data } = supabase.storage
     .from("transformation-photos")
