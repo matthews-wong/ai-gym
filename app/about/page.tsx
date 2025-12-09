@@ -807,7 +807,7 @@ function Footer() {
             <p className="text-gray-500 text-sm mt-4 md:mt-0">
               Built by{" "}
               <a
-                href="https://www.matthewswong.tech"
+                href="https://www.matthewswong.com"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-emerald-400 hover:text-emerald-300 transition-colors"

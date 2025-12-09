@@ -250,7 +250,7 @@ export const metadata: Metadata = {
   authors: [
     {
       name: "Matthews Wong",
-      url: "https://www.matthewswong.tech",
+      url: "https://www.matthewswong.com",
     },
   ],
   creator: "Matthews Wong",

@@ -872,7 +872,7 @@ export default function HomePage() {
             <p className="text-sm text-stone-500">
               Created by{" "}
               <a 
-                href="https://matthewswong.tech" 
+                href="https://matthewswong.com" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="text-stone-400 hover:text-teal-400 transition-colors font-medium"

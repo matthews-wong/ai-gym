@@ -20,7 +20,7 @@ const jsonLd = {
     founder: {
       "@type": "Person",
       name: "Matthews Wong",
-      url: "https://www.matthewswong.tech",
+      url: "https://www.matthewswong.com",
       jobTitle: "Software Engineer & Founder",
       description:
         "Software engineer with a passion for fitness and workout, combining technology and health to create AI GymBRO.",
@@ -63,7 +63,7 @@ const organizationJsonLd = {
     "@type": "Person",
     name: "Matthews Wong",
     jobTitle: "Founder & Developer",
-    url: "https://www.matthewswong.tech",
+    url: "https://www.matthewswong.com",
     description:
       "I am a software engineer while I have a hobby about fitness and workout. Most research shows that a proper meal and workout is the key to achieving your health goals. So combining my 2 main interests, I built this app 'AI GymBRO' for you to create your meal plan and workout plan with the power of artificial intelligence.",
   },
@@ -88,7 +88,7 @@ const personJsonLd = {
   "@type": "Person",
   name: "Matthews Wong",
   jobTitle: "Founder & Developer of AI GymBRO",
-  url: "https://www.matthewswong.tech",
+  url: "https://www.matthewswong.com",
   worksFor: {
     "@type": "Organization",
     name: "AI GymBRO",
@@ -133,7 +133,7 @@ export const metadata: Metadata = {
   authors: [
     {
       name: "Matthews Wong",
-      url: "https://www.matthewswong.tech",
+      url: "https://www.matthewswong.com",
     },
   ],
   creator: "Matthews Wong",

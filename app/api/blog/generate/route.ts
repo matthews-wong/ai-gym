@@ -48,7 +48,7 @@ export async function POST(request: Request) {
       }
     }
 
-    const groqApiKey = process.env.GROQ_API_KEY || process.env.NEXT_PUBLIC_GROQ_API_KEY
+    const groqApiKey = process.env.GROQ_API_KEY
     if (!groqApiKey) {
       return NextResponse.json({ error: "GROQ API key not configured" }, { status: 500 })
     }
@@ -102,8 +102,6 @@ Return your response as a JSON object with this exact structure:
     })
 
     if (!groqResponse.ok) {
-      const errorText = await groqResponse.text()
-      console.error("Groq API error:", errorText)
       return NextResponse.json({ error: "Failed to generate blog content" }, { status: 500 })
     }
 
@@ -142,13 +140,11 @@ Return your response as a JSON object with this exact structure:
       .single()
 
     if (error) {
-      console.error("Supabase insert error:", error)
       return NextResponse.json({ error: "Failed to save blog" }, { status: 500 })
     }
 
     return NextResponse.json({ success: true, blog: data })
   } catch (error) {
-    console.error("Blog generation error:", error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to generate blog" },
       { status: 500 }

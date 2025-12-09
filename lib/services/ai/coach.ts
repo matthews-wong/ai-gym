@@ -43,8 +43,7 @@ export async function getCoachResponse(prompt: string): Promise<CoachResponse> {
     }
 
     return { response };
-  } catch (error) {
-    console.error("Coach API error:", error);
+  } catch {
     return {
       response: "",
       error: "Failed to get response from AI Coach. Please try again.",

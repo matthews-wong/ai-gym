@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { ArrowLeft, ChevronLeft, ChevronRight, Flame, Clock, Download, Loader2, Youtube } from "lucide-react"
-import type { MealPlan } from "@/lib/ai-service"
+import type { MealPlan } from "@/lib/types/plans"
 import { generatePDF } from "@/lib/pdf-service"
 import { savePlanToDatabase } from "@/lib/services/planService"
 

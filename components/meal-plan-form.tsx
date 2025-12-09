@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Loader2, AlertTriangle, Calculator, ArrowRight, ArrowLeft } from "lucide-react"
-import { generateMealPlan, type MealPlan, getApiStatus } from "@/lib/ai-service"
+import type { MealPlan } from "@/lib/types/plans"
 import MealPlanDisplay from "./meal-plan-display"
 import LoadingModal from "./loading-modal"
 import CalorieCalculatorModal from "./calorie-calculator-modal"
@@ -30,12 +30,10 @@ export default function MealPlanForm() {
   })
 
   useEffect(() => {
-    try {
-      const status = getApiStatus()
-      setApiStatus({ available: status.responseStatus.serviceAvailable })
-    } catch {
-      setApiStatus({ available: false })
-    }
+    fetch("/api/env")
+      .then((res) => res.json())
+      .then((data) => setApiStatus({ available: data.hasGroqKey }))
+      .catch(() => setApiStatus({ available: false }))
   }, [])
 
   const updateField = (field: string, value: string | number | boolean) => {
@@ -58,20 +56,31 @@ export default function MealPlanForm() {
     setApiError(null)
 
     try {
-      const plan = await generateMealPlan({
-        ...formData,
-        mealComplexity: "moderate",
-        budgetLevel: "medium",
-        cookingTime: "moderate",
-        seasonalPreference: "any",
-        healthConditions: "none",
-        proteinPreference: "balanced",
-        mealPrepOption: "daily",
-        includeDesserts: false,
-        snackFrequency: "twice",
-        snackType: "balanced",
+      const response = await fetch("/api/meal/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...formData,
+          mealComplexity: "moderate",
+          budgetLevel: "medium",
+          cookingTime: "moderate",
+          seasonalPreference: "any",
+          healthConditions: "none",
+          proteinPreference: "balanced",
+          mealPrepOption: "daily",
+          includeDesserts: false,
+          snackFrequency: "twice",
+          snackType: "balanced",
+        }),
       })
-      setMealPlan(plan)
+      
+      const data = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to generate meal plan")
+      }
+      
+      setMealPlan(data.plan)
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Failed to generate meal plan"
       setApiError(errorMessage)

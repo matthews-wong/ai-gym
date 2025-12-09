@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 import { Loader2, AlertTriangle, ArrowRight, ArrowLeft, Check } from "lucide-react"
-import { generateWorkoutPlan } from "@/lib/ai-service"
 import WorkoutPlanDisplay from "./workout-plan-display"
 import LoadingModal from "./loading-modal"
 
@@ -87,8 +86,19 @@ export default function WorkoutPlanForm() {
     setApiError(null)
 
     try {
-      const plan = await generateWorkoutPlan(formData)
-      setWorkoutPlan(plan)
+      const response = await fetch("/api/workout/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      })
+      
+      const data = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to generate workout plan")
+      }
+      
+      setWorkoutPlan(data.plan)
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Failed to generate workout plan"
       setApiError(errorMessage)

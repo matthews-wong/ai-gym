@@ -33,8 +33,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ response });
-  } catch (error) {
-    console.error("AI Coach API error:", error);
+  } catch {
     return NextResponse.json(
       { error: "An unexpected error occurred. Please try again." },
       { status: 500 }

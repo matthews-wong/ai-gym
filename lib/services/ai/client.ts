@@ -1,6 +1,7 @@
 import Groq from "groq-sdk";
 
-const apiKey = process.env.NEXT_PUBLIC_GROQ_API_KEY;
+// Use server-only API key - this file should only be imported in server contexts
+const apiKey = process.env.GROQ_API_KEY;
 
 let groqClient: Groq | null = null;
 
@@ -8,10 +9,9 @@ if (apiKey) {
   try {
     groqClient = new Groq({
       apiKey,
-      dangerouslyAllowBrowser: true,
     });
-  } catch (error) {
-    console.error("Failed to initialize Groq client:", error);
+  } catch {
+    // Failed to initialize Groq client
   }
 }
 
