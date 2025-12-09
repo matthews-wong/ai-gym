@@ -143,7 +143,7 @@ Return ONLY valid JSON:
 }
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 export async function POST(request: Request) {
   try {
@@ -161,15 +161,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "AI service is not available." }, { status: 500 })
     }
 
+    const body = await request.json()
+    
     // Check for auth token
     const authHeader = request.headers.get("authorization")
     let userId: string | null = null
 
-    if (authHeader?.startsWith("Bearer ")) {
-      const token = authHeader.slice(7)
-      const supabase = createClient(supabaseUrl, supabaseServiceKey)
-      const { data: { user } } = await supabase.auth.getUser(token)
-      userId = user?.id || null
+    try {
+      if (authHeader?.startsWith("Bearer ") && supabaseAnonKey) {
+        const token = authHeader.slice(7)
+        const supabase = createClient(supabaseUrl, supabaseAnonKey)
+        const { data: { user } } = await supabase.auth.getUser(token)
+        userId = user?.id || null
+      }
+    } catch (e) {
+      console.warn("Auth check failed:", e)
     }
 
     // Check usage limits
@@ -186,8 +192,6 @@ export async function POST(request: Request) {
         { status: 403 }
       )
     }
-
-    const body = await request.json()
     
     // Skip prefetch requests
     if (body._prefetch) {

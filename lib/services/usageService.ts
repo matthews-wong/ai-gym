@@ -79,57 +79,68 @@ export function getRemainingLocal(type: PlanType): number {
 
 // Supabase tracking for authenticated users
 export async function getUserUsage(userId: string): Promise<UsageLimits> {
-  const today = getToday()
-  
-  const { data, error } = await supabase
-    .from("user_usage")
-    .select("workout_count, meal_count, usage_date")
-    .eq("user_id", userId)
-    .eq("usage_date", today)
-    .single()
+  try {
+    const today = getToday()
+    
+    const { data, error } = await supabase
+      .from("user_usage")
+      .select("workout_count, meal_count, usage_date")
+      .eq("user_id", userId)
+      .eq("usage_date", today)
+      .single()
 
-  if (error || !data) {
+    // If table doesn't exist or no data, return 0 usage
+    if (error || !data) {
+      return { workout: 0, meal: 0 }
+    }
+
+    return {
+      workout: data.workout_count || 0,
+      meal: data.meal_count || 0,
+    }
+  } catch (error) {
+    console.warn("Failed to get user usage:", error)
     return { workout: 0, meal: 0 }
-  }
-
-  return {
-    workout: data.workout_count || 0,
-    meal: data.meal_count || 0,
   }
 }
 
 export async function incrementUserUsage(userId: string, type: PlanType): Promise<boolean> {
-  const today = getToday()
-  
-  // Try to get existing record
-  const { data: existing } = await supabase
-    .from("user_usage")
-    .select("id, workout_count, meal_count")
-    .eq("user_id", userId)
-    .eq("usage_date", today)
-    .single()
+  try {
+    const today = getToday()
+    
+    // Try to get existing record
+    const { data: existing } = await supabase
+      .from("user_usage")
+      .select("id, workout_count, meal_count")
+      .eq("user_id", userId)
+      .eq("usage_date", today)
+      .single()
 
-  if (existing) {
-    // Update existing record
-    const field = type === "workout" ? "workout_count" : "meal_count"
-    const { error } = await supabase
-      .from("user_usage")
-      .update({ [field]: (existing[field as keyof typeof existing] as number || 0) + 1 })
-      .eq("id", existing.id)
-    
-    return !error
-  } else {
-    // Create new record
-    const { error } = await supabase
-      .from("user_usage")
-      .insert({
-        user_id: userId,
-        usage_date: today,
-        workout_count: type === "workout" ? 1 : 0,
-        meal_count: type === "meal" ? 1 : 0,
-      })
-    
-    return !error
+    if (existing) {
+      // Update existing record
+      const field = type === "workout" ? "workout_count" : "meal_count"
+      const { error } = await supabase
+        .from("user_usage")
+        .update({ [field]: (existing[field as keyof typeof existing] as number || 0) + 1 })
+        .eq("id", existing.id)
+      
+      return !error
+    } else {
+      // Create new record
+      const { error } = await supabase
+        .from("user_usage")
+        .insert({
+          user_id: userId,
+          usage_date: today,
+          workout_count: type === "workout" ? 1 : 0,
+          meal_count: type === "meal" ? 1 : 0,
+        })
+      
+      return !error
+    }
+  } catch (error) {
+    console.warn("Failed to increment user usage:", error)
+    return false
   }
 }
 
@@ -149,30 +160,42 @@ export async function checkUsageLimit(
   type: PlanType,
   clientIp: string
 ): Promise<{ allowed: boolean; remaining: number; requiresAuth: boolean }> {
-  if (userId) {
-    // Authenticated user
-    const canGenerate = await canUserGenerate(userId, type)
-    const remaining = await getUserRemaining(userId, type)
-    return { allowed: canGenerate, remaining, requiresAuth: false }
-  } else {
-    // Anonymous user - use IP-based localStorage simulation for API
-    // We'll track by IP on the server side for anonymous users
-    const storageKey = `anon_${clientIp}_${type}_${getToday()}`
-    
-    const { data } = await supabase
-      .from("anonymous_usage")
-      .select("count")
-      .eq("identifier", storageKey)
-      .single()
+  try {
+    if (userId) {
+      // Authenticated user
+      const canGenerate = await canUserGenerate(userId, type)
+      const remaining = await getUserRemaining(userId, type)
+      return { allowed: canGenerate, remaining, requiresAuth: false }
+    } else {
+      // Anonymous user - use IP-based localStorage simulation for API
+      // We'll track by IP on the server side for anonymous users
+      const storageKey = `anon_${clientIp}_${type}_${getToday()}`
+      
+      const { data, error } = await supabase
+        .from("anonymous_usage")
+        .select("count")
+        .eq("identifier", storageKey)
+        .single()
 
-    const count = data?.count || 0
-    const limit = ANONYMOUS_LIMITS[type]
-    
-    return {
-      allowed: count < limit,
-      remaining: Math.max(0, limit - count),
-      requiresAuth: count >= limit,
+      // If table doesn't exist or other error, allow generation
+      if (error && error.code !== "PGRST116") {
+        console.warn("Usage check failed, allowing generation:", error.message)
+        return { allowed: true, remaining: 1, requiresAuth: false }
+      }
+
+      const count = data?.count || 0
+      const limit = ANONYMOUS_LIMITS[type]
+      
+      return {
+        allowed: count < limit,
+        remaining: Math.max(0, limit - count),
+        requiresAuth: count >= limit,
+      }
     }
+  } catch (error) {
+    // If usage check fails, allow generation (fail open)
+    console.warn("Usage check error, allowing generation:", error)
+    return { allowed: true, remaining: 1, requiresAuth: false }
   }
 }
 
@@ -181,30 +204,36 @@ export async function recordUsage(
   type: PlanType,
   clientIp: string
 ): Promise<boolean> {
-  if (userId) {
-    return incrementUserUsage(userId, type)
-  } else {
-    // Track anonymous usage by IP
-    const storageKey = `anon_${clientIp}_${type}_${getToday()}`
-    
-    const { data: existing } = await supabase
-      .from("anonymous_usage")
-      .select("id, count")
-      .eq("identifier", storageKey)
-      .single()
-
-    if (existing) {
-      const { error } = await supabase
-        .from("anonymous_usage")
-        .update({ count: existing.count + 1 })
-        .eq("id", existing.id)
-      return !error
+  try {
+    if (userId) {
+      return incrementUserUsage(userId, type)
     } else {
-      const { error } = await supabase
+      // Track anonymous usage by IP
+      const storageKey = `anon_${clientIp}_${type}_${getToday()}`
+      
+      const { data: existing } = await supabase
         .from("anonymous_usage")
-        .insert({ identifier: storageKey, count: 1 })
-      return !error
+        .select("id, count")
+        .eq("identifier", storageKey)
+        .single()
+
+      if (existing) {
+        const { error } = await supabase
+          .from("anonymous_usage")
+          .update({ count: existing.count + 1 })
+          .eq("id", existing.id)
+        return !error
+      } else {
+        const { error } = await supabase
+          .from("anonymous_usage")
+          .insert({ identifier: storageKey, count: 1 })
+        return !error
+      }
     }
+  } catch (error) {
+    // If recording fails, just log and continue
+    console.warn("Failed to record usage:", error)
+    return false
   }
 }
 

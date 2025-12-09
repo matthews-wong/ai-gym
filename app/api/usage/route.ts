@@ -4,7 +4,7 @@ import { getClientIp } from "@/lib/rate-limit"
 import { checkUsageLimit, LIMITS } from "@/lib/services/usageService"
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 export async function GET(request: Request) {
   try {
@@ -20,11 +20,15 @@ export async function GET(request: Request) {
     const authHeader = request.headers.get("authorization")
     let userId: string | null = null
 
-    if (authHeader?.startsWith("Bearer ")) {
-      const token = authHeader.slice(7)
-      const supabase = createClient(supabaseUrl, supabaseServiceKey)
-      const { data: { user } } = await supabase.auth.getUser(token)
-      userId = user?.id || null
+    try {
+      if (authHeader?.startsWith("Bearer ") && supabaseAnonKey) {
+        const token = authHeader.slice(7)
+        const supabase = createClient(supabaseUrl, supabaseAnonKey)
+        const { data: { user } } = await supabase.auth.getUser(token)
+        userId = user?.id || null
+      }
+    } catch (e) {
+      console.warn("Auth check failed:", e)
     }
 
     const result = await checkUsageLimit(userId, type, clientIp)
