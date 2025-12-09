@@ -112,7 +112,12 @@ export function useStreamingFetch<T>(options: UseStreamingFetchOptions<T>) {
 
       try {
         // Get auth token if available
-        const token = await getAuthToken?.()
+        let token: string | null = null
+        try {
+          token = await getAuthToken?.() ?? null
+        } catch {
+          // Auth token fetch failed, continue without it
+        }
         const headers: Record<string, string> = { "Content-Type": "application/json" }
         if (token) {
           headers["Authorization"] = `Bearer ${token}`

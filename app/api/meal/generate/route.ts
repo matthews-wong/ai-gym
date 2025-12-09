@@ -186,7 +186,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "AI service is not available." }, { status: 500 })
     }
 
-    const body = await request.json()
+    let body
+    try {
+      body = await request.json()
+    } catch (e) {
+      console.error("Failed to parse request body:", e)
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 })
+    }
     
     // Check for auth token
     const authHeader = request.headers.get("authorization")
@@ -203,19 +209,23 @@ export async function POST(request: Request) {
       console.warn("Auth check failed:", e)
     }
 
-    // Check usage limits
-    const usageCheck = await checkUsageLimit(userId, "meal", clientIp)
-    if (!usageCheck.allowed) {
-      return NextResponse.json(
-        { 
-          error: usageCheck.requiresAuth 
-            ? "You've reached your free limit. Please sign in to generate more meal plans."
-            : "You've reached your daily limit for meal plans. Try again tomorrow.",
-          requiresAuth: usageCheck.requiresAuth,
-          remaining: usageCheck.remaining,
-        },
-        { status: 403 }
-      )
+    // Check usage limits (skip if check fails)
+    try {
+      const usageCheck = await checkUsageLimit(userId, "meal", clientIp)
+      if (!usageCheck.allowed) {
+        return NextResponse.json(
+          { 
+            error: usageCheck.requiresAuth 
+              ? "You've reached your free limit. Please sign in to generate more meal plans."
+              : "You've reached your daily limit for meal plans. Try again tomorrow.",
+            requiresAuth: usageCheck.requiresAuth,
+            remaining: usageCheck.remaining,
+          },
+          { status: 403 }
+        )
+      }
+    } catch (e) {
+      console.warn("Usage check failed, allowing generation:", e)
     }
     
     // Skip prefetch requests
@@ -225,6 +235,7 @@ export async function POST(request: Request) {
 
     const validationResult = mealFormSchema.safeParse(body)
     if (!validationResult.success) {
+      console.error("Meal validation failed:", validationResult.error.flatten())
       return NextResponse.json(
         { error: "Invalid input", details: validationResult.error.flatten().fieldErrors },
         { status: 400 }
