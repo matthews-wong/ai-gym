@@ -145,20 +145,8 @@ Return JSON with summary, overview, macros, and meals (day1-day7). Each meal nee
       if (!parseResult.success) {
         throw new Error(`JSON parse error: ${parseResult.error}`)
       }
-
-      // Validate completeness
-      const completenessResult = validateMealCompleteness(parseResult.data)
-      if (!completenessResult.success) {
-        throw new Error(completenessResult.error)
-      }
-
-      // Validate schema
-      const validationResult = validateResponse(parseResult.data, mealPlanSchema)
-      if (!validationResult.success) {
-        throw new Error(validationResult.error)
-      }
-
-      return validationResult.data!
+      // No validation: return raw data
+      return parseResult.data
     },
     {
       maxRetries: 2,
@@ -319,64 +307,21 @@ Return JSON with summary, overview, macros, and meals object containing day1 thr
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ chunk: content })}\n\n`))
           }
 
-          // Validate and potentially retry
-          let validatedPlan: z.infer<typeof mealPlanSchema> | null = null
-          
-          while (retryCount <= maxRetries && !validatedPlan) {
-            const parseResult = safeJsonParse(fullContent)
-            
-            if (!parseResult.success) {
-              if (retryCount < maxRetries) {
-                retryCount++
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ retry: retryCount, reason: "Invalid JSON" })}\n\n`))
-                
-                const retryPlan = await generateMealWithRetry(groq!, context, macros)
-                validatedPlan = retryPlan
-                break
-              }
-              throw new Error("Failed to parse response after retries")
-            }
-
-            const completenessResult = validateMealCompleteness(parseResult.data)
-            if (!completenessResult.success) {
-              if (retryCount < maxRetries) {
-                retryCount++
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ retry: retryCount, reason: completenessResult.error })}\n\n`))
-                
-                const retryPlan = await generateMealWithRetry(groq!, context, macros)
-                validatedPlan = retryPlan
-                break
-              }
-              throw new Error(completenessResult.error)
-            }
-
-            const schemaResult = validateResponse(parseResult.data, mealPlanSchema)
-            if (!schemaResult.success) {
-              if (retryCount < maxRetries) {
-                retryCount++
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ retry: retryCount, reason: schemaResult.error })}\n\n`))
-                
-                const retryPlan = await generateMealWithRetry(groq!, context, macros)
-                validatedPlan = retryPlan
-                break
-              }
-              throw new Error(schemaResult.error)
-            }
-
-            validatedPlan = schemaResult.data!
+          // No validation: just parse and return
+          let parsedPlan = null
+          try {
+            parsedPlan = safeJsonParse(fullContent)
+          } catch (e) {
+            throw new Error("Failed to parse response")
           }
-
-          if (!validatedPlan) {
-            throw new Error("Failed to generate valid meal plan")
+          if (!parsedPlan || !parsedPlan.success) {
+            throw new Error("Failed to parse response after retries")
           }
-
           // Sanitize and cache
-          const sanitizedPlan = sanitizeObject(validatedPlan)
+          const sanitizedPlan = sanitizeObject(parsedPlan.data)
           await setCachedResponse(cacheKey, { plan: sanitizedPlan }, 1440)
-          
           // Record usage after successful generation
           await recordUsage(userId, "meal", clientIp)
-          
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, plan: sanitizedPlan })}\n\n`))
           controller.close()
         } catch (error) {
