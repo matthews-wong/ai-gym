@@ -16,6 +16,10 @@ export default function MealPlanDisplay({ plan, onBack }: MealPlanDisplayProps) 
   const [expandedMeal, setExpandedMeal] = useState<number | null>(0)
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
 
+  // Remove all guards: allow rendering even if fields are missing
+  // Add debug log
+  console.log('MealPlanDisplay plan:', plan)
+
   const dayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
   const totalDays = 7
 
@@ -23,7 +27,7 @@ export default function MealPlanDisplay({ plan, onBack }: MealPlanDisplayProps) 
     const saveToDb = async () => {
       await savePlanToDatabase({
         planType: "meal",
-        planData: plan as unknown as Record<string, unknown>,
+        planData: plan as any,
       })
     }
     saveToDb()
@@ -36,23 +40,24 @@ export default function MealPlanDisplay({ plan, onBack }: MealPlanDisplayProps) 
     setIsGeneratingPDF(true)
     try {
       await generatePDF(plan, "meal")
-    } catch {
-      // PDF generation failed
-    } finally {
-      setIsGeneratingPDF(false)
-    }
+    } catch {}
+    setIsGeneratingPDF(false)
   }
 
-  const currentDayMeals = plan.meals?.[`day${currentDay}`] || []
-  const dailyTotals = currentDayMeals.reduce(
-    (acc, meal) => ({
-      calories: acc.calories + (meal.totals?.calories || 0),
-      protein: acc.protein + (meal.totals?.protein || 0),
-      carbs: acc.carbs + (meal.totals?.carbs || 0),
-      fat: acc.fat + (meal.totals?.fat || 0),
-    }),
-    { calories: 0, protein: 0, carbs: 0, fat: 0 }
-  )
+  // Remove guards: fallback to empty array if missing
+  const currentDayMeals = (plan && plan.meals && plan.meals[`day${currentDay}`]) || []
+  // Remove guards: fallback to 0 if missing
+  const dailyTotals = Array.isArray(currentDayMeals)
+    ? currentDayMeals.reduce(
+        (acc, meal) => ({
+          calories: acc.calories + (meal?.totals?.calories || 0),
+          protein: acc.protein + (meal?.totals?.protein || 0),
+          carbs: acc.carbs + (meal?.totals?.carbs || 0),
+          fat: acc.fat + (meal?.totals?.fat || 0),
+        }),
+        { calories: 0, protein: 0, carbs: 0, fat: 0 }
+      )
+    : { calories: 0, protein: 0, carbs: 0, fat: 0 }
 
   return (
     <div className="min-h-screen bg-stone-950 pt-20">

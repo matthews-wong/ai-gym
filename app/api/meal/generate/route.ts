@@ -126,6 +126,7 @@ Return JSON with summary, overview, macros, and meals (day1-day7). Each meal nee
 
   return withRetry(
     async () => {
+      console.log('[MealPlan] Calling Groq GPT model...')
       const completion = await groqClient.chat.completions.create({
         messages: [
           { role: "system", content: "You are a professional nutritionist. Generate complete 7-day meal plans in JSON format. ALWAYS include all 7 days with varied meals." },
@@ -135,14 +136,15 @@ Return JSON with summary, overview, macros, and meals (day1-day7). Each meal nee
         response_format: { type: "json_object" },
         temperature: 0.7,
       })
-
       const content = completion.choices[0]?.message?.content
       if (!content) {
+        console.error('[MealPlan] Empty response from AI')
         throw new Error("Empty response from AI")
       }
-
+      console.log('[MealPlan] Raw AI response:', content)
       const parseResult = safeJsonParse(content)
       if (!parseResult.success) {
+        console.error('[MealPlan] JSON parse error:', parseResult.error)
         throw new Error(`JSON parse error: ${parseResult.error}`)
       }
       // No validation: return raw data
@@ -310,11 +312,14 @@ Return JSON with summary, overview, macros, and meals object containing day1 thr
           // No validation: just parse and return
           let parsedPlan = null
           try {
+            console.log('[MealPlan] Streaming: fullContent:', fullContent)
             parsedPlan = safeJsonParse(fullContent)
           } catch (e) {
+            console.error('[MealPlan] Streaming: Failed to parse response', e)
             throw new Error("Failed to parse response")
           }
           if (!parsedPlan || !parsedPlan.success) {
+            console.error('[MealPlan] Streaming: Failed to parse response after retries', parsedPlan)
             throw new Error("Failed to parse response after retries")
           }
           // Sanitize and cache
@@ -326,7 +331,7 @@ Return JSON with summary, overview, macros, and meals object containing day1 thr
           controller.close()
         } catch (error) {
           const errorMsg = error instanceof Error ? error.message : "Failed to generate plan"
-          console.error("Meal generation error:", error)
+          console.error("[MealPlan] Meal generation error:", error)
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: errorMsg })}\n\n`))
           controller.close()
         }
@@ -343,7 +348,7 @@ Return JSON with summary, overview, macros, and meals object containing day1 thr
       },
     })
   } catch (error) {
-    console.error("Meal generation error:", error)
+    console.error("[MealPlan] Meal generation error (outer catch):", error)
     return NextResponse.json(
       { error: "Failed to generate meal plan.", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
