@@ -223,16 +223,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ status: "prefetch_acknowledged" })
     }
 
-    const validationResult = mealFormSchema.safeParse(body)
-    if (!validationResult.success) {
-      console.error("Meal validation failed:", validationResult.error.flatten())
-      return NextResponse.json(
-        { error: "Invalid input", details: validationResult.error.flatten().fieldErrors },
-        { status: 400 }
-      )
-    }
-
-    const formData = validationResult.data
+    // Use body directly without strict validation
+    const formData = body as MealFormInput
     const cacheKey = generateCacheKey("meal", formData)
     
     // Check cache first
