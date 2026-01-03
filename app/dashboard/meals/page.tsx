@@ -41,21 +41,126 @@ interface Meal {
 interface MealPlan {
   id: string;
   plan_data: {
-    summary: {
+    summary: string | {
       goal: string;
       calories: number;
       dietType: string;
       mealsPerDay: number;
     };
-    overview: string;
-    macros: {
+    overview?: string | {
+      goal?: string;
+      calories?: number;
+      dietType?: string;
+      mealsPerDay?: number;
+    };
+    macros?: {
       protein: number;
       carbs: number;
       fat: number;
     };
-    meals: Record<string, Meal[]>;
+    meals: Record<string, unknown>;
   };
   created_at: string;
+}
+
+// Normalize food item from API format to display format
+function normalizeFood(food: Record<string, unknown>): Food {
+  return {
+    name: String(food.name || food.food || "Unknown"),
+    amount: String(food.amount || food.serving || food.portion || "1 serving"),
+    protein: Number(food.protein || food.protein_g || 0),
+    carbs: Number(food.carbs || food.carbs_g || 0),
+    fat: Number(food.fat || food.fat_g || 0),
+    calories: Number(food.calories || food.kcal || 0),
+  };
+}
+
+// Normalize a single meal from API format
+function normalizeMeal(meal: Record<string, unknown>, mealType: string): Meal {
+  // Handle foods array
+  let foods: Food[] = [];
+  if (Array.isArray(meal.foods)) {
+    foods = meal.foods.map((f: Record<string, unknown>) => normalizeFood(f));
+  } else if (Array.isArray(meal.items)) {
+    foods = meal.items.map((f: Record<string, unknown>) => normalizeFood(f));
+  } else if (Array.isArray(meal.ingredients)) {
+    foods = meal.ingredients.map((f: Record<string, unknown>) => normalizeFood(f));
+  }
+
+  // Calculate totals from foods or use provided totals
+  const totals = {
+    calories: Number(meal.calories || meal.total_calories || foods.reduce((sum, f) => sum + f.calories, 0)),
+    protein: Number(meal.protein || meal.protein_g || meal.totals?.protein || foods.reduce((sum, f) => sum + f.protein, 0)),
+    carbs: Number(meal.carbs || meal.carbs_g || meal.totals?.carbs || foods.reduce((sum, f) => sum + f.carbs, 0)),
+    fat: Number(meal.fat || meal.fat_g || meal.totals?.fat || foods.reduce((sum, f) => sum + f.fat, 0)),
+  };
+
+  return {
+    name: String(meal.name || meal.meal || mealType.charAt(0).toUpperCase() + mealType.slice(1)),
+    foods,
+    totals,
+    notes: meal.notes as string | undefined,
+    cookingTime: meal.cookingTime as string | undefined || meal.cooking_time as string | undefined || meal.prep_time as string | undefined,
+  };
+}
+
+// Get meals for a specific day, handling different API response formats
+function getMealsForDay(meals: Record<string, unknown> | undefined, dayKey: string): Meal[] {
+  if (!meals) return [];
+  
+  const dayData = meals[dayKey];
+  if (!dayData) return [];
+
+  // If it's already an array, normalize each meal
+  if (Array.isArray(dayData)) {
+    return dayData.map((meal: Record<string, unknown>, idx: number) => 
+      normalizeMeal(meal, `meal${idx + 1}`)
+    );
+  }
+
+  // If it's an object with meal type keys (breakfast, lunch, dinner, snack, etc.)
+  if (typeof dayData === "object" && dayData !== null) {
+    const mealTypes = ["breakfast", "lunch", "dinner", "snack", "snacks", "pre_workout", "post_workout"];
+    const mealsArray: Meal[] = [];
+
+    for (const mealType of mealTypes) {
+      const mealData = (dayData as Record<string, unknown>)[mealType];
+      if (mealData && typeof mealData === "object") {
+        mealsArray.push(normalizeMeal(mealData as Record<string, unknown>, mealType));
+      }
+    }
+
+    // If no standard meal types found, try to extract any object properties as meals
+    if (mealsArray.length === 0) {
+      for (const [key, value] of Object.entries(dayData as Record<string, unknown>)) {
+        if (value && typeof value === "object" && !Array.isArray(value)) {
+          mealsArray.push(normalizeMeal(value as Record<string, unknown>, key));
+        }
+      }
+    }
+
+    return mealsArray;
+  }
+
+  return [];
+}
+
+// Get macros from plan data
+function getMacros(planData: MealPlan["plan_data"]): { protein: number; carbs: number; fat: number } {
+  if (planData.macros) {
+    return planData.macros;
+  }
+  
+  // Try to get from overview if it's an object
+  if (typeof planData.overview === "object" && planData.overview) {
+    return {
+      protein: Number((planData.overview as Record<string, unknown>).protein || 0),
+      carbs: Number((planData.overview as Record<string, unknown>).carbs || 0),
+      fat: Number((planData.overview as Record<string, unknown>).fat || 0),
+    };
+  }
+
+  return { protein: 0, carbs: 0, fat: 0 };
 }
 
 export default function MealsPage() {
@@ -154,16 +259,19 @@ export default function MealsPage() {
           <>
             {/* Macros */}
             <div className="grid grid-cols-3 gap-4 mb-8">
-              {[
-                { label: "Protein", value: plan.plan_data.macros?.protein || 0, unit: "g", color: "teal" },
-                { label: "Carbs", value: plan.plan_data.macros?.carbs || 0, unit: "g", color: "amber" },
-                { label: "Fat", value: plan.plan_data.macros?.fat || 0, unit: "g", color: "rose" }
-              ].map((macro) => (
-                <div key={macro.label} className="p-5 bg-stone-900 border border-stone-800/50 rounded-xl text-center">
-                  <p className="text-2xl font-bold text-white">{macro.value}<span className="text-lg">{macro.unit}</span></p>
-                  <p className="text-xs text-stone-500 mt-1">{macro.label}</p>
-                </div>
-              ))}
+              {(() => {
+                const macros = getMacros(plan.plan_data);
+                return [
+                  { label: "Protein", value: macros.protein, unit: "g", color: "teal" },
+                  { label: "Carbs", value: macros.carbs, unit: "g", color: "amber" },
+                  { label: "Fat", value: macros.fat, unit: "g", color: "rose" }
+                ].map((macro) => (
+                  <div key={macro.label} className="p-5 bg-stone-900 border border-stone-800/50 rounded-xl text-center">
+                    <p className="text-2xl font-bold text-white">{macro.value}<span className="text-lg">{macro.unit}</span></p>
+                    <p className="text-xs text-stone-500 mt-1">{macro.label}</p>
+                  </div>
+                ));
+              })()}
             </div>
 
             {/* Day Selector */}
@@ -190,7 +298,7 @@ export default function MealsPage() {
 
             {/* Meals */}
             <div className="space-y-4">
-              {plan.plan_data.meals?.[selectedDay]?.map((meal, idx) => (
+              {getMealsForDay(plan.plan_data.meals, selectedDay).map((meal, idx) => (
                 <div 
                   key={idx}
                   className="bg-gradient-to-br from-stone-900 to-stone-900/50 border border-stone-800/50 rounded-xl overflow-hidden"
@@ -204,7 +312,7 @@ export default function MealsPage() {
                       <div className="flex items-center gap-4 mt-1.5">
                         <span className="flex items-center gap-1.5 text-sm text-amber-400">
                           <Flame className="w-4 h-4" />
-                          {meal.totals?.calories || 0} cal
+                          {meal.totals.calories} cal
                         </span>
                         {meal.cookingTime && (
                           <span className="flex items-center gap-1.5 text-sm text-stone-500">
