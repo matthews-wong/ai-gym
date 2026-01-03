@@ -82,6 +82,31 @@ export default function MealPlanDisplay({ plan, onBack }: MealPlanDisplayProps) 
     { calories: 0, protein: 0, carbs: 0, fat: 0 }
   )
 
+  // Normalize the plan data to handle different API response formats
+  const getPlanSummary = () => {
+    // If summary is a string, use overview object for details
+    if (typeof plan.summary === 'string') {
+      const overview = plan.overview as any
+      return {
+        text: plan.summary,
+        calories: overview?.calories_per_day || overview?.calories || 2000,
+        mealsPerDay: 3,
+        goal: overview?.goal || 'Nutrition',
+        diet: overview?.diet || overview?.dietType || 'Balanced',
+      }
+    }
+    // If summary is an object (expected format)
+    return {
+      text: plan.overview as string || "7-day personalized nutrition plan",
+      calories: plan.summary?.calories || 2000,
+      mealsPerDay: plan.summary?.mealsPerDay || 3,
+      goal: plan.summary?.goal || 'Nutrition',
+      diet: plan.summary?.dietType || 'Balanced',
+    }
+  }
+
+  const planSummary = getPlanSummary()
+
   return (
     <div className="min-h-screen bg-stone-950 pt-20">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
@@ -114,19 +139,20 @@ export default function MealPlanDisplay({ plan, onBack }: MealPlanDisplayProps) 
           <h1 className="text-2xl font-bold text-white mb-2">
             Your Meal Plan
           </h1>
-          <p className="text-stone-400 text-sm mb-4">{plan.overview || "7-day personalized nutrition plan"}</p>
+          <p className="text-stone-400 text-sm mb-4">{planSummary.text}</p>
           
           <div className="flex flex-wrap gap-4">
             <div className="flex items-center gap-2 text-sm">
               <Flame className="w-4 h-4 text-amber-400" />
-              <span className="text-stone-300">{plan.summary?.calories || 2000} cal/day</span>
+              <span className="text-stone-300">{planSummary.calories} cal/day</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
               <Clock className="w-4 h-4 text-amber-400" />
-              <span className="text-stone-300">{plan.summary?.mealsPerDay || 3} meals/day</span>
+              <span className="text-stone-300">{planSummary.mealsPerDay} meals/day</span>
             </div>
           </div>
         </div>
+
 
         {/* Day Navigation */}
         <div className="flex items-center justify-between mb-6">
