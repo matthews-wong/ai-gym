@@ -51,23 +51,71 @@ export default function MealPlanDisplay({ plan, onBack }: MealPlanDisplayProps) 
     const dayKey = `day${dayNum}`
     const dayMeals = plan.meals[dayKey]
     
-    // If it's already an array, return it
-    if (Array.isArray(dayMeals)) return dayMeals
+    // If it's already an array, return it with normalized structure
+    if (Array.isArray(dayMeals)) {
+      return dayMeals.map((meal: any) => normalizeMeal(meal))
+    }
     
     // If it's an object with meal keys (breakfast, lunch, dinner, etc.), convert to array
     if (dayMeals && typeof dayMeals === 'object') {
-      return Object.entries(dayMeals).map(([mealName, mealData]: [string, any]) => ({
-        name: mealName.charAt(0).toUpperCase() + mealName.slice(1),
-        foods: Array.isArray(mealData?.foods) ? mealData.foods : 
-               Array.isArray(mealData?.items) ? mealData.items : 
-               Array.isArray(mealData) ? mealData : [],
-        totals: mealData?.totals || { protein: 0, carbs: 0, fat: 0, calories: 0 },
-        notes: mealData?.notes || '',
-        cookingTime: mealData?.cookingTime || '',
-      }))
+      const mealOrder = ['breakfast', 'lunch', 'dinner', 'snack', 'snack1', 'snack2']
+      const entries = Object.entries(dayMeals)
+      // Sort by meal order
+      entries.sort((a, b) => {
+        const aIndex = mealOrder.indexOf(a[0].toLowerCase())
+        const bIndex = mealOrder.indexOf(b[0].toLowerCase())
+        return (aIndex === -1 ? 99 : aIndex) - (bIndex === -1 ? 99 : bIndex)
+      })
+      
+      return entries.map(([mealName, mealData]: [string, any]) => normalizeMeal(mealData, mealName))
     }
     
     return []
+  }
+
+  // Normalize a single meal to a consistent format
+  const normalizeMeal = (mealData: any, mealName?: string) => {
+    if (!mealData) return { name: mealName || 'Meal', foods: [], totals: { protein: 0, carbs: 0, fat: 0, calories: 0 } }
+    
+    // Get foods/ingredients array
+    const foods = Array.isArray(mealData.foods) ? mealData.foods :
+                  Array.isArray(mealData.ingredients) ? mealData.ingredients :
+                  Array.isArray(mealData.items) ? mealData.items : []
+    
+    // Normalize totals - handle both formats
+    const totals = {
+      calories: mealData.totals?.calories || mealData.calories || 0,
+      protein: mealData.totals?.protein || mealData.protein_g || mealData.protein || 0,
+      carbs: mealData.totals?.carbs || mealData.carbs_g || mealData.carbs || 0,
+      fat: mealData.totals?.fat || mealData.fat_g || mealData.fat || 0,
+    }
+    
+    return {
+      name: mealData.name || (mealName ? mealName.charAt(0).toUpperCase() + mealName.slice(1) : 'Meal'),
+      foods: foods.map((f: any) => normalizeFood(f)),
+      totals,
+      notes: mealData.notes || mealData.description || '',
+      cookingTime: mealData.cookingTime || mealData.cooking_time || mealData.prep_time || '',
+    }
+  }
+
+  // Normalize a single food item
+  const normalizeFood = (food: any) => {
+    if (!food) return { name: 'Item', amount: '', calories: 0, protein: 0, carbs: 0, fat: 0 }
+    
+    // Handle string items (just ingredient names)
+    if (typeof food === 'string') {
+      return { name: food, amount: '', calories: 0, protein: 0, carbs: 0, fat: 0 }
+    }
+    
+    return {
+      name: food.name || food.item || food.ingredient || 'Item',
+      amount: food.amount || food.portion || food.quantity || food.serving || '',
+      calories: food.calories || food.kcal || 0,
+      protein: food.protein || food.protein_g || 0,
+      carbs: food.carbs || food.carbs_g || food.carbohydrates || 0,
+      fat: food.fat || food.fat_g || food.fats || 0,
+    }
   }
 
   const currentDayMeals = getMealsForDay(currentDay)
