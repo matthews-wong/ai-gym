@@ -44,20 +44,43 @@ export default function MealPlanDisplay({ plan, onBack }: MealPlanDisplayProps) 
     setIsGeneratingPDF(false)
   }
 
-  // Remove guards: fallback to empty array if missing
-  const currentDayMeals = (plan && plan.meals && plan.meals[`day${currentDay}`]) || []
-  // Remove guards: fallback to 0 if missing
-  const dailyTotals = Array.isArray(currentDayMeals)
-    ? currentDayMeals.reduce(
-        (acc, meal) => ({
-          calories: acc.calories + (meal?.totals?.calories || 0),
-          protein: acc.protein + (meal?.totals?.protein || 0),
-          carbs: acc.carbs + (meal?.totals?.carbs || 0),
-          fat: acc.fat + (meal?.totals?.fat || 0),
-        }),
-        { calories: 0, protein: 0, carbs: 0, fat: 0 }
-      )
-    : { calories: 0, protein: 0, carbs: 0, fat: 0 }
+  // Normalize meals - handle different API response formats
+  const getMealsForDay = (dayNum: number) => {
+    if (!plan || !plan.meals) return []
+    
+    const dayKey = `day${dayNum}`
+    const dayMeals = plan.meals[dayKey]
+    
+    // If it's already an array, return it
+    if (Array.isArray(dayMeals)) return dayMeals
+    
+    // If it's an object with meal keys (breakfast, lunch, dinner, etc.), convert to array
+    if (dayMeals && typeof dayMeals === 'object') {
+      return Object.entries(dayMeals).map(([mealName, mealData]: [string, any]) => ({
+        name: mealName.charAt(0).toUpperCase() + mealName.slice(1),
+        foods: Array.isArray(mealData?.foods) ? mealData.foods : 
+               Array.isArray(mealData?.items) ? mealData.items : 
+               Array.isArray(mealData) ? mealData : [],
+        totals: mealData?.totals || { protein: 0, carbs: 0, fat: 0, calories: 0 },
+        notes: mealData?.notes || '',
+        cookingTime: mealData?.cookingTime || '',
+      }))
+    }
+    
+    return []
+  }
+
+  const currentDayMeals = getMealsForDay(currentDay)
+  
+  const dailyTotals = currentDayMeals.reduce(
+    (acc, meal) => ({
+      calories: acc.calories + (meal?.totals?.calories || 0),
+      protein: acc.protein + (meal?.totals?.protein || 0),
+      carbs: acc.carbs + (meal?.totals?.carbs || 0),
+      fat: acc.fat + (meal?.totals?.fat || 0),
+    }),
+    { calories: 0, protein: 0, carbs: 0, fat: 0 }
+  )
 
   return (
     <div className="min-h-screen bg-stone-950 pt-20">
@@ -174,21 +197,21 @@ export default function MealPlanDisplay({ plan, onBack }: MealPlanDisplayProps) 
 
                 {expandedMeal === idx && (
                   <div className="px-4 pb-4 border-t border-stone-800/50">
-                    {meal.foods && meal.foods.length > 0 ? (
+                    {Array.isArray(meal.foods) && meal.foods.length > 0 ? (
                       <div className="space-y-2 pt-4">
-                        {meal.foods.map((food, foodIdx) => (
+                        {meal.foods.map((food: any, foodIdx: number) => (
                           <div
                             key={foodIdx}
                             className="flex items-center justify-between py-2 border-b border-stone-800/30 last:border-0"
                           >
                             <div>
-                              <p className="text-stone-200">{food.name}</p>
-                              <p className="text-xs text-stone-600">{food.amount}</p>
+                              <p className="text-stone-200">{food?.name || 'Food item'}</p>
+                              <p className="text-xs text-stone-600">{food?.amount || food?.portion || ''}</p>
                             </div>
                             <div className="text-right">
-                              <p className="text-sm text-stone-400">{food.calories} cal</p>
+                              <p className="text-sm text-stone-400">{food?.calories || 0} cal</p>
                               <p className="text-xs text-stone-600">
-                                P:{food.protein}g C:{food.carbs}g F:{food.fat}g
+                                P:{food?.protein || 0}g C:{food?.carbs || 0}g F:{food?.fat || 0}g
                               </p>
                             </div>
                           </div>

@@ -3,11 +3,14 @@
 import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import { Loader2, AlertTriangle, ArrowRight, ArrowLeft, Check, RotateCcw, Sparkles, LogIn, Calculator, ChevronDown, ChevronUp } from "lucide-react"
-import MealPlanDisplay from "./meal-plan-display"
 import LoadingModal from "./loading-modal"
 import CalorieCalculatorModal from "./calorie-calculator-modal"
 import { useStreamingFetch } from "@/lib/hooks/useStreamingFetch"
 import { supabase } from "@/lib/supabase"
+
+// Dynamically import MealPlanDisplay to avoid SSR issues
+import dynamic from "next/dynamic"
+const MealPlanDisplay = dynamic(() => import("./meal-plan-display"), { ssr: false })
 
 type Step = 1 | 2 | 3
 
@@ -18,6 +21,7 @@ export default function MealPlanForm() {
   const [requiresAuth, setRequiresAuth] = useState(false)
   const [showCalorieCalculator, setShowCalorieCalculator] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const [displayError, setDisplayError] = useState<string | null>(null)
 
   const getAuthToken = useCallback(async () => {
     try {
@@ -39,8 +43,14 @@ export default function MealPlanForm() {
     clearIncomplete,
   } = useStreamingFetch<unknown>({
     type: "meal",
-    onComplete: (plan) => setMealPlan(plan),
-    onError: (_, needsAuth) => setRequiresAuth(needsAuth || false),
+    onComplete: (plan) => {
+      console.log("Meal plan received:", plan)
+      setMealPlan(plan)
+    },
+    onError: (err, needsAuth) => {
+      console.error("Streaming error:", err)
+      setRequiresAuth(needsAuth || false)
+    },
     getAuthToken,
   })
 
@@ -108,9 +118,17 @@ export default function MealPlanForm() {
   }
 
   if (mealPlan) {
+    // Ensure plan has required structure before rendering
+    const safePlan = {
+      summary: (mealPlan as any)?.summary || { calories: 2000, mealsPerDay: 3 },
+      overview: (mealPlan as any)?.overview || "Your personalized meal plan",
+      macros: (mealPlan as any)?.macros || { protein: 0, carbs: 0, fat: 0 },
+      meals: (mealPlan as any)?.meals || {},
+    }
+    
     return (
       <MealPlanDisplay
-        plan={mealPlan as Parameters<typeof MealPlanDisplay>[0]["plan"]}
+        plan={safePlan as Parameters<typeof MealPlanDisplay>[0]["plan"]}
         onBack={handleBack}
       />
     )
